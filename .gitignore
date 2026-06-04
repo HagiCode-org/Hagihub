@@ -5,3 +5,4 @@ pkg
 .cache
 .cache/msix-assets
 *.log
+src/renderer/locales/generated-locales/
