@@ -1,4 +1,11 @@
-import type { GitHubOrg, GitHubRepo, GitHubUser } from '../shared/api.js';
+import type {
+  GitHubActionsResult,
+  GitHubOrg,
+  GitHubRepo,
+  GitHubRepoActionsSummary,
+  GitHubUser,
+  GitHubWorkflowRun,
+} from '../shared/api.js';
 
 const GITHUB_API_ROOT = 'https://api.github.com';
 const GITHUB_API_VERSION = '2022-11-28';
@@ -35,6 +42,26 @@ interface RawGitHubRepo {
     avatar_url: string;
     type: string;
   };
+}
+
+interface RawGitHubWorkflowRun {
+  id: number;
+  name: string;
+  display_title: string;
+  html_url: string;
+  status: string;
+  conclusion: string | null;
+  event: string;
+  head_branch: string | null;
+  run_number: number;
+  run_attempt: number;
+  updated_at: string;
+  created_at: string;
+}
+
+interface RawGitHubWorkflowRunsResponse {
+  total_count: number;
+  workflow_runs: RawGitHubWorkflowRun[];
 }
 
 export class GitHubApiError extends Error {
@@ -171,6 +198,103 @@ function mapRepo(repo: RawGitHubRepo): GitHubRepo {
   };
 }
 
+function mapWorkflowRun(run: RawGitHubWorkflowRun): GitHubWorkflowRun {
+  return {
+    id: run.id,
+    workflowName: run.name,
+    displayTitle: run.display_title,
+    htmlUrl: run.html_url,
+    status: run.status,
+    conclusion: run.conclusion,
+    event: run.event,
+    branch: run.head_branch,
+    runNumber: run.run_number,
+    attempt: run.run_attempt,
+    updatedAt: run.updated_at,
+    createdAt: run.created_at,
+  };
+}
+
+function resolveRunState(run: GitHubWorkflowRun | null): GitHubRepoActionsSummary['state'] {
+  if (!run) {
+    return 'empty';
+  }
+
+  if (run.status !== 'completed') {
+    return 'running';
+  }
+
+  if (run.conclusion === 'success' || run.conclusion === 'neutral' || run.conclusion === 'skipped') {
+    return 'passed';
+  }
+
+  if (
+    run.conclusion === 'failure'
+    || run.conclusion === 'timed_out'
+    || run.conclusion === 'cancelled'
+    || run.conclusion === 'action_required'
+    || run.conclusion === 'startup_failure'
+    || run.conclusion === 'stale'
+  ) {
+    return 'failed';
+  }
+
+  return 'error';
+}
+
+async function mapWithConcurrency<T, TResult>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<TResult>,
+): Promise<TResult[]> {
+  const results = new Array<TResult>(items.length);
+  let cursor = 0;
+
+  const runWorker = async () => {
+    while (cursor < items.length) {
+      const currentIndex = cursor;
+      cursor += 1;
+      results[currentIndex] = await worker(items[currentIndex], currentIndex);
+    }
+  };
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => runWorker());
+  await Promise.all(workers);
+  return results;
+}
+
+async function fetchRepoActionsSummary(token: string, repoFullName: string): Promise<GitHubRepoActionsSummary> {
+  const [owner, repo] = repoFullName.split('/');
+
+  if (!owner || !repo) {
+    return {
+      repoFullName,
+      workflowCount: 0,
+      latestRun: null,
+      state: 'error',
+      scannedAt: new Date().toISOString(),
+      error: `Invalid repository name: ${repoFullName}`,
+    };
+  }
+
+  const encodedOwner = encodeURIComponent(owner);
+  const encodedRepo = encodeURIComponent(repo);
+  const { data } = await requestJson<RawGitHubWorkflowRunsResponse>(
+    `${GITHUB_API_ROOT}/repos/${encodedOwner}/${encodedRepo}/actions/runs?per_page=1`,
+    token,
+  );
+  const latestRun = data.workflow_runs.length > 0 ? mapWorkflowRun(data.workflow_runs[0]) : null;
+
+  return {
+    repoFullName,
+    workflowCount: data.total_count,
+    latestRun,
+    state: resolveRunState(latestRun),
+    scannedAt: new Date().toISOString(),
+    error: null,
+  };
+}
+
 export async function fetchUser(token: string): Promise<GitHubUser> {
   const { data } = await requestJson<RawGitHubUser>(`${GITHUB_API_ROOT}/user`, token);
   return mapUser(data);
@@ -188,4 +312,34 @@ export async function fetchRepos(token: string): Promise<GitHubRepo[]> {
   );
 
   return repos.map(mapRepo);
+}
+
+export async function fetchActionsSummaries(token: string, repoFullNames: string[]): Promise<GitHubActionsResult> {
+  let failedCount = 0;
+
+  const summaries = await mapWithConcurrency(repoFullNames, 4, async (repoFullName) => {
+    try {
+      return await fetchRepoActionsSummary(token, repoFullName);
+    } catch (error) {
+      if (error instanceof GitHubApiError && (error.code === 'unauthorized' || error.code === 'network')) {
+        throw error;
+      }
+
+      failedCount += 1;
+
+      return {
+        repoFullName,
+        workflowCount: 0,
+        latestRun: null,
+        state: 'error',
+        scannedAt: new Date().toISOString(),
+        error: error instanceof Error ? error.message : String(error),
+      } satisfies GitHubRepoActionsSummary;
+    }
+  });
+
+  return {
+    summaries,
+    failedCount,
+  };
 }

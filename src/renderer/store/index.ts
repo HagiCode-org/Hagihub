@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import hubReducer from './slices/hubSlice';
 import navigationReducer from './slices/navigationSlice';
 import githubAccountsReducer from './slices/githubAccountsSlice';
+import githubActionsReducer from './slices/githubActionsSlice';
 import githubReposReducer from './slices/githubReposSlice';
 
 export const store = configureStore({
@@ -10,6 +11,7 @@ export const store = configureStore({
     hub: hubReducer,
     navigation: navigationReducer,
     githubAccounts: githubAccountsReducer,
+    githubActions: githubActionsReducer,
     githubRepos: githubReposReducer,
   },
   devTools: import.meta.env.DEV,

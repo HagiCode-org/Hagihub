@@ -3,6 +3,7 @@ import type {
   DeviceFlowPollResult,
   DeviceFlowStartResult,
   ExternalOpenResult,
+  GitHubActionsResult,
   GitHubAccountsResult,
   OrgsResult,
   ReposResult,
@@ -18,6 +19,7 @@ interface HagihubApi {
   switchGitHubAccount: (accountId: string) => Promise<GitHubAccountsResult>;
   fetchGitHubRepos: (accountId: string) => Promise<ReposResult>;
   fetchGitHubOrgs: (accountId: string) => Promise<OrgsResult>;
+  fetchGitHubActions: (accountId: string, repoFullNames: string[]) => Promise<GitHubActionsResult>;
 }
 
 declare global {

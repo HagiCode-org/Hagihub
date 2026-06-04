@@ -4,6 +4,7 @@ import type {
   DeviceFlowPollResult,
   DeviceFlowStartResult,
   ExternalOpenResult,
+  GitHubActionsResult,
   GitHubAccountsResult,
   OrgsResult,
   ReposResult,
@@ -27,6 +28,7 @@ const hagihubApi = {
   switchGitHubAccount: (accountId: string) => ipcRenderer.invoke('hagihub:switch-github-account', accountId) as Promise<GitHubAccountsResult>,
   fetchGitHubRepos: (accountId: string) => ipcRenderer.invoke('hagihub:fetch-github-repos', accountId) as Promise<ReposResult>,
   fetchGitHubOrgs: (accountId: string) => ipcRenderer.invoke('hagihub:fetch-github-orgs', accountId) as Promise<OrgsResult>,
+  fetchGitHubActions: (accountId: string, repoFullNames: string[]) => ipcRenderer.invoke('hagihub:fetch-github-actions', accountId, repoFullNames) as Promise<GitHubActionsResult>,
 };
 
 contextBridge.exposeInMainWorld('hagihub', hagihubApi);

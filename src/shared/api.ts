@@ -51,6 +51,32 @@ export interface GitHubRepo {
   owner: GitHubRepoOwner;
 }
 
+export type GitHubActionRunState = 'running' | 'failed' | 'passed' | 'empty' | 'error';
+
+export interface GitHubWorkflowRun {
+  id: number;
+  workflowName: string;
+  displayTitle: string;
+  htmlUrl: string;
+  status: string;
+  conclusion: string | null;
+  event: string;
+  branch: string | null;
+  runNumber: number;
+  attempt: number;
+  updatedAt: string;
+  createdAt: string;
+}
+
+export interface GitHubRepoActionsSummary {
+  repoFullName: string;
+  workflowCount: number;
+  latestRun: GitHubWorkflowRun | null;
+  state: GitHubActionRunState;
+  scannedAt: string;
+  error: string | null;
+}
+
 export interface GitHubAccount {
   id: string;
   login: string;
@@ -90,4 +116,9 @@ export interface ReposResult {
 
 export interface OrgsResult {
   orgs: GitHubOrg[];
+}
+
+export interface GitHubActionsResult {
+  summaries: GitHubRepoActionsSummary[];
+  failedCount: number;
 }
