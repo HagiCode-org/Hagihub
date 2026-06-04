@@ -1,0 +1,80 @@
+app:
+  name: Hagihub
+language:
+  label: 语言
+navigation:
+  sections:
+    overview:
+      label: 概览
+      description: 基础设施与运行状态
+    workspace:
+      label: 工作区
+      description: 后续功能模块落位区
+    settings:
+      label: 设置
+      description: 桌面端配置与调试入口
+shell:
+  foundationBadge: Hagihub 基础层
+  title: HagiCode Hub
+  description: 面向后续 Hagihub 开发的桌面端基础壳，已经接入 UI 基础组件、状态管理和 Electron 数据桥接。
+  runtimeSnapshot: 运行时快照
+  loading: 加载中
+  loadingRuntime: 正在加载运行时
+  runtimeUnavailable: 运行时不可用
+  runtimeConnected: 运行时已连接
+  prepareTitle: 为 Hagihub 准备好后续开发所需的前端基础层。
+  prepareDescription: 现在的 renderer 已经不是单一展示页，而是具备可复用 UI、集中式状态管理、统一主题 token 和 Electron 数据接入能力的应用壳。
+  openRepository: 打开仓库
+  refreshRuntime: 刷新运行信息
+  rendererStackLabel: 渲染层栈
+  rendererStackValue: React 19 + Redux Toolkit + shadcn
+  rendererStackDescription: 当前最核心的状态、组件和构建基线都已经接入，后续可以直接开始切业务模块。
+  appModeLabel: 应用模式
+  appModePackaged: 已打包构建
+  appModeDevelopment: 开发壳
+  electronLabel: Electron
+  environmentSnapshotTitle: 环境快照
+  environmentSnapshotDescription: 通过 preload API 注入，并由 Redux 统一管理。
+  suggestedNextSteps: 建议的下一步
+  foundationModulesLabel: 基础模块
+  info:
+    channel: 通道
+    platform: 平台
+    version: 版本
+    app: 应用
+    chrome: Chrome
+    node: Node
+  buildChannel:
+    development: 开发环境
+    production: 生产环境
+  foundationModules:
+    - 带严格 TypeScript 配置的 React 19 renderer 入口
+    - 包含 typed hooks 和 preload 异步桥接状态的 Redux Toolkit store
+    - 兼容 shadcn 的组件目录与 Tailwind 基础层
+    - 支持 @/ 导入别名的 renderer 模块组织方式
+  roadmap:
+    overview:
+      - title: 基础层已就绪
+        detail: 依赖、目录和状态管理已经从单页演示升级为可扩展应用壳。
+      - title: Electron 桥接已接通
+        detail: 主进程提供的 appInfo 已通过 Redux thunk 统一接管。
+      - title: UI 系统已可扩展
+        detail: 后续新增页面时可以直接基于 shadcn 风格组件和共享设计 token 扩展。
+    workspace:
+      - title: Hub 面板
+        detail: 实例列表、资源监控、任务面板和消息中心可以继续在这里落位。
+      - title: 功能模块拆分
+        detail: 下一步建议新增 features 目录，按领域拆分 slice、组件和 IPC 契约。
+      - title: 导航能力可继续扩展
+        detail: 当前 section 状态已经为多页签或路由接入留出了空间。
+    settings:
+      - title: 环境控制项
+        detail: 后续可以在这里接入日志级别、更新通道、实验开关和诊断面板。
+      - title: 状态持久化
+        detail: 如果需要本地配置持久化，可以继续接到 middleware 或 preload IPC 层。
+      - title: 设计系统继续扩展
+        detail: 未来的表单、对话框和表格建议继续沿用当前 shadcn 组件目录。
+  nextSteps:
+    - 后续在 src/renderer/features 下按业务域拆分组件、slice 和 IPC actions。
+    - 需要更多 shadcn 组件时，继续基于 components.json 扩展。
+    - 当页面增长到多个视图时，再从当前 section 状态切换到 React Router。

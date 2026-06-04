@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -8,9 +9,14 @@ const DEV_SERVER_HOST = '127.0.0.1';
 const DEV_SERVER_PORT = 36599;
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   base: './',
   root: path.resolve(__dirname, './src/renderer'),
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src/renderer'),
+    },
+  },
   build: {
     outDir: path.resolve(__dirname, 'dist/renderer'),
     emptyOutDir: true,

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en-US">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -53,6 +53,40 @@
         <p class="loading-subtitle">应用正在准备中。</p>
       </div>
     </div>
+    <script>
+      (() => {
+        const storageKey = 'hagihub.language';
+        const storedLanguage = window.localStorage.getItem(storageKey);
+        const browserLanguage = navigator.language || 'en-US';
+        const language = /^zh/i.test(storedLanguage || browserLanguage) ? 'zh-CN' : 'en-US';
+        const copy = {
+          'zh-CN': {
+            title: 'Hagihub',
+            heading: '正在启动',
+            subtitle: '应用正在准备中。',
+          },
+          'en-US': {
+            title: 'Hagihub',
+            heading: 'Starting up',
+            subtitle: 'Preparing the application.',
+          },
+        };
+        const localeCopy = copy[language];
+
+        document.documentElement.lang = language;
+        document.title = localeCopy.title;
+        const loadingTitle = document.querySelector('.loading-title');
+        const loadingSubtitle = document.querySelector('.loading-subtitle');
+
+        if (loadingTitle) {
+          loadingTitle.textContent = localeCopy.heading;
+        }
+
+        if (loadingSubtitle) {
+          loadingSubtitle.textContent = localeCopy.subtitle;
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/main.tsx"></script>
   </body>

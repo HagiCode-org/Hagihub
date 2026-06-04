@@ -1,0 +1,31 @@
+localesRoot: src/renderer/locales
+repoRoot: .
+baseLocale: en-US
+targetLocales:
+  - zh-CN
+doctor:
+  excludedDirectories:
+    - .git
+    - dist
+    - node_modules
+  excludedPathPrefixes:
+    - src/renderer/locales/generated-locales/
+  textFileExtensions:
+    - .ts
+    - .tsx
+    - .js
+    - .jsx
+    - .mjs
+    - .cjs
+    - .json
+    - .md
+    - .yml
+    - .yaml
+  allowlist:
+    legacy-language-change-call: []
+    legacy-locale-path: []
+    legacy-ui-language-literal:
+      - src/renderer/locales/metadata.ts
+    legacy-ui-language-union:
+      - src/renderer/locales/metadata.ts
+    legacy-locale-raw-import: []

@@ -6,6 +6,10 @@ HagiCode 生态系统的桌面端入口，基于 Electron 构建。
 
 - **Electron** 41 — 桌面端运行时
 - **React** 19 — UI 框架
+- **Redux Toolkit / react-redux** — 渲染进程状态管理
+- **i18next / react-i18next** — 简体中文与英语多语言支持
+- **hagi18n** — YAML 翻译源管理、审计与生成
+- **shadcn/ui + Tailwind CSS 4** — 基础组件与设计 token
 - **Vite** 8 — 构建工具（renderer + preload）
 - **TypeScript** 6 — 类型系统
 - **Electron Forge** 7 — 打包与分发
@@ -21,9 +25,12 @@ src/
     index.ts
   renderer/       # React 渲染进程
     App.tsx
+    components/   # shadcn-compatible UI 与应用壳组件
+    lib/          # renderer 工具函数
     main.tsx
     index.html
     index.css
+    store/        # Redux Toolkit store 与 slices
     global.d.ts
   shared/         # 主进程/渲染进程共享类型
     api.ts
