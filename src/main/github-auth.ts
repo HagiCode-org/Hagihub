@@ -14,7 +14,8 @@ import type {
 
 const DEVICE_CODE_URL = 'https://github.com/login/device/code';
 const ACCESS_TOKEN_URL = 'https://github.com/login/oauth/access_token';
-const GITHUB_OAUTH_SCOPE = 'repo,read:org';
+const DEFAULT_GITHUB_CLIENT_ID = 'Ov23lifl4lJU94egKfAz';
+const DEFAULT_GITHUB_OAUTH_SCOPE = 'repo,read:org';
 
 interface GitHubAccountsStore {
   accounts: GitHubAccount[];
@@ -56,7 +57,21 @@ function getGitHubClientId(): string {
     return clientId;
   }
 
-  throw new Error('GitHub OAuth client_id is not configured. Set HAGIHUB_GITHUB_CLIENT_ID.');
+  return DEFAULT_GITHUB_CLIENT_ID;
+}
+
+function getGitHubOAuthScope(): string {
+  const configuredScope = process.env.HAGIHUB_GITHUB_SCOPE
+    ?.split(',')
+    .map((scope) => scope.trim())
+    .filter((scope) => scope.length > 0)
+    .join(',');
+
+  if (configuredScope) {
+    return configuredScope;
+  }
+
+  return DEFAULT_GITHUB_OAUTH_SCOPE;
 }
 
 function getStorageFilePath(): string {
@@ -221,6 +236,7 @@ async function waitForNextPoll(intervalMs: number, signal: AbortSignal): Promise
 }
 
 async function requestDeviceCode(clientId: string): Promise<DeviceCodeResponse> {
+  const scope = getGitHubOAuthScope();
   const response = await fetch(DEVICE_CODE_URL, {
     method: 'POST',
     headers: {
@@ -230,7 +246,7 @@ async function requestDeviceCode(clientId: string): Promise<DeviceCodeResponse> 
     },
     body: new URLSearchParams({
       client_id: clientId,
-      scope: GITHUB_OAUTH_SCOPE,
+      scope,
     }),
   });
 
