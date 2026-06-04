@@ -677,7 +677,7 @@ function HubShell() {
             </div>
           </aside>
 
-          <aside className="hidden w-72 shrink-0 border-r border-border/70 bg-[var(--surface-sidebar)]/90 p-3 xl:flex xl:flex-col xl:gap-4">
+          <aside className="hidden min-h-0 w-72 shrink-0 overflow-y-auto border-r border-border/70 bg-[var(--surface-sidebar)]/90 p-3 xl:flex xl:flex-col xl:gap-4">
             <section className="editor-panel p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{t('shell.navigationLabel', { ns: 'common' })}</p>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('shell.navigationDescription', { ns: 'common' })}</p>
