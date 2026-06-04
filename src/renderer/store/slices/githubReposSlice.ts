@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import i18n from '@/locales';
 import type { GitHubOrg, GitHubRepo } from '../../../shared/api';
 
@@ -16,12 +16,15 @@ interface FetchReposPayload {
   orgError: string | null;
 }
 
+export type OrgFilterValue = 'all' | 'personal' | string;
+
 export interface GitHubReposState {
   orgs: GitHubOrg[];
   repos: GitHubRepo[];
   groupedRepos: GitHubRepoGroup[];
   personalRepos: GitHubRepo[];
   activeAccountId: string | null;
+  activeOrgFilter: OrgFilterValue;
   fetchStatus: FetchStatus;
   error: string | null;
 }
@@ -32,6 +35,7 @@ const initialState: GitHubReposState = {
   groupedRepos: [],
   personalRepos: [],
   activeAccountId: null,
+  activeOrgFilter: 'all',
   fetchStatus: 'idle',
   error: null,
 };
@@ -118,8 +122,12 @@ const githubReposSlice = createSlice({
       state.groupedRepos = [];
       state.personalRepos = [];
       state.activeAccountId = null;
+      state.activeOrgFilter = 'all';
       state.fetchStatus = 'idle';
       state.error = null;
+    },
+    setActiveOrgFilter(state, action: PayloadAction<OrgFilterValue>) {
+      state.activeOrgFilter = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -130,6 +138,7 @@ const githubReposSlice = createSlice({
         state.groupedRepos = [];
         state.personalRepos = [];
         state.activeAccountId = action.meta.arg;
+        state.activeOrgFilter = 'all';
         state.fetchStatus = 'loading';
         state.error = null;
       })
@@ -140,6 +149,7 @@ const githubReposSlice = createSlice({
         state.groupedRepos = groupedRepos;
         state.personalRepos = personalRepos;
         state.activeAccountId = action.payload.accountId;
+        state.activeOrgFilter = 'personal';
         state.fetchStatus = 'succeeded';
         state.error = action.payload.orgError;
       })
@@ -150,6 +160,6 @@ const githubReposSlice = createSlice({
   },
 });
 
-export const { clearRepos } = githubReposSlice.actions;
+export const { clearRepos, setActiveOrgFilter } = githubReposSlice.actions;
 
 export default githubReposSlice.reducer;

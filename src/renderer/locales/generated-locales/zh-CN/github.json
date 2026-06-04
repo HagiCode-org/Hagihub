@@ -127,6 +127,10 @@
       "error": "异常"
     }
   },
+  "orgFilter": {
+    "all": "全部",
+    "personal": "个人"
+  },
   "errors": {
     "loadAccountsFailed": "加载 GitHub 账号失败。",
     "startDeviceFlowFailed": "启动 GitHub Device Flow 失败。",

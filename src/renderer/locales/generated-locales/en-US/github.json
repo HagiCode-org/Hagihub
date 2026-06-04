@@ -127,6 +127,10 @@
       "error": "Error"
     }
   },
+  "orgFilter": {
+    "all": "All",
+    "personal": "Personal"
+  },
   "errors": {
     "loadAccountsFailed": "Failed to load GitHub accounts.",
     "startDeviceFlowFailed": "Failed to start GitHub Device Flow.",

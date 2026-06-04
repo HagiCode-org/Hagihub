@@ -1,10 +1,11 @@
-import { useDeferredValue } from 'react';
+import { useDeferredValue, useMemo } from 'react';
 import { LoaderCircle, RefreshCw, TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { fetchRepos } from '@/store/slices/githubReposSlice';
+import OrgFilterBar from './OrgFilterBar';
 import RepoGroup from './RepoGroup';
 
 interface RepoListProps {
@@ -16,7 +17,7 @@ const RECENT_REPO_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 function RepoList({ activeAccountId }: RepoListProps) {
   const { t } = useTranslation('github');
   const dispatch = useAppDispatch();
-  const { groupedRepos, orgs, personalRepos, fetchStatus, error, repos } = useAppSelector((state) => state.githubRepos);
+  const { groupedRepos, orgs, personalRepos, activeOrgFilter, fetchStatus, error, repos } = useAppSelector((state) => state.githubRepos);
   const {
     summariesByRepoFullName,
     fetchStatus: actionsFetchStatus,
@@ -25,6 +26,20 @@ function RepoList({ activeAccountId }: RepoListProps) {
   } = useAppSelector((state) => state.githubActions);
   const deferredGroups = useDeferredValue(groupedRepos);
   const deferredPersonalRepos = useDeferredValue(personalRepos);
+
+  const filteredGroups = useMemo(() => {
+    if (activeOrgFilter === 'all') {
+      return { groups: deferredGroups, personal: deferredPersonalRepos };
+    }
+
+    if (activeOrgFilter === 'personal') {
+      return { groups: [], personal: deferredPersonalRepos };
+    }
+
+    const match = deferredGroups.filter((group) => group.org.login === activeOrgFilter);
+    return { groups: match, personal: [] };
+  }, [activeOrgFilter, deferredGroups, deferredPersonalRepos]);
+
   const actionSummaries = Object.values(summariesByRepoFullName).filter((summary) => summary !== undefined);
   const privateRepoCount = repos.filter((repo) => repo.isPrivate).length;
   const recentRepoCount = repos.filter((repo) => Date.now() - Date.parse(repo.updatedAt) <= RECENT_REPO_WINDOW_MS).length;
@@ -133,10 +148,11 @@ function RepoList({ activeAccountId }: RepoListProps) {
         </section>
       ) : (
         <div className="space-y-4">
-          {deferredGroups.map((group) => (
+          <OrgFilterBar />
+          {filteredGroups.groups.map((group) => (
             <RepoGroup key={group.org.id} org={group.org} repos={group.repos} />
           ))}
-          {deferredPersonalRepos.length > 0 ? <RepoGroup org={null} repos={deferredPersonalRepos} /> : null}
+          {filteredGroups.personal.length > 0 ? <RepoGroup org={null} repos={filteredGroups.personal} /> : null}
         </div>
       )}
     </div>
