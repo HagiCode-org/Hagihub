@@ -13,7 +13,7 @@
       },
       "workspace": {
         "label": "Workspace",
-        "description": "Landing area for upcoming feature modules"
+        "description": "Multi-account GitHub access and repository browsing"
       },
       "settings": {
         "label": "Settings",

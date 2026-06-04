@@ -9,7 +9,7 @@ navigation:
       description: Foundation and runtime status
     workspace:
       label: Workspace
-      description: Landing area for upcoming feature modules
+      description: Multi-account GitHub access and repository browsing
     settings:
       label: Settings
       description: Desktop configuration and debugging entry points

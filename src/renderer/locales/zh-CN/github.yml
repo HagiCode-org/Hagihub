@@ -1,0 +1,73 @@
+workspace:
+  heroBadge: GitHub 工作区
+  heroTitle: 在一个桌面工作区里切换多个 GitHub 身份，并浏览所有关联仓库。
+  heroDescription: 通过浏览器完成授权，令牌始终停留在主进程内，个人仓库和组织仓库都可以在同一工作区内切换查看。
+  sectionDescription: 管理 GitHub 账号、授权新身份，并按归属方浏览仓库列表。
+  addAccount: 添加账号
+  refreshRepos: 刷新仓库
+  loadingAccounts: 正在加载 GitHub 账号
+  loadAccountsFailedTitle: 无法恢复 GitHub 账号数据。
+  retry: 重试
+emptyState:
+  title: 还没有 GitHub 账号
+  description: 添加一个 GitHub 账号后，就可以在 Hagihub 里查看个人仓库和组织仓库。
+  secondary: 授权通过浏览器中的 GitHub Device Flow 完成，同时支持多个 GitHub 账号并存。
+accountSelector:
+  eyebrow: 账号
+  title: 已连接身份
+  description: 切换当前活跃 GitHub 账号，或继续添加新的身份来查看另一组仓库。
+  active: 当前
+  addedAt: 添加于 {{date}}
+  remove: 移除账号
+  removeConfirm: 确定要从当前设备移除 @{{login}} 吗？
+  plaintextStorage: 当前设备缺少系统密钥环能力，令牌已退化为明文加密存储模式。
+deviceFlow:
+  title: 添加 GitHub 账号
+  description: 请在浏览器中完成 GitHub 授权。Hagihub 会在主进程中持续轮询，直到 GitHub 确认登录成功。
+  codeLabel: 一次性验证码
+  openBrowser: 在浏览器中打开 GitHub
+  browserHint: GitHub 会要求你输入左侧验证码，然后确认申请的权限范围。
+  requesting: 正在请求 GitHub 授权码
+  waiting: 正在等待浏览器授权
+  success: 授权完成
+  retry: 重新开始
+  cancel: 取消
+  close: 关闭
+  done: 完成
+  githubUser: GitHub 用户
+  securityHint: 令牌只会保存在本地，并且在拉取仓库数据时仅由 Electron 主进程使用。
+  steps:
+    open: 1. 打开 GitHub 授权页面。
+    enter: 2. 输入左侧显示的验证码。
+    finish: 3. 确认授权后，Hagihub 会自动完成登录。
+repoList:
+  eyebrow: 仓库
+  title: 仓库清单
+  description: Hagihub 先拉取组织列表，再按归属方把仓库统一分组展示。
+  loading: 正在加载仓库
+  loadingHint: Hagihub 会等所有 GitHub 分页返回后再一次性渲染列表。
+  loadFailed: 仓库加载失败
+  retry: 重新加载
+  emptyTitle: 暂无仓库
+  emptyDescription: GitHub 返回了空仓库列表，请确认当前授权账号具备 `repo` 权限范围。
+  personalRepos: 个人仓库
+  personalDescription: 当前活跃账号直接拥有，或未匹配到已加载组织的仓库。
+  organizationRepos: 当前组织名下的仓库分组。
+repoCard:
+  private: 私有
+  public: 公开
+  fork: Fork
+  open: 打开
+  noDescription: 暂无仓库描述。
+  updatedAt: 更新于 {{date}}
+errors:
+  loadAccountsFailed: 加载 GitHub 账号失败。
+  startDeviceFlowFailed: 启动 GitHub Device Flow 失败。
+  cancelDeviceFlowFailed: 取消 GitHub Device Flow 失败。
+  removeAccountFailed: 移除 GitHub 账号失败。
+  switchAccountFailed: 切换活跃 GitHub 账号失败。
+  fetchReposFailed: 加载 GitHub 仓库失败。
+  deviceFlowFailed: GitHub 授权失败。
+  storageReset: 本地 GitHub 账号存储文件已损坏，应用已自动重置并备份原文件。
+  openBrowserFailed: Hagihub 无法打开 GitHub 授权页面。
+  orgsPartialFailed: 组织列表加载失败，但个人仓库仍然可用。

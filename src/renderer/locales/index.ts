@@ -54,7 +54,7 @@ void i18n.use(initReactI18next).init({
   resources,
   lng: initialLanguage,
   fallbackLng: 'en-US',
-  ns: ['common', 'error'],
+  ns: ['common', 'error', 'github'],
   defaultNS: 'common',
   interpolation: {
     escapeValue: false,

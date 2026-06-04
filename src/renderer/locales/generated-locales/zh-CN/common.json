@@ -13,7 +13,7 @@
       },
       "workspace": {
         "label": "工作区",
-        "description": "后续功能模块落位区"
+        "description": "多账号 GitHub 与仓库浏览工作区"
       },
       "settings": {
         "label": "设置",

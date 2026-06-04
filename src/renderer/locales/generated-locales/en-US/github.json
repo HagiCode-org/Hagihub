@@ -1,0 +1,83 @@
+{
+  "workspace": {
+    "heroBadge": "GitHub workspace",
+    "heroTitle": "Switch between GitHub identities and browse every repository in one desktop workspace.",
+    "heroDescription": "Authorize in your browser, keep tokens confined to the main process, and move across personal and organization repositories without leaving the shell.",
+    "sectionDescription": "Manage GitHub accounts, authorize new identities, and browse repositories grouped by owner.",
+    "addAccount": "Add account",
+    "refreshRepos": "Refresh repositories",
+    "loadingAccounts": "Loading GitHub accounts",
+    "loadAccountsFailedTitle": "GitHub accounts could not be restored.",
+    "retry": "Retry"
+  },
+  "emptyState": {
+    "title": "No GitHub accounts yet",
+    "description": "Add a GitHub account to unlock your personal and organization repositories inside Hagihub.",
+    "secondary": "Authorization uses GitHub Device Flow in your browser and supports multiple accounts at the same time."
+  },
+  "accountSelector": {
+    "eyebrow": "Accounts",
+    "title": "Connected identities",
+    "description": "Switch the active GitHub account or add another identity for a different repository set.",
+    "active": "Active",
+    "addedAt": "Added {{date}}",
+    "remove": "Remove account",
+    "removeConfirm": "Remove @{{login}} from this device?",
+    "plaintextStorage": "Token storage fell back to plaintext encryption because OS keychain encryption is unavailable on this device."
+  },
+  "deviceFlow": {
+    "title": "Add GitHub account",
+    "description": "Finish the GitHub authorization in your browser. Hagihub keeps polling in the main process until GitHub confirms the login.",
+    "codeLabel": "One-time code",
+    "openBrowser": "Open GitHub in browser",
+    "browserHint": "GitHub will ask you to enter the code above, then confirm the requested scopes.",
+    "requesting": "Requesting GitHub authorization code",
+    "waiting": "Waiting for browser authorization",
+    "success": "Authorization complete",
+    "retry": "Start again",
+    "cancel": "Cancel",
+    "close": "Close",
+    "done": "Done",
+    "githubUser": "GitHub user",
+    "securityHint": "Tokens are stored locally and stay inside the Electron main process when repository data is fetched.",
+    "steps": {
+      "open": "1. Open the GitHub authorization page.",
+      "enter": "2. Enter the code shown on the left.",
+      "finish": "3. Approve access, Hagihub will finish the login automatically."
+    }
+  },
+  "repoList": {
+    "eyebrow": "Repositories",
+    "title": "Repository inventory",
+    "description": "Hagihub fetches organizations first, then groups every repository by owner login.",
+    "loading": "Loading repositories",
+    "loadingHint": "Hagihub waits for every GitHub page before rendering the full list.",
+    "loadFailed": "Repository loading failed",
+    "retry": "Retry loading",
+    "emptyTitle": "No repositories found",
+    "emptyDescription": "GitHub returned an empty repository list. Check whether the authorized account has the required repo scope.",
+    "personalRepos": "Personal repositories",
+    "personalDescription": "Repositories owned directly by the active account or not matched to a loaded organization.",
+    "organizationRepos": "Repositories grouped under the active organization."
+  },
+  "repoCard": {
+    "private": "Private",
+    "public": "Public",
+    "fork": "Fork",
+    "open": "Open",
+    "noDescription": "No repository description.",
+    "updatedAt": "Updated {{date}}"
+  },
+  "errors": {
+    "loadAccountsFailed": "Failed to load GitHub accounts.",
+    "startDeviceFlowFailed": "Failed to start GitHub Device Flow.",
+    "cancelDeviceFlowFailed": "Failed to cancel GitHub Device Flow.",
+    "removeAccountFailed": "Failed to remove the GitHub account.",
+    "switchAccountFailed": "Failed to switch the active GitHub account.",
+    "fetchReposFailed": "Failed to load GitHub repositories.",
+    "deviceFlowFailed": "GitHub authorization failed.",
+    "storageReset": "Saved GitHub account data was reset because the local storage file was corrupted.",
+    "openBrowserFailed": "Hagihub could not open the GitHub authorization page.",
+    "orgsPartialFailed": "Organizations could not be loaded. Personal repositories are still available."
+  }
+}
