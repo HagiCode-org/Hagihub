@@ -1,7 +1,8 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { removeAccount, switchAccount } from '@/store/slices/githubAccountsSlice';
 
@@ -30,10 +31,13 @@ function AccountSelector({ onAddAccount }: AccountSelectorProps) {
   };
 
   return (
-    <div className="rounded-[1.75rem] border border-border/70 bg-background/45 p-5 sm:p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <section className="editor-panel p-5 lg:p-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('accountSelector.eyebrow')}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary">{t('accountSelector.eyebrow')}</Badge>
+            <Badge variant="outline">{t('accountSelector.connectedCount', { count: accounts.length })}</Badge>
+          </div>
           <div>
             <h3 className="text-2xl font-semibold tracking-tight text-foreground">{t('accountSelector.title')}</h3>
             <p className="mt-1 text-sm leading-7 text-muted-foreground">{t('accountSelector.description')}</p>
@@ -45,39 +49,44 @@ function AccountSelector({ onAddAccount }: AccountSelectorProps) {
         </Button>
       </div>
 
-      <div className="mt-5 grid gap-3 lg:grid-cols-2">
+      <div className="mt-5 space-y-3">
         {accounts.map((account) => {
           const isActive = account.id === activeAccountId;
+          const storageKey = account.storageMode === 'plaintext' ? 'plaintextStorageShort' : 'encryptedStorage';
 
           return (
             <div
               key={account.id}
-              className={isActive
-                ? 'rounded-[1.5rem] border border-primary/30 bg-primary/10 p-4'
-                : 'rounded-[1.5rem] border border-border/70 bg-card/50 p-4'}
+              className={cn(
+                'flex flex-col gap-4 rounded-xl border px-4 py-4 transition-colors lg:flex-row lg:items-center lg:justify-between',
+                isActive ? 'border-primary/30 bg-primary/10' : 'border-border/70 bg-background/35 hover:bg-accent/18',
+              )}
             >
-              <div className="flex items-start justify-between gap-4">
-                <button
-                  type="button"
-                  className="flex flex-1 items-center gap-4 text-left"
-                  onClick={() => void dispatch(switchAccount(account.id))}
-                  disabled={isActive}
-                >
-                  <img
-                    src={account.avatarUrl}
-                    alt={account.login}
-                    className="size-12 rounded-2xl border border-border/70 object-cover"
-                  />
-                  <span className="space-y-1">
-                    <span className="flex items-center gap-2">
-                      <span className="text-base font-semibold text-foreground">@{account.login}</span>
-                      {isActive ? <Badge>{t('accountSelector.active')}</Badge> : null}
-                    </span>
-                    <span className="block text-sm text-muted-foreground">{account.name ?? t('deviceFlow.githubUser')}</span>
-                    <span className="block text-xs text-muted-foreground">{t('accountSelector.addedAt', { date: formatDate(account.addedAt) })}</span>
+              <button
+                type="button"
+                className="flex min-w-0 flex-1 items-center gap-4 text-left"
+                onClick={() => void dispatch(switchAccount(account.id))}
+                disabled={isActive}
+              >
+                <img src={account.avatarUrl} alt={account.login} className="size-12 rounded-xl border border-border/70 object-cover" />
+                <span className="min-w-0 space-y-1">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="truncate text-base font-semibold text-foreground">@{account.login}</span>
+                    {isActive ? <Badge>{t('accountSelector.active')}</Badge> : null}
+                    <span className="status-chip">{t(`accountSelector.${storageKey}`)}</span>
                   </span>
-                </button>
+                  <span className="block truncate text-sm text-muted-foreground">{account.name ?? t('deviceFlow.githubUser')}</span>
+                  <span className="block font-mono text-xs text-muted-foreground">{t('accountSelector.addedAt', { date: formatDate(account.addedAt) })}</span>
+                </span>
+              </button>
 
+              <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                {account.storageMode !== 'plaintext' ? (
+                  <span className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/20 bg-emerald-300/8 px-3 py-2 text-xs text-emerald-100">
+                    <ShieldCheck className="size-3.5" />
+                    {t('accountSelector.encryptedStorage')}
+                  </span>
+                ) : null}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -89,7 +98,7 @@ function AccountSelector({ onAddAccount }: AccountSelectorProps) {
               </div>
 
               {account.storageMode === 'plaintext' ? (
-                <p className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-300/10 px-3 py-2 text-xs leading-6 text-amber-100/85">
+                <p className="rounded-xl border border-amber-400/20 bg-amber-300/8 px-3 py-2 text-xs leading-6 text-amber-100/85 lg:basis-full">
                   {t('accountSelector.plaintextStorage')}
                 </p>
               ) : null}
@@ -97,7 +106,7 @@ function AccountSelector({ onAddAccount }: AccountSelectorProps) {
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }
 
