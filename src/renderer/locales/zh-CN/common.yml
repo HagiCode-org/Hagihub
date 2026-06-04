@@ -17,6 +17,10 @@ shell:
   foundationBadge: Hagihub 基础层
   title: HagiCode Hub
   description: 面向后续 Hagihub 开发的桌面端基础壳，已经接入 UI 基础组件、状态管理和 Electron 数据桥接。
+  chromeBadge: 本地桌面壳
+  navigationLabel: 工作区
+  navigationDescription: 在同一个桌面壳里切换基础层、仓库工作流和后续设置等表面，不再回到展示页结构。
+  activeSectionLabel: 当前通道
   runtimeSnapshot: 运行时快照
   loading: 加载中
   loadingRuntime: 正在加载运行时
@@ -78,3 +82,11 @@ shell:
     - 后续在 src/renderer/features 下按业务域拆分组件、slice 和 IPC actions。
     - 需要更多 shadcn 组件时，继续基于 components.json 扩展。
     - 当页面增长到多个视图时，再从当前 section 状态切换到 React Router。
+  statusBar:
+    section: 区域
+    account: 账号
+    repos: 仓库
+    orgs: 组织
+    runtime: 运行时
+    ready: 已就绪
+    none: 无

@@ -25,6 +25,10 @@
     "foundationBadge": "Hagihub Foundation",
     "title": "HagiCode Hub",
     "description": "A desktop shell for the next phase of Hagihub development, with UI primitives, state management, and Electron bridge wiring already in place.",
+    "chromeBadge": "Local shell",
+    "navigationLabel": "Workspaces",
+    "navigationDescription": "Move between foundation, repository workflow, and future settings surfaces without leaving the same desktop shell.",
+    "activeSectionLabel": "Active lane",
     "runtimeSnapshot": "Runtime snapshot",
     "loading": "Loading",
     "loadingRuntime": "Loading runtime",
@@ -111,6 +115,15 @@
       "Split future components, slices, and IPC actions under src/renderer/features by domain.",
       "Keep extending components.json when more shadcn components are needed.",
       "Switch from section state to React Router once the app grows beyond a single shell view."
-    ]
+    ],
+    "statusBar": {
+      "section": "Section",
+      "account": "Account",
+      "repos": "Repos",
+      "orgs": "Orgs",
+      "runtime": "Runtime",
+      "ready": "Ready",
+      "none": "None"
+    }
   }
 }

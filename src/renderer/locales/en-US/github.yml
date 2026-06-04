@@ -3,23 +3,48 @@ workspace:
   heroTitle: Switch between GitHub identities and browse every repository in one desktop workspace.
   heroDescription: Authorize in your browser, keep tokens confined to the main process, and move across personal and organization repositories without leaving the shell.
   sectionDescription: Manage GitHub accounts, authorize new identities, and browse repositories grouped by owner.
+  toolbarHint: Work inside one local shell, switch identities safely, and jump from repository inventory straight into GitHub Actions when you need workflow detail.
   addAccount: Add account
   refreshRepos: Refresh repositories
+  actionsReady: Actions entry points ready
+  actionsScanning: Scanning workflows
+  actionsUnavailable: Workflow scan unavailable
+  actionsSynced: Workflow scan synced
+  actionsHintTitle: Actions lane
+  actionsHint: Hagihub now scans the latest workflow run for each loaded repository and keeps the most recent runs visible in the side inspector.
+  actionsHintLoading: Hagihub is still scanning repository workflows. Recent runs will appear here as soon as GitHub responds.
+  actionsHintPartial: Workflow data could not be loaded for {{count}} repositories.
   loadingAccounts: Loading GitHub accounts
   loadAccountsFailedTitle: GitHub accounts could not be restored.
   retry: Retry
+  accountCount: '{{count}} accounts'
+  orgCount: '{{count}} orgs'
+  repoCount: '{{count}} repos'
+  runningCount: '{{count}} running'
+  failedCount: '{{count}} failed'
+  passedCount: '{{count}} passed'
+  recentRunsTitle: Recent runs
+  recentRunsEmpty: No workflow runs were returned for the currently loaded repositories.
+  noRunsCount: '{{count}} repos with no runs'
 emptyState:
   title: No GitHub accounts yet
   description: Add a GitHub account to unlock your personal and organization repositories inside Hagihub.
   secondary: Authorization uses GitHub Device Flow in your browser and supports multiple accounts at the same time.
+  tipTitle: Before you inspect workflows
+  tip1: Add an account with repository scope.
+  tip2: Switch the active identity to load the right repository set.
+  tip3: Use the Actions button on each row to open workflow runs in the browser.
 accountSelector:
   eyebrow: Accounts
   title: Connected identities
   description: Switch the active GitHub account or add another identity for a different repository set.
   active: Active
+  connectedCount: '{{count}} connected'
   addedAt: Added {{date}}
   remove: Remove account
   removeConfirm: Remove @{{login}} from this device?
+  encryptedStorage: Encrypted storage
+  plaintextStorageShort: Plaintext fallback
   plaintextStorage: Token storage fell back to plaintext encryption because OS keychain encryption is unavailable on this device.
 deviceFlow:
   title: Add GitHub account
@@ -44,22 +69,54 @@ repoList:
   eyebrow: Repositories
   title: Repository inventory
   description: Hagihub fetches organizations first, then groups every repository by owner login.
+  actionsTitle: Workflow entry points
+  actionsDescription: Scan repository ownership, activity, and visibility in one list, then jump into the matching GitHub Actions page without leaving the desktop shell.
   loading: Loading repositories
   loadingHint: Hagihub waits for every GitHub page before rendering the full list.
   loadFailed: Repository loading failed
   retry: Retry loading
   emptyTitle: No repositories found
   emptyDescription: GitHub returned an empty repository list. Check whether the authorized account has the required repo scope.
+  repoCountLabel: '{{count}} repositories'
   personalRepos: Personal repositories
   personalDescription: Repositories owned directly by the active account or not matched to a loaded organization.
   organizationRepos: Repositories grouped under the active organization.
+  actionsLoading: Scanning recent GitHub Actions runs.
+  actionsLoaded: Loaded workflow status for {{count}} repositories.
+  actionsPartialFailure: Workflow scans failed for {{count}} repositories.
+  metrics:
+    repos: Repos
+    organizations: Orgs
+    running: Running
+    failed: Failed
+    passed: Passed
+    private: Private
+    updated: Updated 7d
+    updatedCount: '{{count}} repos updated in 7d'
 repoCard:
   private: Private
   public: Public
   fork: Fork
-  open: Open
+  owner: Owner
+  updated: Updated
+  actions: Actions
+  lastRun: Last run
+  actionsScanning: Scanning workflow state
+  actionsUnavailable: Workflow state unavailable
+  noRuns: No workflow runs
+  triggeredBy: 'Event: {{event}}'
+  openLatestRun: Latest run
+  openRepo: Repository
+  openActions: Actions
   noDescription: No repository description.
   updatedAt: Updated {{date}}
+  state:
+    loading: Scanning
+    running: Running
+    passed: Passed
+    failed: Failed
+    empty: No runs
+    error: Error
 errors:
   loadAccountsFailed: Failed to load GitHub accounts.
   startDeviceFlowFailed: Failed to start GitHub Device Flow.
@@ -71,3 +128,4 @@ errors:
   storageReset: Saved GitHub account data was reset because the local storage file was corrupted.
   openBrowserFailed: Hagihub could not open the GitHub authorization page.
   orgsPartialFailed: Organizations could not be loaded. Personal repositories are still available.
+  fetchActionsFailed: Failed to load GitHub Actions workflow data.
