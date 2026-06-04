@@ -32,8 +32,10 @@ Hagihub 是一个基于 Electron 的多账号 GitHub 管理桌面应用，用来
 
 ### 请求的权限范围
 
-- `repo`, 用于读取个人和协作者仓库列表
+- 默认 scope 为 `repo,read:org`
+- `repo`, 用于读取仓库数据，并为后续需要写入仓库数据的能力保留权限
 - `read:org`, 用于读取组织列表和组织归属关系
+- 如需调整授权范围，可通过 `HAGIHUB_GITHUB_SCOPE` 覆盖默认值
 
 ### 安全模型
 
@@ -44,11 +46,16 @@ Hagihub 是一个基于 Electron 的多账号 GitHub 管理桌面应用，用来
 
 ### 开发环境说明
 
-Device Flow 需要 GitHub OAuth App 的 `client_id`。本地开发前请设置：
+应用内置生产环境 GitHub OAuth App `client_id`：`Ov23lifl4lJU94egKfAz`。
+
+本地开发或切换到其他 OAuth App 时，可通过环境变量覆盖：
 
 ```bash
 export HAGIHUB_GITHUB_CLIENT_ID="<your-github-oauth-client-id>"
+export HAGIHUB_GITHUB_SCOPE="repo,read:org"
 ```
+
+如果未设置 `HAGIHUB_GITHUB_CLIENT_ID`，应用会默认使用生产环境 `client_id`。
 
 ## 项目结构
 
