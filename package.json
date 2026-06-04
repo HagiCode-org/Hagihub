@@ -6,6 +6,17 @@
   "packageManager": "npm@10.9.2",
   "description": "HagiCode hub desktop application",
   "main": "dist/main/bootstrap.js",
+  "build": {
+    "win": {
+      "publish": null
+    },
+    "nsis": {
+      "publish": null
+    },
+    "portable": {
+      "publish": null
+    }
+  },
   "license": "AGPL-3.0",
   "homepage": "https://github.com/HagiCode-org/Hagihub",
   "author": {
