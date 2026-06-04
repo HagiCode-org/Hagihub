@@ -4,4 +4,5 @@ export { default as EmptyState } from './components/EmptyState';
 export { default as OrgFilterBar } from './components/OrgFilterBar';
 export { default as RepoCard } from './components/RepoCard';
 export { default as RepoGroup } from './components/RepoGroup';
+export { default as RepoInfoSheet } from './components/RepoInfoSheet';
 export { default as RepoList } from './components/RepoList';

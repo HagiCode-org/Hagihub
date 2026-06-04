@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fetchActionsSummaries, fetchOrgs, fetchRepos } from './github-api.js';
+import { fetchActionsSummaries, fetchOrgs, fetchRepoDetails, fetchRepos, updateRepo } from './github-api.js';
 import { GitHubAuthManager, githubDeviceFlowEventChannel } from './github-auth.js';
 import type {
   AppInfo,
@@ -9,7 +9,10 @@ import type {
   GitHubActionsResult,
   OrgsResult,
   PlatformId,
+  RepoDetailsResult,
   ReposResult,
+  UpdateRepoPayload,
+  UpdateRepoResult,
 } from '../shared/api.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -151,6 +154,28 @@ function registerIpcHandlers(): void {
 
       const token = await gitHubAuthManager.getDecryptedToken(accountId);
       return await fetchActionsSummaries(token, repoFullNames);
+    },
+  );
+  ipcMain.handle(
+    'hagihub:fetch-repo-details',
+    async (_event, accountId: string, owner: string, repo: string): Promise<RepoDetailsResult> => {
+      if (!gitHubAuthManager) {
+        throw new Error('GitHub auth manager is unavailable.');
+      }
+
+      const token = await gitHubAuthManager.getDecryptedToken(accountId);
+      return { details: await fetchRepoDetails(token, owner, repo) };
+    },
+  );
+  ipcMain.handle(
+    'hagihub:update-repo',
+    async (_event, accountId: string, owner: string, repo: string, updates: UpdateRepoPayload): Promise<UpdateRepoResult> => {
+      if (!gitHubAuthManager) {
+        throw new Error('GitHub auth manager is unavailable.');
+      }
+
+      const token = await gitHubAuthManager.getDecryptedToken(accountId);
+      return { details: await updateRepo(token, owner, repo, updates) };
     },
   );
 }

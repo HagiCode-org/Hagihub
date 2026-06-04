@@ -125,11 +125,35 @@
       "failed": "Failed",
       "empty": "No runs",
       "error": "Error"
+    },
+    "info": {
+      "title": "Repository info",
+      "url": "URL",
+      "description": "Description",
+      "descriptionPlaceholder": "No description",
+      "homepage": "Homepage",
+      "homepagePlaceholder": "No homepage set",
+      "topics": "Topics",
+      "topicsPlaceholder": "Add topics separated by commas",
+      "noTopics": "No topics",
+      "visibility": "Visibility",
+      "defaultBranch": "Default branch",
+      "language": "Language",
+      "license": "License",
+      "stars": "Stars",
+      "forks": "Forks",
+      "openIssues": "Open issues",
+      "watchers": "Watchers",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "pushedAt": "Last push",
+      "edit": "Edit info",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saving": "Saving",
+      "saveSuccess": "Changes saved",
+      "saveFailed": "Failed to save changes"
     }
-  },
-  "orgFilter": {
-    "all": "All",
-    "personal": "Personal"
   },
   "errors": {
     "loadAccountsFailed": "Failed to load GitHub accounts.",

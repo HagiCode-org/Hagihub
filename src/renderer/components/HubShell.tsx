@@ -395,18 +395,6 @@ function HubShell() {
                   {t('workspace.toolbarHint', { ns: 'github' })}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {workspaceSummary.map((item) => (
-                  <span key={item} className="status-chip">
-                    {item}
-                  </span>
-                ))}
-                {actionSummaryChips.map((item) => (
-                  <span key={item} className="status-chip">
-                    {item}
-                  </span>
-                ))}
-              </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -810,6 +798,8 @@ function HubShell() {
             <span className="font-mono">{t('shell.statusBar.repos', { ns: 'common' })}: {repos.length}</span>
             <span className="font-mono">{t('shell.statusBar.orgs', { ns: 'common' })}: {orgs.length}</span>
             <span className="font-mono">{t('workspace.runningCount', { ns: 'github', count: runningActionCount })}</span>
+            <span className="font-mono">{t('workspace.failedCount', { ns: 'github', count: failedActionCount })}</span>
+            <span className="font-mono">{t('workspace.passedCount', { ns: 'github', count: passedActionCount })}</span>
             <span className="font-mono">{t('shell.statusBar.runtime', { ns: 'common' })}: {loadStatus === 'failed' ? t('shell.runtimeUnavailable', { ns: 'common' }) : t('shell.statusBar.ready', { ns: 'common' })}</span>
           </div>
         </footer>

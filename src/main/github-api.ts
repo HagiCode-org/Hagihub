@@ -3,8 +3,10 @@ import type {
   GitHubOrg,
   GitHubRepo,
   GitHubRepoActionsSummary,
+  GitHubRepoDetails,
   GitHubUser,
   GitHubWorkflowRun,
+  UpdateRepoPayload,
 } from '../shared/api.js';
 
 const GITHUB_API_ROOT = 'https://api.github.com';
@@ -42,6 +44,27 @@ interface RawGitHubRepo {
     avatar_url: string;
     type: string;
   };
+}
+
+interface RawGitHubRepoDetails {
+  id: number;
+  name: string;
+  full_name: string;
+  description: string | null;
+  html_url: string;
+  homepage: string | null;
+  topics: string[];
+  visibility: 'public' | 'private' | 'internal';
+  default_branch: string;
+  language: string | null;
+  stargazers_count: number;
+  forks_count: number;
+  open_issues_count: number;
+  watchers_count: number;
+  license: { name: string; spdx_id: string | null } | null;
+  created_at: string;
+  updated_at: string;
+  pushed_at: string | null;
 }
 
 interface RawGitHubWorkflowRun {
@@ -312,6 +335,65 @@ export async function fetchRepos(token: string): Promise<GitHubRepo[]> {
   );
 
   return repos.map(mapRepo);
+}
+
+function mapRepoDetails(repo: RawGitHubRepoDetails): GitHubRepoDetails {
+  return {
+    id: repo.id,
+    name: repo.name,
+    fullName: repo.full_name,
+    description: repo.description,
+    htmlUrl: repo.html_url,
+    homepage: repo.homepage,
+    topics: repo.topics ?? [],
+    visibility: repo.visibility,
+    defaultBranch: repo.default_branch,
+    language: repo.language,
+    stargazersCount: repo.stargazers_count,
+    forksCount: repo.forks_count,
+    openIssuesCount: repo.open_issues_count,
+    watchersCount: repo.watchers_count,
+    license: repo.license ? { name: repo.license.name, spdxId: repo.license.spdx_id } : null,
+    createdAt: repo.created_at,
+    updatedAt: repo.updated_at,
+    pushedAt: repo.pushed_at,
+  };
+}
+
+export async function fetchRepoDetails(token: string, owner: string, repo: string): Promise<GitHubRepoDetails> {
+  const encodedOwner = encodeURIComponent(owner);
+  const encodedRepo = encodeURIComponent(repo);
+  const { data } = await requestJson<RawGitHubRepoDetails>(
+    `${GITHUB_API_ROOT}/repos/${encodedOwner}/${encodedRepo}`,
+    token,
+  );
+  return mapRepoDetails(data);
+}
+
+export async function updateRepo(token: string, owner: string, repo: string, updates: UpdateRepoPayload): Promise<GitHubRepoDetails> {
+  const encodedOwner = encodeURIComponent(owner);
+  const encodedRepo = encodeURIComponent(repo);
+  let response: Response;
+
+  try {
+    response = await fetch(`${GITHUB_API_ROOT}/repos/${encodedOwner}/${encodedRepo}`, {
+      method: 'PATCH',
+      headers: {
+        ...buildHeaders(token),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
+  } catch (error) {
+    throw new GitHubApiError(
+      error instanceof Error ? error.message : 'Network error while updating repository.',
+      'network',
+    );
+  }
+
+  await assertResponse(response);
+  const data = await response.json() as RawGitHubRepoDetails;
+  return mapRepoDetails(data);
 }
 
 export async function fetchActionsSummaries(token: string, repoFullNames: string[]): Promise<GitHubActionsResult> {

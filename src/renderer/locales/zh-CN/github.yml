@@ -117,6 +117,33 @@ repoCard:
     failed: 失败
     empty: 无运行
     error: 异常
+  info:
+    title: 仓库信息
+    url: URL
+    description: 描述
+    descriptionPlaceholder: 暂无描述
+    homepage: 主页
+    homepagePlaceholder: 未设置主页
+    topics: 话题标签
+    topicsPlaceholder: 用逗号分隔添加话题
+    noTopics: 暂无话题
+    visibility: 可见性
+    defaultBranch: 默认分支
+    language: 语言
+    license: 许可证
+    stars: 星标
+    forks: 复刻
+    openIssues: 待处理 Issue
+    watchers: 关注者
+    createdAt: 创建时间
+    updatedAt: 更新时间
+    pushedAt: 最近推送
+    edit: 编辑信息
+    save: 保存
+    cancel: 取消
+    saving: 保存中
+    saveSuccess: 更改已保存
+    saveFailed: 保存失败
 errors:
   loadAccountsFailed: 加载 GitHub 账号失败。
   startDeviceFlowFailed: 启动 GitHub Device Flow 失败。

@@ -1,10 +1,12 @@
-import { ArrowUpRight, CheckCircle2, GitFork, LoaderCircle, LockKeyhole, Radio, TriangleAlert, Workflow } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowUpRight, CheckCircle2, GitFork, Info, LoaderCircle, LockKeyhole, Radio, TriangleAlert, Workflow } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAppSelector } from '@/store';
 import type { GitHubActionRunState, GitHubRepo } from '../../../../shared/api';
+import RepoInfoSheet from './RepoInfoSheet';
 
 interface RepoCardProps {
   repo: GitHubRepo;
@@ -14,6 +16,7 @@ type RepoActionDisplayState = GitHubActionRunState | 'loading';
 
 function RepoCard({ repo }: RepoCardProps) {
   const { t, i18n } = useTranslation('github');
+  const [showInfo, setShowInfo] = useState(false);
   const summary = useAppSelector((state) => state.githubActions.summariesByRepoFullName[repo.fullName]);
   const actionsFetchStatus = useAppSelector((state) => state.githubActions.fetchStatus);
 
@@ -113,6 +116,9 @@ function RepoCard({ repo }: RepoCardProps) {
       </dl>
 
       <div className="flex flex-wrap gap-2 lg:flex-col lg:items-stretch">
+        <Button variant="outline" size="sm" onClick={() => setShowInfo(true)}>
+          <Info /> {t('repoCard.info.title')}
+        </Button>
         <Button variant="outline" size="sm" onClick={() => void window.hagihub.openExternal(repo.htmlUrl)}>
           <ArrowUpRight /> {t('repoCard.openRepo')}
         </Button>
@@ -120,6 +126,14 @@ function RepoCard({ repo }: RepoCardProps) {
           <ArrowUpRight /> {primaryLabel}
         </Button>
       </div>
+
+      {showInfo ? (
+        <RepoInfoSheet
+          owner={repo.owner.login}
+          repo={repo.name}
+          onClose={() => setShowInfo(false)}
+        />
+      ) : null}
     </div>
   );
 }

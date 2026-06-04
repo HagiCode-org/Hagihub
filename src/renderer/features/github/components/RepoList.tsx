@@ -12,12 +12,10 @@ interface RepoListProps {
   activeAccountId: string;
 }
 
-const RECENT_REPO_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-
 function RepoList({ activeAccountId }: RepoListProps) {
   const { t } = useTranslation('github');
   const dispatch = useAppDispatch();
-  const { groupedRepos, orgs, personalRepos, activeOrgFilter, fetchStatus, error, repos } = useAppSelector((state) => state.githubRepos);
+  const { groupedRepos, personalRepos, activeOrgFilter, fetchStatus, error, repos } = useAppSelector((state) => state.githubRepos);
   const {
     summariesByRepoFullName,
     fetchStatus: actionsFetchStatus,
@@ -41,11 +39,6 @@ function RepoList({ activeAccountId }: RepoListProps) {
   }, [activeOrgFilter, deferredGroups, deferredPersonalRepos]);
 
   const actionSummaries = Object.values(summariesByRepoFullName).filter((summary) => summary !== undefined);
-  const privateRepoCount = repos.filter((repo) => repo.isPrivate).length;
-  const recentRepoCount = repos.filter((repo) => Date.now() - Date.parse(repo.updatedAt) <= RECENT_REPO_WINDOW_MS).length;
-  const runningCount = actionSummaries.filter((summary) => summary.state === 'running').length;
-  const failedCount = actionSummaries.filter((summary) => summary.state === 'failed').length + actionsFailedCount;
-  const passedCount = actionSummaries.filter((summary) => summary.state === 'passed').length;
 
   const refresh = async () => {
     await dispatch(fetchRepos(activeAccountId));
@@ -100,35 +93,7 @@ function RepoList({ activeAccountId }: RepoListProps) {
           </Button>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-          <div className="panel-muted p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('repoList.metrics.repos')}</p>
-            <p className="mt-2 font-mono text-2xl text-foreground">{repos.length}</p>
-          </div>
-          <div className="panel-muted p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('repoList.metrics.organizations')}</p>
-            <p className="mt-2 font-mono text-2xl text-foreground">{orgs.length}</p>
-          </div>
-          <div className="panel-muted p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('repoList.metrics.running')}</p>
-            <p className="mt-2 font-mono text-2xl text-foreground">{runningCount}</p>
-          </div>
-          <div className="panel-muted p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('repoList.metrics.failed')}</p>
-            <p className="mt-2 font-mono text-2xl text-foreground">{failedCount}</p>
-          </div>
-          <div className="panel-muted p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('repoList.metrics.passed')}</p>
-            <p className="mt-2 font-mono text-2xl text-foreground">{passedCount}</p>
-          </div>
-          <div className="panel-muted p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('repoList.metrics.private')}</p>
-            <p className="mt-2 font-mono text-2xl text-foreground">{privateRepoCount}</p>
-          </div>
-        </div>
-
         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          <span className="status-chip">{t('repoList.metrics.updatedCount', { count: recentRepoCount })}</span>
           {actionsFetchStatus === 'loading' ? <span>{t('repoList.actionsLoading')}</span> : null}
           {actionsFetchStatus === 'succeeded' ? <span>{t('repoList.actionsLoaded', { count: actionSummaries.length })}</span> : null}
           {actionsFailedCount > 0 ? <span>{t('repoList.actionsPartialFailure', { count: actionsFailedCount })}</span> : null}

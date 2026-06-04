@@ -51,6 +51,41 @@ export interface GitHubRepo {
   owner: GitHubRepoOwner;
 }
 
+export interface GitHubRepoDetails {
+  id: number;
+  name: string;
+  fullName: string;
+  description: string | null;
+  htmlUrl: string;
+  homepage: string | null;
+  topics: string[];
+  visibility: 'public' | 'private' | 'internal';
+  defaultBranch: string;
+  language: string | null;
+  stargazersCount: number;
+  forksCount: number;
+  openIssuesCount: number;
+  watchersCount: number;
+  license: { name: string; spdxId: string | null } | null;
+  createdAt: string;
+  updatedAt: string;
+  pushedAt: string | null;
+}
+
+export interface RepoDetailsResult {
+  details: GitHubRepoDetails;
+}
+
+export interface UpdateRepoPayload {
+  description?: string;
+  homepage?: string;
+  topics?: string[];
+}
+
+export interface UpdateRepoResult {
+  details: GitHubRepoDetails;
+}
+
 export type GitHubActionRunState = 'running' | 'failed' | 'passed' | 'empty' | 'error';
 
 export interface GitHubWorkflowRun {

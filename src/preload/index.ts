@@ -7,7 +7,10 @@ import type {
   GitHubActionsResult,
   GitHubAccountsResult,
   OrgsResult,
+  RepoDetailsResult,
   ReposResult,
+  UpdateRepoPayload,
+  UpdateRepoResult,
 } from '../shared/api.js';
 
 const deviceFlowEventChannel = 'hagihub:device-flow-update';
@@ -29,6 +32,8 @@ const hagihubApi = {
   fetchGitHubRepos: (accountId: string) => ipcRenderer.invoke('hagihub:fetch-github-repos', accountId) as Promise<ReposResult>,
   fetchGitHubOrgs: (accountId: string) => ipcRenderer.invoke('hagihub:fetch-github-orgs', accountId) as Promise<OrgsResult>,
   fetchGitHubActions: (accountId: string, repoFullNames: string[]) => ipcRenderer.invoke('hagihub:fetch-github-actions', accountId, repoFullNames) as Promise<GitHubActionsResult>,
+  fetchRepoDetails: (accountId: string, owner: string, repo: string) => ipcRenderer.invoke('hagihub:fetch-repo-details', accountId, owner, repo) as Promise<RepoDetailsResult>,
+  updateRepo: (accountId: string, owner: string, repo: string, updates: UpdateRepoPayload) => ipcRenderer.invoke('hagihub:update-repo', accountId, owner, repo, updates) as Promise<UpdateRepoResult>,
 };
 
 contextBridge.exposeInMainWorld('hagihub', hagihubApi);
