@@ -14,9 +14,11 @@ import {
   ShieldCheck,
   TerminalSquare,
   Users,
+  Workflow,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { ActionManagementPage } from '@/features/action-management';
 import { AccountManagementPage, AddAccountDialog, EmptyState, RepoList } from '@/features/github';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -40,6 +42,7 @@ const sectionDefinitions: Array<{
 }> = [
   { id: 'overview', icon: Layers3 },
   { id: 'repos', icon: FolderGit2 },
+  { id: 'actions', icon: Workflow },
   { id: 'accounts', icon: Users },
   { id: 'settings', icon: Settings2 },
 ];
@@ -98,6 +101,7 @@ function HubShell() {
   }, [accountsFetchStatus, dispatch]);
 
   const isReposSection = activeSection === 'repos';
+  const isActionsSection = activeSection === 'actions';
   const isAccountsSection = activeSection === 'accounts';
 
   useEffect(() => {
@@ -415,6 +419,17 @@ function HubShell() {
     <AccountManagementPage onAddAccount={openAddAccountDialog} />
   );
 
+  const renderActionsContent = () => (
+    <ActionManagementPage
+      onAddAccount={openAddAccountDialog}
+      onOpenAccounts={() => {
+        startTransition(() => {
+          dispatch(setActiveSection('accounts'));
+        });
+      }}
+    />
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="relative flex h-screen flex-col overflow-hidden">
@@ -554,6 +569,7 @@ function HubShell() {
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 lg:px-5 lg:py-5">
               {activeSection === 'overview' ? renderOverviewContent() : null}
               {isReposSection ? renderReposContent() : null}
+              {isActionsSection ? renderActionsContent() : null}
               {isAccountsSection ? renderAccountsContent() : null}
               {activeSection === 'settings' ? renderSettingsContent() : null}
             </div>
