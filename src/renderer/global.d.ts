@@ -10,6 +10,7 @@ import type {
   ReposResult,
   UpdateRepoPayload,
   UpdateRepoResult,
+  UpdateRepoTopicsResult,
 } from '../shared/api';
 
 interface HagihubApi {
@@ -25,6 +26,7 @@ interface HagihubApi {
   fetchGitHubActions: (accountId: string, repoFullNames: string[]) => Promise<GitHubActionsResult>;
   fetchRepoDetails: (accountId: string, owner: string, repo: string) => Promise<RepoDetailsResult>;
   updateRepo: (accountId: string, owner: string, repo: string, updates: UpdateRepoPayload) => Promise<UpdateRepoResult>;
+  updateRepoTopics: (accountId: string, owner: string, repo: string, names: string[]) => Promise<UpdateRepoTopicsResult>;
 }
 
 declare global {

@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fetchActionsSummaries, fetchOrgs, fetchRepoDetails, fetchRepos, updateRepo } from './github-api.js';
+import { fetchActionsSummaries, fetchOrgs, fetchRepoDetails, fetchRepos, updateRepo, updateRepoTopics } from './github-api.js';
 import { GitHubAuthManager, githubDeviceFlowEventChannel } from './github-auth.js';
 import type {
   AppInfo,
@@ -13,6 +13,7 @@ import type {
   ReposResult,
   UpdateRepoPayload,
   UpdateRepoResult,
+  UpdateRepoTopicsResult,
 } from '../shared/api.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -176,6 +177,17 @@ function registerIpcHandlers(): void {
 
       const token = await gitHubAuthManager.getDecryptedToken(accountId);
       return { details: await updateRepo(token, owner, repo, updates) };
+    },
+  );
+  ipcMain.handle(
+    'hagihub:update-repo-topics',
+    async (_event, accountId: string, owner: string, repo: string, names: string[]): Promise<UpdateRepoTopicsResult> => {
+      if (!gitHubAuthManager) {
+        throw new Error('GitHub auth manager is unavailable.');
+      }
+
+      const token = await gitHubAuthManager.getDecryptedToken(accountId);
+      return await updateRepoTopics(token, owner, repo, names);
     },
   );
 }
