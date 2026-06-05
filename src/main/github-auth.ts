@@ -1,8 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { app, safeStorage } from 'electron';
+import { safeStorage } from 'electron';
 import { fetchUser } from './github-api.js';
+import { accountsStore, type GitHubAccountsData } from './storage/stores.js';
 import type {
   DeviceFlowPollResult,
   DeviceFlowStartResult,
@@ -16,16 +15,6 @@ const DEVICE_CODE_URL = 'https://github.com/login/device/code';
 const ACCESS_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const DEFAULT_GITHUB_CLIENT_ID = 'Ov23lifl4lJU94egKfAz';
 const DEFAULT_GITHUB_OAUTH_SCOPE = 'repo,read:org';
-
-interface GitHubAccountsStore {
-  accounts: GitHubAccount[];
-  activeAccountId: string | null;
-}
-
-interface ReadStoreResult {
-  store: GitHubAccountsStore;
-  recoveredCorruptedStorage: boolean;
-}
 
 interface ActiveDeviceFlow {
   flowId: string;
@@ -74,17 +63,6 @@ function getGitHubOAuthScope(): string {
   return DEFAULT_GITHUB_OAUTH_SCOPE;
 }
 
-function getStorageFilePath(): string {
-  return path.join(app.getPath('userData'), 'github-accounts.json');
-}
-
-function createEmptyStore(): GitHubAccountsStore {
-  return {
-    accounts: [],
-    activeAccountId: null,
-  };
-}
-
 function summarizeAccount(account: GitHubAccount): GitHubAccountSummary {
   return {
     id: account.id,
@@ -94,59 +72,6 @@ function summarizeAccount(account: GitHubAccount): GitHubAccountSummary {
     name: account.name ?? null,
     storageMode: account.storageMode,
   };
-}
-
-function normalizeAccount(value: unknown): GitHubAccount | null {
-  if (typeof value !== 'object' || value === null) {
-    return null;
-  }
-
-  const candidate = value as Record<string, unknown>;
-  if (
-    typeof candidate.id !== 'string'
-    || typeof candidate.login !== 'string'
-    || typeof candidate.avatarUrl !== 'string'
-    || typeof candidate.encryptedToken !== 'string'
-    || typeof candidate.addedAt !== 'string'
-  ) {
-    return null;
-  }
-
-  const storageMode = candidate.storageMode === 'plaintext' ? 'plaintext' : 'encrypted';
-
-  return {
-    id: candidate.id,
-    login: candidate.login,
-    avatarUrl: candidate.avatarUrl,
-    encryptedToken: candidate.encryptedToken,
-    addedAt: candidate.addedAt,
-    name: typeof candidate.name === 'string' ? candidate.name : null,
-    storageMode,
-  };
-}
-
-function normalizeStore(value: unknown): GitHubAccountsStore {
-  if (typeof value !== 'object' || value === null) {
-    return createEmptyStore();
-  }
-
-  const candidate = value as Record<string, unknown>;
-  const accounts = Array.isArray(candidate.accounts)
-    ? candidate.accounts.map(normalizeAccount).filter((account): account is GitHubAccount => account !== null)
-    : [];
-  const activeAccountId = typeof candidate.activeAccountId === 'string'
-    && accounts.some((account) => account.id === candidate.activeAccountId)
-    ? candidate.activeAccountId
-    : accounts[0]?.id ?? null;
-
-  return {
-    accounts,
-    activeAccountId,
-  };
-}
-
-async function ensureStorageDirectory(): Promise<void> {
-  await fs.mkdir(path.dirname(getStorageFilePath()), { recursive: true });
 }
 
 function resolveStorageMode(): GitHubTokenStorageMode {
@@ -172,49 +97,7 @@ function decryptToken(encryptedToken: string): string {
   return safeStorage.decryptString(Buffer.from(encryptedToken, 'base64'));
 }
 
-async function writeStore(store: GitHubAccountsStore): Promise<void> {
-  await ensureStorageDirectory();
-  await fs.writeFile(getStorageFilePath(), `${JSON.stringify(store, null, 2)}\n`, 'utf8');
-}
-
-async function backupCorruptedStoreFile(): Promise<void> {
-  const storageFilePath = getStorageFilePath();
-  const backupPath = `${storageFilePath}.${Date.now()}.bak`;
-  await fs.rename(storageFilePath, backupPath);
-}
-
-async function readStore(): Promise<ReadStoreResult> {
-  const storageFilePath = getStorageFilePath();
-
-  try {
-    const raw = await fs.readFile(storageFilePath, 'utf8');
-    const parsed = JSON.parse(raw) as unknown;
-    return {
-      store: normalizeStore(parsed),
-      recoveredCorruptedStorage: false,
-    };
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') {
-      return {
-        store: createEmptyStore(),
-        recoveredCorruptedStorage: false,
-      };
-    }
-
-    await ensureStorageDirectory();
-    await backupCorruptedStoreFile().catch(() => undefined);
-
-    const emptyStore = createEmptyStore();
-    await writeStore(emptyStore);
-
-    return {
-      store: emptyStore,
-      recoveredCorruptedStorage: true,
-    };
-  }
-}
-
-function mapAccountsResult(store: GitHubAccountsStore, recoveredCorruptedStorage = false): GitHubAccountsResult {
+function mapAccountsResult(store: GitHubAccountsData, recoveredCorruptedStorage = false): GitHubAccountsResult {
   return {
     accounts: store.accounts.map(summarizeAccount),
     activeAccountId: store.activeAccountId,
@@ -356,42 +239,42 @@ export class GitHubAuthManager {
   }
 
   async removeAccount(accountId: string): Promise<GitHubAccountsResult> {
-    const { store, recoveredCorruptedStorage } = await readStore();
+    const { data: store, source } = await accountsStore.read();
     const accounts = store.accounts.filter((account) => account.id !== accountId);
     const activeAccountId = store.activeAccountId === accountId ? accounts[0]?.id ?? null : store.activeAccountId;
-    const nextStore = { accounts, activeAccountId };
+    const nextStore: GitHubAccountsData = { accounts, activeAccountId };
 
-    await writeStore(nextStore);
+    await accountsStore.write(nextStore);
     console.info('[github-auth] GitHub account removed', { accountId, activeAccountId });
 
-    return mapAccountsResult(nextStore, recoveredCorruptedStorage);
+    return mapAccountsResult(nextStore, source === 'default');
   }
 
   async getAccounts(): Promise<GitHubAccountsResult> {
-    const { store, recoveredCorruptedStorage } = await readStore();
-    return mapAccountsResult(store, recoveredCorruptedStorage);
+    const { data: store, source } = await accountsStore.read();
+    return mapAccountsResult(store, source === 'default');
   }
 
   async switchAccount(accountId: string): Promise<GitHubAccountsResult> {
-    const { store, recoveredCorruptedStorage } = await readStore();
+    const { data: store, source } = await accountsStore.read();
 
     if (!store.accounts.some((account) => account.id === accountId)) {
       throw new Error('GitHub account not found.');
     }
 
-    const nextStore = {
+    const nextStore: GitHubAccountsData = {
       ...store,
       activeAccountId: accountId,
     };
 
-    await writeStore(nextStore);
+    await accountsStore.write(nextStore);
     console.info('[github-auth] Active GitHub account switched', { accountId });
 
-    return mapAccountsResult(nextStore, recoveredCorruptedStorage);
+    return mapAccountsResult(nextStore, source === 'default');
   }
 
   async getDecryptedToken(accountId: string): Promise<string> {
-    const { store } = await readStore();
+    const { data: store } = await accountsStore.read();
     const account = store.accounts.find((candidate) => candidate.id === accountId);
 
     if (!account) {
@@ -416,7 +299,7 @@ export class GitHubAuthManager {
 
   private async saveAccountFromToken(token: string): Promise<GitHubAccountSummary> {
     const user = await fetchUser(token);
-    const { store } = await readStore();
+    const { data: store } = await accountsStore.read();
     const existingAccount = store.accounts.find((account) => account.login === user.login);
     const encrypted = encryptToken(token);
     const account: GitHubAccount = {
@@ -433,12 +316,12 @@ export class GitHubAuthManager {
       ? store.accounts.map((candidate) => (candidate.id === existingAccount.id ? account : candidate))
       : [account, ...store.accounts];
 
-    const nextStore: GitHubAccountsStore = {
+    const nextStore: GitHubAccountsData = {
       accounts,
       activeAccountId: account.id,
     };
 
-    await writeStore(nextStore);
+    await accountsStore.write(nextStore);
     console.info('[github-auth] GitHub account stored', {
       login: account.login,
       accountId: account.id,

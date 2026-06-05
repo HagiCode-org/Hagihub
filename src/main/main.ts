@@ -3,6 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fetchActionsSummaries, fetchOrgs, fetchRepoDetails, fetchRepos, updateRepo, updateRepoTopics } from './github-api.js';
 import { GitHubAuthManager, githubDeviceFlowEventChannel } from './github-auth.js';
+import { bootstrapStorage } from './storage/index.js';
+import './storage/stores.js';
 import type {
   AppInfo,
   ExternalOpenResult,
@@ -250,6 +252,7 @@ if (!gotSingleInstanceLock) {
   });
 
   app.whenReady().then(async () => {
+    await bootstrapStorage();
     registerIpcHandlers();
     await createMainWindow();
 
