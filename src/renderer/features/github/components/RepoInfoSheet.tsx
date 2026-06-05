@@ -106,6 +106,7 @@ function RepoInfoSheet({ owner, repo, onClose }: RepoInfoSheetProps) {
     const trimmedDesc = editDescription.trim();
     const trimmedHomepage = editHomepage.trim();
     const parsedTopics = editTopics.split(',').map((t) => t.trim()).filter(Boolean);
+    const topicsChanged = JSON.stringify(parsedTopics) !== JSON.stringify(details.topics);
 
     if (trimmedDesc !== (details.description ?? '')) {
       updates.description = trimmedDesc;
@@ -113,13 +114,18 @@ function RepoInfoSheet({ owner, repo, onClose }: RepoInfoSheetProps) {
     if (trimmedHomepage !== (details.homepage ?? '')) {
       updates.homepage = trimmedHomepage;
     }
-    if (JSON.stringify(parsedTopics) !== JSON.stringify(details.topics)) {
-      updates.topics = parsedTopics;
-    }
 
     try {
-      const result = await window.hagihub.updateRepo(activeAccountId, owner, repo, updates);
-      setDetails(result.details);
+      if (Object.keys(updates).length > 0) {
+        const result = await window.hagihub.updateRepo(activeAccountId, owner, repo, updates);
+        setDetails(result.details);
+      }
+
+      if (topicsChanged) {
+        const topicsResult = await window.hagihub.updateRepoTopics(activeAccountId, owner, repo, parsedTopics);
+        setDetails((prev) => prev ? { ...prev, topics: topicsResult.names } : prev);
+      }
+
       setIsEditing(false);
       setSaveMessage(t('repoCard.info.saveSuccess'));
     } catch (err) {
