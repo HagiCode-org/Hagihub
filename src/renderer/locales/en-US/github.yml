@@ -46,6 +46,19 @@ accountSelector:
   encryptedStorage: Encrypted storage
   plaintextStorageShort: Plaintext fallback
   plaintextStorage: Token storage fell back to plaintext encryption because OS keychain encryption is unavailable on this device.
+accountManagement:
+  badge: Account management
+  title: Account management
+  description: Manage all connected GitHub accounts, add new identities, and maintain credentials in one place.
+  migrationHint: Account management has moved to a first-level navigation section. You can now access it directly from the sidebar without entering Workspace.
+  emptyTitle: No accounts yet
+  emptyDescription: Add a GitHub account to get started with repository browsing and workflow monitoring.
+  hint: Account management handles identity and credential maintenance. Each feature uses accounts within its own context.
+workspaceAccountEntry:
+  noAccounts: No GitHub accounts connected. Add one to start browsing repositories.
+  selectAccount: Select an account to browse repositories.
+  manageAccounts: Manage accounts
+  summary: '{{count}} account(s) connected. Manage accounts for detailed maintenance.'
 deviceFlow:
   title: Add GitHub account
   description: Finish the GitHub authorization in your browser. Hagihub keeps polling in the main process until GitHub confirms the login.

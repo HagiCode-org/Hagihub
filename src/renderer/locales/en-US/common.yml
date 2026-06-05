@@ -10,6 +10,9 @@ navigation:
     workspace:
       label: Workspace
       description: Multi-account GitHub access and repository browsing
+    accounts:
+      label: Accounts
+      description: Account management and credential maintenance
     settings:
       label: Settings
       description: Desktop configuration and debugging entry points

@@ -46,6 +46,19 @@ accountSelector:
   encryptedStorage: 已加密存储
   plaintextStorageShort: 明文退化存储
   plaintextStorage: 当前设备缺少系统密钥环能力，令牌已退化为明文加密存储模式。
+accountManagement:
+  badge: 账号管理
+  title: 账号管理
+  description: 在这里统一管理所有已连接的 GitHub 账号、添加新身份并维护凭据。
+  migrationHint: 账号管理已迁移到一级导航入口，现在可以直接从侧边栏进入，无需先进入工作区。
+  emptyTitle: 暂无账号
+  emptyDescription: 添加一个 GitHub 账号，即可开始浏览仓库和查看工作流。
+  hint: 账号管理负责身份与凭据维护，各功能在自身上下文中使用账号。
+workspaceAccountEntry:
+  noAccounts: 尚未连接 GitHub 账号，添加一个即可开始浏览仓库。
+  selectAccount: 选择一个账号以浏览仓库。
+  manageAccounts: 管理账号
+  summary: 已连接 {{count}} 个账号。如需详细维护，请前往账号管理。
 deviceFlow:
   title: 添加 GitHub 账号
   description: 请在浏览器中完成 GitHub 授权。Hagihub 会在主进程中持续轮询，直到 GitHub 确认登录成功。

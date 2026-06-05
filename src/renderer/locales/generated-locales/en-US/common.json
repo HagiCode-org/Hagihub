@@ -8,38 +8,50 @@
   "navigation": {
     "sections": {
       "overview": {
-        "label": "Overview"
+        "label": "Overview",
+        "description": "Foundation and runtime status"
       },
       "workspace": {
-        "label": "Workspace"
+        "label": "Workspace",
+        "description": "Multi-account GitHub access and repository browsing"
+      },
+      "accounts": {
+        "label": "Accounts",
+        "description": "Account management and credential maintenance"
       },
       "settings": {
-        "label": "Settings"
+        "label": "Settings",
+        "description": "Desktop configuration and debugging entry points"
       }
     }
   },
   "shell": {
-    "foundationBadge": "Foundation",
+    "foundationBadge": "Hagihub Foundation",
     "title": "HagiCode Hub",
+    "description": "A desktop shell for the next phase of Hagihub development, with UI primitives, state management, and Electron bridge wiring already in place.",
     "chromeBadge": "Local shell",
     "navigationLabel": "Workspaces",
+    "navigationDescription": "Move between foundation, repository workflow, and future settings surfaces without leaving the same desktop shell.",
     "activeSectionLabel": "Active lane",
-    "runtimeSnapshot": "Runtime",
+    "runtimeSnapshot": "Runtime snapshot",
     "loading": "Loading",
     "loadingRuntime": "Loading runtime",
     "runtimeUnavailable": "Runtime unavailable",
     "runtimeConnected": "Runtime connected",
-    "prepareTitle": "Hagihub application shell",
+    "prepareTitle": "Prepare Hagihub for the next phase of application development.",
+    "prepareDescription": "The renderer is no longer a single demo page. It now behaves as an application shell with reusable UI, centralized state, theme tokens, and Electron data access.",
     "openRepository": "Open repository",
-    "refreshRuntime": "Refresh",
+    "refreshRuntime": "Refresh runtime info",
     "rendererStackLabel": "Renderer stack",
     "rendererStackValue": "React 19 + Redux Toolkit + shadcn",
+    "rendererStackDescription": "Core state, component, and build foundations are now connected, so feature work can continue on top of them directly.",
     "appModeLabel": "App mode",
-    "appModePackaged": "Packaged",
-    "appModeDevelopment": "Development",
+    "appModePackaged": "Packaged build",
+    "appModeDevelopment": "Development shell",
     "electronLabel": "Electron",
     "environmentSnapshotTitle": "Environment snapshot",
-    "suggestedNextSteps": "Next steps",
+    "environmentSnapshotDescription": "Injected through the preload API and managed centrally by Redux.",
+    "suggestedNextSteps": "Suggested next steps",
     "foundationModulesLabel": "Foundation modules",
     "info": {
       "channel": "Channel",
@@ -54,32 +66,59 @@
       "production": "Production"
     },
     "foundationModules": [
-      "React 19 renderer with strict TypeScript",
-      "Redux Toolkit store with typed hooks",
-      "shadcn component registry and Tailwind",
-      "@/ import aliases for module growth"
+      "React 19 renderer entry with strict TypeScript setup",
+      "Redux Toolkit store with typed hooks and async preload bridge state",
+      "shadcn-compatible component registry and Tailwind foundation",
+      "Renderer aliasing with @/ imports for scalable module growth"
     ],
     "roadmap": {
       "overview": [
-        { "title": "Foundation ready" },
-        { "title": "Electron bridge online" },
-        { "title": "UI system ready" }
+        {
+          "title": "Foundation ready",
+          "detail": "Dependencies, folder layout, and state management have moved beyond a single page demo and into an extensible app shell."
+        },
+        {
+          "title": "Electron bridge online",
+          "detail": "App info from the main process is now fetched through a Redux thunk."
+        },
+        {
+          "title": "UI system ready",
+          "detail": "New pages can build directly on top of shadcn-style components and shared design tokens."
+        }
       ],
       "workspace": [
-        { "title": "Hub dashboard" },
-        { "title": "Feature modules" },
-        { "title": "Navigation growth" }
+        {
+          "title": "Hub dashboard",
+          "detail": "Instance lists, resource monitoring, task panels, and inbox modules can land here next."
+        },
+        {
+          "title": "Feature modules",
+          "detail": "A dedicated features directory is the next clean split for slices, components, and IPC contracts."
+        },
+        {
+          "title": "Navigation growth",
+          "detail": "The current section state already leaves room for tabs or router-based navigation later."
+        }
       ],
       "settings": [
-        { "title": "Environment controls" },
-        { "title": "State persistence" },
-        { "title": "Design system scale" }
+        {
+          "title": "Environment controls",
+          "detail": "Log levels, update channels, experimental flags, and diagnostics can be added here later."
+        },
+        {
+          "title": "State persistence",
+          "detail": "If local configuration persistence is needed, it can be added in middleware or through preload IPC."
+        },
+        {
+          "title": "Design system scale",
+          "detail": "Future forms, dialogs, and tables should continue extending the same shadcn component directory."
+        }
       ]
     },
     "nextSteps": [
-      "Split components and slices under src/renderer/features by domain.",
-      "Keep extending components.json for more shadcn components.",
-      "Switch to React Router once the app grows beyond a single shell view."
+      "Split future components, slices, and IPC actions under src/renderer/features by domain.",
+      "Keep extending components.json when more shadcn components are needed.",
+      "Switch from section state to React Router once the app grows beyond a single shell view."
     ],
     "statusBar": {
       "section": "Section",

@@ -10,6 +10,9 @@ navigation:
     workspace:
       label: 工作区
       description: 多账号 GitHub 与仓库浏览工作区
+    accounts:
+      label: 账号
+      description: 账号管理与凭据维护
     settings:
       label: 设置
       description: 桌面端配置与调试入口
