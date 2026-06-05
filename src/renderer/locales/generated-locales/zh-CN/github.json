@@ -105,6 +105,10 @@
     "actionsLoading": "正在扫描最近的 GitHub Actions 运行。",
     "actionsLoaded": "已为 {{count}} 个仓库加载工作流状态。",
     "actionsPartialFailure": "有 {{count}} 个仓库的工作流扫描失败。",
+    "searchPlaceholder": "搜索仓库名称或描述...",
+    "visibilityAll": "全部",
+    "visibilityPublic": "公开",
+    "visibilityPrivate": "私有",
     "metrics": {
       "repos": "仓库",
       "organizations": "组织",

@@ -17,6 +17,7 @@ interface FetchReposPayload {
 }
 
 export type OrgFilterValue = 'all' | 'personal' | string;
+export type VisibilityFilter = 'all' | 'public' | 'private';
 
 export interface GitHubReposState {
   orgs: GitHubOrg[];
@@ -25,6 +26,8 @@ export interface GitHubReposState {
   personalRepos: GitHubRepo[];
   activeAccountId: string | null;
   activeOrgFilter: OrgFilterValue;
+  searchQuery: string;
+  visibilityFilter: VisibilityFilter;
   fetchStatus: FetchStatus;
   error: string | null;
 }
@@ -36,6 +39,8 @@ const initialState: GitHubReposState = {
   personalRepos: [],
   activeAccountId: null,
   activeOrgFilter: 'all',
+  searchQuery: '',
+  visibilityFilter: 'all',
   fetchStatus: 'idle',
   error: null,
 };
@@ -123,11 +128,19 @@ const githubReposSlice = createSlice({
       state.personalRepos = [];
       state.activeAccountId = null;
       state.activeOrgFilter = 'all';
+      state.searchQuery = '';
+      state.visibilityFilter = 'all';
       state.fetchStatus = 'idle';
       state.error = null;
     },
     setActiveOrgFilter(state, action: PayloadAction<OrgFilterValue>) {
       state.activeOrgFilter = action.payload;
+    },
+    setSearchQuery(state, action: PayloadAction<string>) {
+      state.searchQuery = action.payload;
+    },
+    setVisibilityFilter(state, action: PayloadAction<VisibilityFilter>) {
+      state.visibilityFilter = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -139,6 +152,8 @@ const githubReposSlice = createSlice({
         state.personalRepos = [];
         state.activeAccountId = action.meta.arg;
         state.activeOrgFilter = 'all';
+        state.searchQuery = '';
+        state.visibilityFilter = 'all';
         state.fetchStatus = 'loading';
         state.error = null;
       })
@@ -160,6 +175,6 @@ const githubReposSlice = createSlice({
   },
 });
 
-export const { clearRepos, setActiveOrgFilter } = githubReposSlice.actions;
+export const { clearRepos, setActiveOrgFilter, setSearchQuery, setVisibilityFilter } = githubReposSlice.actions;
 
 export default githubReposSlice.reducer;
