@@ -10,6 +10,16 @@ import type {
 type LoadStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
 type DeviceFlowStatus = 'idle' | 'requesting' | 'polling' | 'success' | 'error';
 
+const MIGRATION_NOTICE_KEY = 'hagihub.accounts.migrationNoticeDismissed';
+
+function isMigrationNoticeDismissed(): boolean {
+  try {
+    return window.localStorage.getItem(MIGRATION_NOTICE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 export interface GitHubAccountsState {
   accounts: GitHubAccountSummary[];
   activeAccountId: string | null;
@@ -23,6 +33,7 @@ export interface GitHubAccountsState {
   latestAccount: GitHubAccountSummary | null;
   error: string | null;
   notice: string | null;
+  migrationNoticeDismissed: boolean;
 }
 
 const initialState: GitHubAccountsState = {
@@ -38,6 +49,7 @@ const initialState: GitHubAccountsState = {
   latestAccount: null,
   error: null,
   notice: null,
+  migrationNoticeDismissed: isMigrationNoticeDismissed(),
 };
 
 function toMessage(error: unknown, fallbackKey: string): string {
@@ -164,6 +176,12 @@ const githubAccountsSlice = createSlice({
     clearAccountsNotice(state) {
       state.notice = null;
     },
+    clearMigrationNotice(state) {
+      state.migrationNoticeDismissed = true;
+      try {
+        window.localStorage.setItem(MIGRATION_NOTICE_KEY, 'true');
+      } catch {}
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -235,6 +253,6 @@ const githubAccountsSlice = createSlice({
   },
 });
 
-export const { applyDeviceFlowUpdate, clearAccountsNotice, resetDeviceFlowState } = githubAccountsSlice.actions;
+export const { applyDeviceFlowUpdate, clearAccountsNotice, clearMigrationNotice, resetDeviceFlowState } = githubAccountsSlice.actions;
 
 export default githubAccountsSlice.reducer;

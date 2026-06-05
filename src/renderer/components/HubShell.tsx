@@ -15,11 +15,12 @@ import {
   ShieldCheck,
   TerminalSquare,
   TriangleAlert,
+  Users,
   Workflow,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-import { AddAccountDialog, AccountSelector, EmptyState, RepoList } from '@/features/github';
+import { AccountManagementPage, AddAccountDialog, EmptyState, RepoList, WorkspaceAccountEntry } from '@/features/github';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -46,6 +47,7 @@ const sectionDefinitions: Array<{
 }> = [
   { id: 'overview', icon: Layers3 },
   { id: 'workspace', icon: FolderGit2 },
+  { id: 'accounts', icon: Users },
   { id: 'settings', icon: Settings2 },
 ];
 
@@ -107,18 +109,24 @@ function HubShell() {
     }
   }, [accountsFetchStatus, dispatch]);
 
+  const isWorkspaceSection = activeSection === 'workspace';
+  const isAccountsSection = activeSection === 'accounts';
+
   useEffect(() => {
+    if (!isWorkspaceSection) {
+      return;
+    }
+
     if (!activeAccountId) {
       dispatch(clearRepos());
       return;
     }
 
     void dispatch(fetchRepos(activeAccountId));
-  }, [activeAccountId, dispatch]);
+  }, [activeAccountId, dispatch, isWorkspaceSection]);
 
   useEffect(() => {
-    if (!activeAccountId || reposFetchStatus !== 'succeeded' || repos.length === 0) {
-      dispatch(clearActions());
+    if (!isWorkspaceSection || !activeAccountId || reposFetchStatus !== 'succeeded' || repos.length === 0) {
       return;
     }
 
@@ -126,7 +134,7 @@ function HubShell() {
       accountId: activeAccountId,
       repoFullNames: repos.map((repo) => repo.fullName),
     }));
-  }, [activeAccountId, dispatch, repos, reposFetchStatus]);
+  }, [activeAccountId, dispatch, isWorkspaceSection, repos, reposFetchStatus]);
 
   const sections = sectionDefinitions.map((section) => ({
     ...section,
@@ -134,7 +142,6 @@ function HubShell() {
   }));
 
   const sectionMeta = sections.find((section) => section.id === activeSection) ?? sections[0];
-  const isWorkspaceSection = activeSection === 'workspace';
   const foundationModules = ensureStringArray(t('shell.foundationModules', { ns: 'common', returnObjects: true }));
   const roadmapItems = ensureRoadmapItems(t(`shell.roadmap.${activeSection}`, { ns: 'common', returnObjects: true }));
   const nextSteps = ensureStringArray(t('shell.nextSteps', { ns: 'common', returnObjects: true }));
@@ -418,13 +425,17 @@ function HubShell() {
           <EmptyState onAddAccount={openAddAccountDialog} />
         ) : (
           <>
-            <AccountSelector onAddAccount={openAddAccountDialog} />
+            <WorkspaceAccountEntry onAddAccount={openAddAccountDialog} />
             {activeAccountId ? <RepoList activeAccountId={activeAccountId} /> : null}
           </>
         )}
       </div>
     );
   };
+
+  const renderAccountsContent = () => (
+    <AccountManagementPage onAddAccount={openAddAccountDialog} />
+  );
 
   const renderInspector = () => (
     <>
@@ -761,6 +772,7 @@ function HubShell() {
               <section className="min-h-0 overflow-y-auto px-4 py-4 lg:px-5 lg:py-5">
                 {activeSection === 'overview' ? renderOverviewContent() : null}
                 {isWorkspaceSection ? renderWorkspaceContent() : null}
+                {isAccountsSection ? renderAccountsContent() : null}
                 {activeSection === 'settings' ? renderSettingsContent() : null}
               </section>
 
