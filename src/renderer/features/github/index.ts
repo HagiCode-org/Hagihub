@@ -1,3 +1,4 @@
+export { default as AccountManagementPage } from './components/AccountManagementPage';
 export { default as AccountSelector } from './components/AccountSelector';
 export { default as AddAccountDialog } from './components/AddAccountDialog';
 export { default as EmptyState } from './components/EmptyState';
@@ -6,3 +7,4 @@ export { default as RepoCard } from './components/RepoCard';
 export { default as RepoGroup } from './components/RepoGroup';
 export { default as RepoInfoSheet } from './components/RepoInfoSheet';
 export { default as RepoList } from './components/RepoList';
+export { default as WorkspaceAccountEntry } from './components/WorkspaceAccountEntry';
