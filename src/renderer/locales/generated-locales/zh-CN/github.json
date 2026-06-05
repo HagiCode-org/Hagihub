@@ -1,5 +1,5 @@
 {
-  "workspace": {
+  "repos": {
     "heroBadge": "GitHub 工作区",
     "heroTitle": "在一个桌面工作区里切换多个 GitHub 身份，并浏览所有关联仓库。",
     "heroDescription": "通过浏览器完成授权，令牌始终停留在主进程内，个人仓库和组织仓库都可以在同一工作区内切换查看。",
@@ -28,6 +28,9 @@
     "recentRunsEmpty": "当前加载的仓库没有返回工作流运行记录。",
     "noRunsCount": "{{count}} 个仓库无运行"
   },
+  "reposAccountEntry": {
+    "selectAccount": "选择一个账号以浏览仓库。"
+  },
   "emptyState": {
     "title": "还没有 GitHub 账号",
     "description": "添加一个 GitHub 账号后，就可以在 Hagihub 里查看个人仓库和组织仓库。",
@@ -35,7 +38,8 @@
     "tipTitle": "开始查看工作流之前",
     "tip1": "先添加具备仓库权限范围的 GitHub 账号。",
     "tip2": "切换当前活跃身份，加载对应的仓库集合。",
-    "tip3": "使用每一行上的 Actions 按钮，直接在浏览器中打开工作流运行列表。"
+    "tip3": "使用每一行上的 Actions 按钮，直接在浏览器中打开工作流运行列表。",
+    "addFirst": "添加一个 GitHub 账号以开始浏览仓库。"
   },
   "accountSelector": {
     "eyebrow": "账号",
@@ -54,16 +58,10 @@
     "badge": "账号管理",
     "title": "账号管理",
     "description": "在这里统一管理所有已连接的 GitHub 账号、添加新身份并维护凭据。",
-    "migrationHint": "账号管理已迁移到一级导航入口，现在可以直接从侧边栏进入，无需先进入工作区。",
+    "migrationHint": "账号管理已迁移到一级导航入口，现在可以直接从侧边栏进入。",
     "emptyTitle": "暂无账号",
     "emptyDescription": "添加一个 GitHub 账号，即可开始浏览仓库和查看工作流。",
     "hint": "账号管理负责身份与凭据维护，各功能在自身上下文中使用账号。"
-  },
-  "workspaceAccountEntry": {
-    "noAccounts": "尚未连接 GitHub 账号，添加一个即可开始浏览仓库。",
-    "selectAccount": "选择一个账号以浏览仓库。",
-    "manageAccounts": "管理账号",
-    "summary": "已连接 {{count}} 个账号。如需详细维护，请前往账号管理。"
   },
   "deviceFlow": {
     "title": "添加 GitHub 账号",

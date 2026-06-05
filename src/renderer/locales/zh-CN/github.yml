@@ -1,9 +1,31 @@
 repos:
+  heroBadge: GitHub 工作区
+  heroTitle: 在一个桌面工作区里切换多个 GitHub 身份，并浏览所有关联仓库。
+  heroDescription: 通过浏览器完成授权，令牌始终停留在主进程内，个人仓库和组织仓库都可以在同一工作区内切换查看。
+  sectionDescription: 管理 GitHub 账号、授权新身份，并按归属方浏览仓库列表。
+  toolbarHint: 在一个本地桌面壳里完成身份切换、仓库盘点和工作流入口跳转，需要查看细节时可直接进入对应的 GitHub Actions 页面。
   addAccount: 添加账号
   refreshRepos: 刷新仓库
+  actionsReady: Actions 入口已就绪
+  actionsScanning: 正在扫描工作流
+  actionsUnavailable: 工作流扫描不可用
+  actionsSynced: 工作流状态已同步
+  actionsHintTitle: Actions 侧栏
+  actionsHint: Hagihub 现在会为当前加载的仓库扫描最新一次工作流运行，并把最近的运行记录固定展示在右侧检查栏中。
+  actionsHintLoading: Hagihub 仍在扫描仓库工作流，GitHub 返回结果后会在这里显示最近运行记录。
+  actionsHintPartial: 有 {{count}} 个仓库的工作流数据未能成功加载。
   loadingAccounts: 正在加载 GitHub 账号
   loadAccountsFailedTitle: 无法恢复 GitHub 账号数据。
   retry: 重试
+  accountCount: '{{count}} 个账号'
+  orgCount: '{{count}} 个组织'
+  repoCount: '{{count}} 个仓库'
+  runningCount: '{{count}} 个运行中'
+  failedCount: '{{count}} 个失败'
+  passedCount: '{{count}} 个通过'
+  recentRunsTitle: 最近运行
+  recentRunsEmpty: 当前加载的仓库没有返回工作流运行记录。
+  noRunsCount: '{{count}} 个仓库无运行'
 reposAccountEntry:
   selectAccount: 选择一个账号以浏览仓库。
 emptyState:
@@ -58,7 +80,10 @@ repoList:
   eyebrow: 仓库
   title: 仓库清单
   description: Hagihub 先拉取组织列表，再按归属方把仓库统一分组展示。
+  actionsTitle: 工作流入口
+  actionsDescription: 在一个列表里查看仓库归属、活跃度和可见性，再直接跳到对应的 GitHub Actions 页面，无需离开桌面壳。
   loading: 正在加载仓库
+  loadingHint: Hagihub 会等所有 GitHub 分页返回后再一次性渲染列表。
   loadFailed: 仓库加载失败
   retry: 重新加载
   emptyTitle: 暂无仓库
@@ -67,9 +92,19 @@ repoList:
   personalRepos: 个人仓库
   personalDescription: 当前活跃账号直接拥有，或未匹配到已加载组织的仓库。
   organizationRepos: 当前组织名下的仓库分组。
+  actionsLoading: 正在扫描最近的 GitHub Actions 运行。
+  actionsLoaded: 已为 {{count}} 个仓库加载工作流状态。
+  actionsPartialFailure: 有 {{count}} 个仓库的工作流扫描失败。
+  searchPlaceholder: 搜索仓库名称或描述...
+  visibilityAll: 全部
+  visibilityPublic: 公开
+  visibilityPrivate: 私有
   metrics:
     repos: 仓库
     organizations: 组织
+    running: 运行中
+    failed: 失败
+    passed: 通过
     private: 私有
     updated: 7 天内更新
     updatedCount: '{{count}} 个仓库在 7 天内更新'
@@ -79,9 +114,24 @@ repoCard:
   fork: Fork
   owner: 归属
   updated: 更新
+  actions: 工作流
+  lastRun: 最近运行
+  actionsScanning: 正在扫描工作流状态
+  actionsUnavailable: 无法获取工作流状态
+  noRuns: 暂无工作流运行
+  triggeredBy: '事件：{{event}}'
+  openLatestRun: 最近运行
+  openRepo: 仓库
+  openActions: Actions
   noDescription: 暂无仓库描述。
   updatedAt: 更新于 {{date}}
-  openRepo: 仓库
+  state:
+    loading: 扫描中
+    running: 运行中
+    passed: 已通过
+    failed: 失败
+    empty: 无运行
+    error: 异常
   info:
     title: 仓库信息
     url: URL
@@ -120,3 +170,4 @@ errors:
   storageReset: 本地 GitHub 账号存储文件已损坏，应用已自动重置并备份原文件。
   openBrowserFailed: Hagihub 无法打开 GitHub 授权页面。
   orgsPartialFailed: 组织列表加载失败，但个人仓库仍然可用。
+  fetchActionsFailed: 加载 GitHub Actions 工作流数据失败。

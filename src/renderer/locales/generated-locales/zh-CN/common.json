@@ -11,9 +11,9 @@
         "label": "概览",
         "description": "基础设施与运行状态"
       },
-      "workspace": {
-        "label": "工作区",
-        "description": "多账号 GitHub 与仓库浏览工作区"
+      "repos": {
+        "label": "仓库",
+        "description": "浏览和管理 GitHub 仓库"
       },
       "accounts": {
         "label": "账号",
@@ -30,8 +30,8 @@
     "title": "HagiCode Hub",
     "description": "面向后续 Hagihub 开发的桌面端基础壳，已经接入 UI 基础组件、状态管理和 Electron 数据桥接。",
     "chromeBadge": "本地桌面壳",
-    "navigationLabel": "工作区",
-    "navigationDescription": "在同一个桌面壳里切换基础层、仓库工作流和后续设置等表面，不再回到展示页结构。",
+    "navigationLabel": "仓库",
+    "navigationDescription": "浏览和管理 GitHub 仓库信息。",
     "activeSectionLabel": "当前通道",
     "runtimeSnapshot": "运行时快照",
     "loading": "加载中",
@@ -86,7 +86,7 @@
           "detail": "后续新增页面时可以直接基于 shadcn 风格组件和共享设计 token 扩展。"
         }
       ],
-      "workspace": [
+      "repos": [
         {
           "title": "Hub 面板",
           "detail": "实例列表、资源监控、任务面板和消息中心可以继续在这里落位。"

@@ -1,5 +1,5 @@
 {
-  "workspace": {
+  "repos": {
     "heroBadge": "GitHub workspace",
     "heroTitle": "Switch between GitHub identities and browse every repository in one desktop workspace.",
     "heroDescription": "Authorize in your browser, keep tokens confined to the main process, and move across personal and organization repositories without leaving the shell.",
@@ -28,6 +28,9 @@
     "recentRunsEmpty": "No workflow runs were returned for the currently loaded repositories.",
     "noRunsCount": "{{count}} repos with no runs"
   },
+  "reposAccountEntry": {
+    "selectAccount": "Select an account to browse repositories."
+  },
   "emptyState": {
     "title": "No GitHub accounts yet",
     "description": "Add a GitHub account to unlock your personal and organization repositories inside Hagihub.",
@@ -35,7 +38,8 @@
     "tipTitle": "Before you inspect workflows",
     "tip1": "Add an account with repository scope.",
     "tip2": "Switch the active identity to load the right repository set.",
-    "tip3": "Use the Actions button on each row to open workflow runs in the browser."
+    "tip3": "Use the Actions button on each row to open workflow runs in the browser.",
+    "addFirst": "Add a GitHub account to start browsing repositories."
   },
   "accountSelector": {
     "eyebrow": "Accounts",
@@ -54,16 +58,10 @@
     "badge": "Account management",
     "title": "Account management",
     "description": "Manage all connected GitHub accounts, add new identities, and maintain credentials in one place.",
-    "migrationHint": "Account management has moved to a first-level navigation section. You can now access it directly from the sidebar without entering Workspace.",
+    "migrationHint": "Account management has moved to a first-level navigation section. You can now access it directly from the sidebar.",
     "emptyTitle": "No accounts yet",
     "emptyDescription": "Add a GitHub account to get started with repository browsing and workflow monitoring.",
     "hint": "Account management handles identity and credential maintenance. Each feature uses accounts within its own context."
-  },
-  "workspaceAccountEntry": {
-    "noAccounts": "No GitHub accounts connected. Add one to start browsing repositories.",
-    "selectAccount": "Select an account to browse repositories.",
-    "manageAccounts": "Manage accounts",
-    "summary": "{{count}} account(s) connected. Manage accounts for detailed maintenance."
   },
   "deviceFlow": {
     "title": "Add GitHub account",
