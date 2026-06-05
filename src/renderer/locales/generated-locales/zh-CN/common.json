@@ -15,6 +15,10 @@
         "label": "仓库",
         "description": "浏览和管理 GitHub 仓库"
       },
+      "actions": {
+        "label": "Action 管理",
+        "description": "搜索、固定、刷新并手动运行 GitHub 工作流"
+      },
       "accounts": {
         "label": "账号",
         "description": "账号管理与凭据维护"
@@ -30,8 +34,8 @@
     "title": "HagiCode Hub",
     "description": "面向后续 Hagihub 开发的桌面端基础壳，已经接入 UI 基础组件、状态管理和 Electron 数据桥接。",
     "chromeBadge": "本地桌面壳",
-    "navigationLabel": "仓库",
-    "navigationDescription": "浏览和管理 GitHub 仓库信息。",
+    "navigationLabel": "工作区",
+    "navigationDescription": "在仓库、工作流、账号和设置之间切换。",
     "activeSectionLabel": "当前通道",
     "runtimeSnapshot": "运行时快照",
     "loading": "加载中",
@@ -98,6 +102,20 @@
         {
           "title": "导航能力可继续扩展",
           "detail": "当前 section 状态已经为多页签或路由接入留出了空间。"
+        }
+      ],
+      "actions": [
+        {
+          "title": "托管工作流看板",
+          "detail": "常用发布和维护工作流可以固定在这里，保持一键可达。"
+        },
+        {
+          "title": "Dispatch 安全边界",
+          "detail": "手动触发和输入校验都应继续留在主进程边界内，并给出明确错误反馈。"
+        },
+        {
+          "title": "后续扩展空间",
+          "detail": "这个工作区后续可以自然扩展到 runner、日志和队列检查，而不需要重做导航。"
         }
       ],
       "settings": [

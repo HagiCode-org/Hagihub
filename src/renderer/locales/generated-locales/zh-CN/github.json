@@ -183,6 +183,87 @@
     "storageReset": "本地 GitHub 账号存储文件已损坏，应用已自动重置并备份原文件。",
     "openBrowserFailed": "Hagihub 无法打开 GitHub 授权页面。",
     "orgsPartialFailed": "组织列表加载失败，但个人仓库仍然可用。",
-    "fetchActionsFailed": "加载 GitHub Actions 工作流数据失败。"
+    "fetchActionsFailed": "加载 GitHub Actions 工作流数据失败。",
+    "loadManagedActionsFailed": "恢复已托管工作流失败。",
+    "searchWorkflowsFailed": "搜索 GitHub 工作流失败。",
+    "saveManagedActionsFailed": "更新托管工作流列表失败。",
+    "refreshManagedActionsFailed": "刷新托管工作流状态失败。",
+    "dispatchWorkflowFailed": "触发工作流失败。"
+  },
+  "actionManagement": {
+    "badge": "工作流工作区",
+    "title": "Action 管理",
+    "description": "搜索可访问的工作流，固定常用项，并在一个桌面工作区里持续查看它们的最新运行状态。",
+    "refresh": "刷新托管工作流",
+    "retry": "重试",
+    "loading": "正在恢复托管工作流",
+    "loadFailedTitle": "无法恢复托管工作流。",
+    "addAccount": "添加账号",
+    "openAccounts": "打开账号管理",
+    "noAccountBadge": "需要账号",
+    "noAccountTitle": "先连接 GitHub 账号，再开始管理工作流。",
+    "noAccountDescription": "Action 管理依赖当前活跃账号来搜索仓库、恢复已固定工作流并发起手动运行。",
+    "managedCount": "已托管 {{count}} 个",
+    "searchScannedCount": "已扫描 {{count}} 个仓库",
+    "failedRefreshCount": "有 {{count}} 个工作流需要关注",
+    "search": {
+      "badge": "搜索工作流",
+      "title": "按仓库名或工作流名搜索",
+      "description": "Hagihub 会扫描候选仓库中的匹配工作流，并在固定前先展示是否支持手动触发。",
+      "inputLabel": "搜索工作流",
+      "placeholder": "搜索仓库名称或工作流名称...",
+      "emptyQuery": "输入关键词后，Hagihub 会扫描当前账号可访问的仓库。",
+      "loading": "正在搜索 GitHub 工作流",
+      "noResults": "在本次扫描的仓库中没有找到匹配的工作流。",
+      "scanning": "正在扫描仓库",
+      "scannedRepos": "已扫描 {{count}} 个仓库",
+      "dispatchReady": "可手动触发",
+      "dispatchUnavailable": "仅查看",
+      "add": "添加",
+      "added": "已添加"
+    },
+    "managed": {
+      "badge": "托管工作流",
+      "title": "固定工作流看板",
+      "description": "每次进入页面都会自动刷新已固定工作流，因此无需打开 GitHub 也能先看到最新状态。",
+      "refreshing": "正在刷新工作流状态",
+      "emptyTitle": "还没有固定工作流",
+      "emptyDescription": "先在左侧搜索并添加工作流，之后 Hagihub 会在下次进入时自动恢复并刷新它。"
+    },
+    "state": {
+      "success": "成功",
+      "failure": "失败",
+      "inProgress": "运行中",
+      "waiting": "等待中",
+      "unavailable": "不可用",
+      "error": "异常"
+    },
+    "card": {
+      "dispatchReady": "已启用手动运行",
+      "dispatchUnavailable": "不支持手动运行",
+      "latestRun": "最近运行",
+      "latestRunMeta": "事件：{{event}} · 分支：{{branch}}",
+      "unknownBranch": "未知分支",
+      "noRun": "GitHub 还没有为这个工作流返回最近一次运行记录。",
+      "updated": "刷新时间",
+      "defaultBranch": "默认分支：{{branch}}",
+      "runWorkflow": "运行工作流",
+      "openGithub": "在 GitHub 中打开",
+      "remove": "移除"
+    },
+    "dispatch": {
+      "title": "运行工作流",
+      "close": "关闭对话框",
+      "repository": "仓库",
+      "targetRef": "目标 ref",
+      "defaultRefFallback": "使用 GitHub 默认分支",
+      "noInputs": "这个工作流没有声明手动触发输入项。Hagihub 会直接针对默认分支提交 dispatch 请求。",
+      "selectPlaceholder": "选择一个值",
+      "valuePlaceholder": "输入一个值",
+      "required": "必填",
+      "cancel": "取消",
+      "submit": "触发工作流",
+      "submitting": "正在触发"
+    }
   }
 }

@@ -183,6 +183,87 @@
     "storageReset": "Saved GitHub account data was reset because the local storage file was corrupted.",
     "openBrowserFailed": "Hagihub could not open the GitHub authorization page.",
     "orgsPartialFailed": "Organizations could not be loaded. Personal repositories are still available.",
-    "fetchActionsFailed": "Failed to load GitHub Actions workflow data."
+    "fetchActionsFailed": "Failed to load GitHub Actions workflow data.",
+    "loadManagedActionsFailed": "Failed to restore managed workflows.",
+    "searchWorkflowsFailed": "Failed to search GitHub workflows.",
+    "saveManagedActionsFailed": "Failed to update the managed workflow list.",
+    "refreshManagedActionsFailed": "Failed to refresh managed workflow status.",
+    "dispatchWorkflowFailed": "Failed to dispatch the workflow."
+  },
+  "actionManagement": {
+    "badge": "Workflow workspace",
+    "title": "Action Management",
+    "description": "Search accessible workflows, pin the ones that matter, and keep their latest run state visible in one desktop workspace.",
+    "refresh": "Refresh managed workflows",
+    "retry": "Retry",
+    "loading": "Restoring managed workflows",
+    "loadFailedTitle": "Managed workflows could not be restored.",
+    "addAccount": "Add account",
+    "openAccounts": "Open accounts",
+    "noAccountBadge": "Account required",
+    "noAccountTitle": "Connect a GitHub account before managing workflows.",
+    "noAccountDescription": "Action Management relies on the active account to search repositories, restore pinned workflows, and trigger manual runs.",
+    "managedCount": "{{count}} managed",
+    "searchScannedCount": "{{count}} repos scanned",
+    "failedRefreshCount": "{{count}} workflows need attention",
+    "search": {
+      "badge": "Search workflows",
+      "title": "Search by repository or workflow name",
+      "description": "Hagihub scans candidate repositories for matching workflows and returns dispatch support before you pin them.",
+      "inputLabel": "Search workflows",
+      "placeholder": "Search repository name or workflow name...",
+      "emptyQuery": "Start typing to scan repositories that the active account can access.",
+      "loading": "Searching GitHub workflows",
+      "noResults": "No workflows matched this query in the scanned repositories.",
+      "scanning": "Scanning repositories",
+      "scannedRepos": "{{count}} repos scanned",
+      "dispatchReady": "Dispatch ready",
+      "dispatchUnavailable": "View only",
+      "add": "Add",
+      "added": "Added"
+    },
+    "managed": {
+      "badge": "Managed workflows",
+      "title": "Pinned workflow board",
+      "description": "Every pinned workflow refreshes on page entry so the latest state is visible without opening GitHub.",
+      "refreshing": "Refreshing workflow status",
+      "emptyTitle": "No workflows pinned yet",
+      "emptyDescription": "Search for a workflow on the left, add it, then Hagihub will restore and refresh it here on future visits."
+    },
+    "state": {
+      "success": "Success",
+      "failure": "Failure",
+      "inProgress": "In progress",
+      "waiting": "Waiting",
+      "unavailable": "Unavailable",
+      "error": "Error"
+    },
+    "card": {
+      "dispatchReady": "Manual run enabled",
+      "dispatchUnavailable": "Manual run unavailable",
+      "latestRun": "Latest run",
+      "latestRunMeta": "Event: {{event}} · Branch: {{branch}}",
+      "unknownBranch": "Unknown branch",
+      "noRun": "GitHub did not return a recent run for this workflow yet.",
+      "updated": "Refreshed",
+      "defaultBranch": "Default branch: {{branch}}",
+      "runWorkflow": "Run workflow",
+      "openGithub": "Open on GitHub",
+      "remove": "Remove"
+    },
+    "dispatch": {
+      "title": "Run workflow",
+      "close": "Close dialog",
+      "repository": "Repository",
+      "targetRef": "Target ref",
+      "defaultRefFallback": "Default branch from GitHub",
+      "noInputs": "This workflow does not declare manual inputs. Hagihub will submit the dispatch against the default branch.",
+      "selectPlaceholder": "Select a value",
+      "valuePlaceholder": "Enter a value",
+      "required": "Required",
+      "cancel": "Cancel",
+      "submit": "Dispatch workflow",
+      "submitting": "Dispatching"
+    }
   }
 }

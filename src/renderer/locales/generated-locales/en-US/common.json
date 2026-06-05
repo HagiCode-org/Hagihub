@@ -15,6 +15,10 @@
         "label": "Repositories",
         "description": "Browse and manage GitHub repositories"
       },
+      "actions": {
+        "label": "Action Management",
+        "description": "Search, pin, refresh, and run GitHub workflows"
+      },
       "accounts": {
         "label": "Accounts",
         "description": "Account management and credential maintenance"
@@ -30,8 +34,8 @@
     "title": "HagiCode Hub",
     "description": "A desktop shell for the next phase of Hagihub development, with UI primitives, state management, and Electron bridge wiring already in place.",
     "chromeBadge": "Local shell",
-    "navigationLabel": "Repositories",
-    "navigationDescription": "Browse and manage GitHub repository information.",
+    "navigationLabel": "Workspace",
+    "navigationDescription": "Move between repository, workflow, account, and settings surfaces.",
     "activeSectionLabel": "Active lane",
     "runtimeSnapshot": "Runtime snapshot",
     "loading": "Loading",
@@ -98,6 +102,20 @@
         {
           "title": "Navigation growth",
           "detail": "The current section state already leaves room for tabs or router-based navigation later."
+        }
+      ],
+      "actions": [
+        {
+          "title": "Managed workflow board",
+          "detail": "Curated workflows can stay pinned here so routine release and maintenance flows stay one click away."
+        },
+        {
+          "title": "Dispatch safety",
+          "detail": "Workflow inputs and manual runs should keep tokens in the main process and show clear errors."
+        },
+        {
+          "title": "Future expansion",
+          "detail": "This surface can grow into runners, logs, and queue inspection without changing the top-level shell."
         }
       ],
       "settings": [
