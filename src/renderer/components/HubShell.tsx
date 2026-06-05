@@ -1,12 +1,11 @@
 import { startTransition, useEffect, useState } from 'react';
 import {
-  ArrowUpRight,
   Bolt,
   Cable,
-  CheckCircle2,
+  Check,
+  ChevronsUpDown,
   ExternalLink,
   FolderGit2,
-  Github,
   Layers3,
   LoaderCircle,
   Plus,
@@ -14,13 +13,11 @@ import {
   Settings2,
   ShieldCheck,
   TerminalSquare,
-  TriangleAlert,
   Users,
-  Workflow,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-import { AccountManagementPage, AddAccountDialog, EmptyState, RepoList, WorkspaceAccountEntry } from '@/features/github';
+import { AccountManagementPage, AddAccountDialog, EmptyState, RepoList } from '@/features/github';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -30,23 +27,19 @@ import {
   clearAccountsNotice,
   fetchAccounts,
   resetDeviceFlowState,
+  switchAccount,
 } from '@/store/slices/githubAccountsSlice';
-import { clearActions, fetchActionsSummaries } from '@/store/slices/githubActionsSlice';
 import { clearRepos, fetchRepos } from '@/store/slices/githubReposSlice';
 import { setActiveSection, type NavigationSection } from '@/store/slices/navigationSlice';
-import type { GitHubRepoActionsSummary } from '../../shared/api';
 
 const repoUrl = 'https://github.com/HagiCode-org/Hagihub';
-const RECENT_REPO_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-
-type ActionChipState = GitHubRepoActionsSummary['state'] | 'loading';
 
 const sectionDefinitions: Array<{
   id: NavigationSection;
   icon: typeof Layers3;
 }> = [
   { id: 'overview', icon: Layers3 },
-  { id: 'workspace', icon: FolderGit2 },
+  { id: 'repos', icon: FolderGit2 },
   { id: 'accounts', icon: Users },
   { id: 'settings', icon: Settings2 },
 ];
@@ -71,9 +64,10 @@ function ensureRoadmapItems(value: unknown): RoadmapItem[] {
 }
 
 function HubShell() {
-  const { t, i18n } = useTranslation(['common', 'github']);
+  const { t } = useTranslation(['common', 'github']);
   const dispatch = useAppDispatch();
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
+  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const { appInfo, loadStatus } = useAppSelector((state) => state.hub);
   const activeSection = useAppSelector((state) => state.navigation.activeSection);
   const {
@@ -88,12 +82,6 @@ function HubShell() {
     repos,
     fetchStatus: reposFetchStatus,
   } = useAppSelector((state) => state.githubRepos);
-  const {
-    summariesByRepoFullName,
-    fetchStatus: actionsFetchStatus,
-    failedCount: actionsFailedCount,
-    error: actionsError,
-  } = useAppSelector((state) => state.githubActions);
 
   useEffect(() => {
     document.getElementById('loading-container')?.remove();
@@ -109,11 +97,11 @@ function HubShell() {
     }
   }, [accountsFetchStatus, dispatch]);
 
-  const isWorkspaceSection = activeSection === 'workspace';
+  const isReposSection = activeSection === 'repos';
   const isAccountsSection = activeSection === 'accounts';
 
   useEffect(() => {
-    if (!isWorkspaceSection) {
+    if (!isReposSection) {
       return;
     }
 
@@ -123,18 +111,7 @@ function HubShell() {
     }
 
     void dispatch(fetchRepos(activeAccountId));
-  }, [activeAccountId, dispatch, isWorkspaceSection]);
-
-  useEffect(() => {
-    if (!isWorkspaceSection || !activeAccountId || reposFetchStatus !== 'succeeded' || repos.length === 0) {
-      return;
-    }
-
-    void dispatch(fetchActionsSummaries({
-      accountId: activeAccountId,
-      repoFullNames: repos.map((repo) => repo.fullName),
-    }));
-  }, [activeAccountId, dispatch, isWorkspaceSection, repos, reposFetchStatus]);
+  }, [activeAccountId, dispatch, isReposSection]);
 
   const sections = sectionDefinitions.map((section) => ({
     ...section,
@@ -147,19 +124,6 @@ function HubShell() {
   const nextSteps = ensureStringArray(t('shell.nextSteps', { ns: 'common', returnObjects: true }));
   const loadingLabel = t('shell.loading', { ns: 'common' });
   const activeAccount = accounts.find((account) => account.id === activeAccountId) ?? null;
-  const privateRepoCount = repos.filter((repo) => repo.isPrivate).length;
-  const recentRepoCount = repos.filter((repo) => Date.now() - Date.parse(repo.updatedAt) <= RECENT_REPO_WINDOW_MS).length;
-  const actionSummaries = Object.values(summariesByRepoFullName).filter(
-    (summary): summary is GitHubRepoActionsSummary => summary !== undefined,
-  );
-  const runningActionCount = actionSummaries.filter((summary) => summary.state === 'running').length;
-  const failedActionCount = actionSummaries.filter((summary) => summary.state === 'failed' || summary.state === 'error').length;
-  const passedActionCount = actionSummaries.filter((summary) => summary.state === 'passed').length;
-  const noRunsCount = actionSummaries.filter((summary) => summary.state === 'empty').length;
-  const recentActionRuns = actionSummaries
-    .filter((summary): summary is GitHubRepoActionsSummary & { latestRun: NonNullable<GitHubRepoActionsSummary['latestRun']> } => summary.latestRun !== null)
-    .sort((left, right) => Date.parse(right.latestRun.updatedAt) - Date.parse(left.latestRun.updatedAt))
-    .slice(0, 5);
 
   const openAddAccountDialog = () => {
     dispatch(resetDeviceFlowState());
@@ -170,7 +134,7 @@ function HubShell() {
     setIsAddAccountOpen(false);
   };
 
-  const refreshWorkspace = () => {
+  const refreshRepos = () => {
     if (activeAccountId) {
       void dispatch(fetchRepos(activeAccountId));
       return;
@@ -179,56 +143,9 @@ function HubShell() {
     void dispatch(fetchAccounts());
   };
 
-  const workspaceSummary = [
-    t('workspace.accountCount', { ns: 'github', count: accounts.length }),
-    t('workspace.orgCount', { ns: 'github', count: orgs.length }),
-    t('workspace.repoCount', { ns: 'github', count: repos.length }),
-  ];
-
-  const actionSummaryChips = [
-    t('workspace.runningCount', { ns: 'github', count: runningActionCount }),
-    t('workspace.failedCount', { ns: 'github', count: failedActionCount }),
-    t('workspace.passedCount', { ns: 'github', count: passedActionCount }),
-  ];
-
-  const getActionChipMeta = (state: ActionChipState) => {
-    if (state === 'loading') {
-      return {
-        label: t('repoCard.state.loading', { ns: 'github' }),
-        className: 'border-sky-400/20 bg-sky-300/8 text-sky-100',
-        icon: <LoaderCircle className="size-3.5 animate-spin" />,
-      };
-    }
-
-    if (state === 'running') {
-      return {
-        label: t('repoCard.state.running', { ns: 'github' }),
-        className: 'border-amber-400/25 bg-amber-300/10 text-amber-100',
-        icon: <Workflow className="size-3.5" />,
-      };
-    }
-
-    if (state === 'passed') {
-      return {
-        label: t('repoCard.state.passed', { ns: 'github' }),
-        className: 'border-emerald-400/25 bg-emerald-300/10 text-emerald-100',
-        icon: <CheckCircle2 className="size-3.5" />,
-      };
-    }
-
-    if (state === 'failed' || state === 'error') {
-      return {
-        label: t(`repoCard.state.${state}`, { ns: 'github' }),
-        className: 'border-red-400/25 bg-red-300/10 text-red-100',
-        icon: <TriangleAlert className="size-3.5" />,
-      };
-    }
-
-    return {
-      label: t('repoCard.state.empty', { ns: 'github' }),
-      className: 'border-border/70 bg-background/45 text-muted-foreground',
-      icon: <Workflow className="size-3.5" />,
-    };
+  const handleSwitchAccount = (accountId: string) => {
+    void dispatch(switchAccount(accountId));
+    setIsAccountDropdownOpen(false);
   };
 
   const renderOverviewContent = () => (
@@ -347,12 +264,90 @@ function HubShell() {
     </div>
   );
 
-  const renderWorkspaceContent = () => {
+  const renderAccountDropdown = () => {
+    if (accounts.length === 0) {
+      return (
+        <Button variant="outline" size="sm" onClick={openAddAccountDialog}>
+          <Plus /> {t('repos.addAccount', { ns: 'github' })}
+        </Button>
+      );
+    }
+
+    return (
+      <div className="relative">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
+        >
+          {activeAccount ? (
+            <>
+              <img src={activeAccount.avatarUrl} alt={activeAccount.login} className="size-5 rounded-md border border-border/70 object-cover" />
+              <span className="truncate max-w-[120px]">@{activeAccount.login}</span>
+            </>
+          ) : (
+            <span>{t('reposAccountEntry.selectAccount', { ns: 'github' })}</span>
+          )}
+          <ChevronsUpDown className="size-3.5 text-muted-foreground" />
+        </Button>
+
+        {isAccountDropdownOpen ? (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setIsAccountDropdownOpen(false)} />
+            <div className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-xl border border-border/70 bg-[var(--surface-panel)]/98 shadow-xl backdrop-blur-xl">
+              <div className="p-1.5">
+                {accounts.map((account) => {
+                  const isActive = account.id === activeAccountId;
+
+                  return (
+                    <button
+                      key={account.id}
+                      type="button"
+                      className={cn(
+                        'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors',
+                        isActive
+                          ? 'bg-primary/10 text-foreground'
+                          : 'text-muted-foreground hover:bg-accent/45 hover:text-accent-foreground',
+                      )}
+                      onClick={() => handleSwitchAccount(account.id)}
+                    >
+                      <img src={account.avatarUrl} alt={account.login} className="size-8 rounded-lg border border-border/70 object-cover" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">@{account.login}</p>
+                        <p className="truncate text-xs text-muted-foreground">{account.name ?? t('deviceFlow.githubUser', { ns: 'github' })}</p>
+                      </div>
+                      {isActive ? <Check className="size-4 shrink-0 text-primary" /> : null}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="border-t border-border/70 p-1.5">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent/45 hover:text-accent-foreground"
+                  onClick={() => {
+                    setIsAccountDropdownOpen(false);
+                    openAddAccountDialog();
+                  }}
+                >
+                  <Plus className="size-4" />
+                  {t('repos.addAccount', { ns: 'github' })}
+                </button>
+              </div>
+            </div>
+          </>
+        ) : null}
+      </div>
+    );
+  };
+
+  const renderReposContent = () => {
     if (accountsFetchStatus === 'loading' && accounts.length === 0) {
       return (
         <section className="editor-panel px-6 py-12 text-center">
-          <RefreshCw className="mx-auto size-8 animate-spin text-primary" />
-          <p className="mt-4 text-base font-medium text-foreground">{t('workspace.loadingAccounts', { ns: 'github' })}</p>
+          <LoaderCircle className="mx-auto size-8 animate-spin text-primary" />
+          <p className="mt-4 text-base font-medium text-foreground">{t('repos.loadingAccounts', { ns: 'github' })}</p>
         </section>
       );
     }
@@ -360,10 +355,10 @@ function HubShell() {
     if (accountsFetchStatus === 'failed') {
       return (
         <section className="editor-panel border-destructive/30 bg-destructive/6 px-6 py-8">
-          <p className="text-base font-semibold text-destructive">{t('workspace.loadAccountsFailedTitle', { ns: 'github' })}</p>
+          <p className="text-base font-semibold text-destructive">{t('repos.loadAccountsFailedTitle', { ns: 'github' })}</p>
           <p className="mt-2 text-sm leading-7 text-destructive/90">{accountsError}</p>
           <Button className="mt-5" variant="outline" onClick={() => void dispatch(fetchAccounts())}>
-            <RefreshCw /> {t('workspace.retry', { ns: 'github' })}
+            <RefreshCw /> {t('repos.retry', { ns: 'github' })}
           </Button>
         </section>
       );
@@ -372,35 +367,27 @@ function HubShell() {
     return (
       <div className="space-y-4">
         <section className="editor-panel p-5 lg:p-6">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge>{t('workspace.heroBadge', { ns: 'github' })}</Badge>
-                <Badge variant="secondary">
-                  {actionsFetchStatus === 'loading'
-                    ? t('workspace.actionsScanning', { ns: 'github' })
-                    : actionsFetchStatus === 'failed'
-                      ? t('workspace.actionsUnavailable', { ns: 'github' })
-                      : t('workspace.actionsSynced', { ns: 'github' })}
-                </Badge>
-              </div>
-              <h2 className="max-w-3xl text-2xl font-semibold tracking-tight text-foreground lg:text-3xl">
-                {t('workspace.heroTitle', { ns: 'github' })}
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <Badge>{t('repoList.eyebrow', { ns: 'github' })}</Badge>
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                {t('repoList.title', { ns: 'github' })}
               </h2>
+              <p className="text-sm text-muted-foreground">
+                {t('repoList.description', { ns: 'github' })}
+              </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={openAddAccountDialog}>
-                <Plus /> {t('workspace.addAccount', { ns: 'github' })}
-              </Button>
-              <Button variant="outline" onClick={refreshWorkspace}>
-                <RefreshCw /> {t('workspace.refreshRepos', { ns: 'github' })}
+            <div className="flex flex-wrap items-center gap-2">
+              {renderAccountDropdown()}
+              <Button variant="outline" size="sm" onClick={refreshRepos}>
+                <RefreshCw /> {t('repos.refreshRepos', { ns: 'github' })}
               </Button>
             </div>
           </div>
 
           {accountsNotice ? (
-            <div className="mt-5 rounded-xl border border-amber-400/20 bg-amber-300/8 px-4 py-3 text-sm leading-6 text-amber-100/88">
+            <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-300/8 px-4 py-3 text-sm leading-6 text-amber-100/88">
               <div className="flex items-start justify-between gap-4">
                 <span>{accountsNotice}</span>
                 <button
@@ -413,21 +400,12 @@ function HubShell() {
               </div>
             </div>
           ) : null}
-
-          {actionsError ? (
-            <div className="mt-4 rounded-xl border border-destructive/25 bg-destructive/8 px-4 py-3 text-sm leading-6 text-destructive/92">
-              {actionsError}
-            </div>
-          ) : null}
         </section>
 
         {accounts.length === 0 ? (
           <EmptyState onAddAccount={openAddAccountDialog} />
         ) : (
-          <>
-            <WorkspaceAccountEntry onAddAccount={openAddAccountDialog} />
-            {activeAccountId ? <RepoList activeAccountId={activeAccountId} /> : null}
-          </>
+          activeAccountId ? <RepoList activeAccountId={activeAccountId} /> : null
         )}
       </div>
     );
@@ -435,159 +413,6 @@ function HubShell() {
 
   const renderAccountsContent = () => (
     <AccountManagementPage onAddAccount={openAddAccountDialog} />
-  );
-
-  const renderInspector = () => (
-    <>
-      <section className="editor-panel p-4">
-        <div className="flex items-center gap-3 text-sm font-medium text-foreground">
-          <TerminalSquare className="size-4 text-primary" />
-          {t('shell.runtimeSnapshot', { ns: 'common' })}
-        </div>
-        <dl className="mt-4 space-y-3 text-sm">
-          <div className="flex items-center justify-between gap-3">
-            <dt className="text-muted-foreground">{t('shell.info.channel', { ns: 'common' })}</dt>
-            <dd className="font-mono text-xs text-foreground">
-              {appInfo ? t(`shell.buildChannel.${appInfo.buildChannel}`, { ns: 'common' }) : loadingLabel}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <dt className="text-muted-foreground">{t('shell.info.platform', { ns: 'common' })}</dt>
-            <dd className="font-mono text-xs text-foreground">{appInfo?.platform ?? loadingLabel}</dd>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <dt className="text-muted-foreground">{t('shell.info.version', { ns: 'common' })}</dt>
-            <dd className="font-mono text-xs text-foreground">{appInfo ? `v${appInfo.appVersion}` : loadingLabel}</dd>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <dt className="text-muted-foreground">{t('shell.info.node', { ns: 'common' })}</dt>
-            <dd className="font-mono text-xs text-foreground">{appInfo?.nodeVersion ?? loadingLabel}</dd>
-          </div>
-        </dl>
-      </section>
-
-      {isWorkspaceSection ? (
-        <section className="editor-panel p-4">
-          <div className="flex items-center gap-3 text-sm font-medium text-foreground">
-            <Github className="size-4 text-primary" />
-            {t('workspace.actionsHintTitle', { ns: 'github' })}
-          </div>
-
-          <div className="mt-4 space-y-3">
-            <div className="panel-muted p-3">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('shell.activeSectionLabel', { ns: 'common' })}</p>
-              <p className="mt-2 text-sm font-medium text-foreground">{sectionMeta.label}</p>
-            </div>
-
-            {activeAccount ? (
-              <div className="list-row px-3 py-3">
-                <div className="flex items-center gap-3">
-                  <img src={activeAccount.avatarUrl} alt={activeAccount.login} className="size-10 rounded-xl border border-border/70 object-cover" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">@{activeAccount.login}</p>
-                    <p className="truncate text-xs text-muted-foreground">{activeAccount.name ?? t('deviceFlow.githubUser', { ns: 'github' })}</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="panel-muted px-3 py-3 text-sm leading-6 text-muted-foreground">
-                {t('emptyState.addFirst', { ns: 'github' })}
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="panel-muted p-3">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('repoList.metrics.running', { ns: 'github' })}</p>
-                <p className="mt-2 font-mono text-lg text-foreground">{runningActionCount}</p>
-              </div>
-              <div className="panel-muted p-3">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('repoList.metrics.failed', { ns: 'github' })}</p>
-                <p className="mt-2 font-mono text-lg text-foreground">{failedActionCount}</p>
-              </div>
-              <div className="panel-muted p-3">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('repoList.metrics.passed', { ns: 'github' })}</p>
-                <p className="mt-2 font-mono text-lg text-foreground">{passedActionCount}</p>
-              </div>
-              <div className="panel-muted p-3">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('repoList.metrics.updated', { ns: 'github' })}</p>
-                <p className="mt-2 font-mono text-lg text-foreground">{recentRepoCount}</p>
-              </div>
-            </div>
-
-            {actionsFetchStatus === 'loading' ? (
-              <p className="text-sm leading-6 text-muted-foreground">{t('workspace.actionsHintLoading', { ns: 'github' })}</p>
-            ) : (
-              <p className="text-sm leading-6 text-muted-foreground">{t('workspace.actionsHint', { ns: 'github' })}</p>
-            )}
-
-            {actionsFailedCount > 0 ? (
-              <div className="rounded-xl border border-amber-400/20 bg-amber-300/8 px-3 py-3 text-sm leading-6 text-amber-100/88">
-                {t('workspace.actionsHintPartial', { ns: 'github', count: actionsFailedCount })}
-              </div>
-            ) : null}
-
-            <div className="panel-muted p-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('workspace.recentRunsTitle', { ns: 'github' })}</p>
-                <span className="font-mono text-[11px] text-muted-foreground">{t('workspace.noRunsCount', { ns: 'github', count: noRunsCount })}</span>
-              </div>
-
-              <div className="mt-3 space-y-3">
-                {recentActionRuns.length === 0 ? (
-                  <p className="text-sm leading-6 text-muted-foreground">{t('workspace.recentRunsEmpty', { ns: 'github' })}</p>
-                ) : recentActionRuns.map((summary) => {
-                  const meta = getActionChipMeta(summary.state);
-                  const latestRun = summary.latestRun;
-                  const updatedAt = new Date(latestRun.updatedAt).toLocaleString(i18n.resolvedLanguage ?? i18n.language, {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  });
-
-                  return (
-                    <div key={latestRun.id} className="list-row px-3 py-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-foreground">{summary.repoFullName}</p>
-                          <p className="mt-1 truncate text-xs text-muted-foreground">{`${latestRun.workflowName} #${latestRun.runNumber}`}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">{t('repoCard.triggeredBy', { ns: 'github', event: latestRun.event })}</p>
-                        </div>
-                        <Button variant="ghost" size="icon" onClick={() => void window.hagihub.openExternal(latestRun.htmlUrl)}>
-                          <ArrowUpRight />
-                        </Button>
-                      </div>
-
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <span className={cn('inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium', meta.className)}>
-                          {meta.icon}
-                          {meta.label}
-                        </span>
-                        <span className="font-mono text-[11px] text-muted-foreground">{updatedAt}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="editor-panel p-4">
-        <div className="flex items-center gap-3 text-sm font-medium text-foreground">
-          <Bolt className="size-4 text-primary" />
-          {t('shell.suggestedNextSteps', { ns: 'common' })}
-        </div>
-        <div className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
-          {roadmapItems.map((item) => (
-            <div key={item.title} className="panel-muted px-3 py-3">
-              <p className="text-sm font-medium text-foreground">{item.title}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-    </>
   );
 
   return (
@@ -660,7 +485,7 @@ function HubShell() {
             </div>
           </aside>
 
-          <aside className="hidden min-h-0 w-72 shrink-0 overflow-y-auto border-r border-border/70 bg-[var(--surface-sidebar)]/90 p-3 xl:flex xl:flex-col xl:gap-4">
+          <aside className="hidden min-h-0 w-56 shrink-0 overflow-y-auto border-r border-border/70 bg-[var(--surface-sidebar)]/90 p-3 xl:flex xl:flex-col xl:gap-4">
             <section className="editor-panel p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{t('shell.navigationLabel', { ns: 'common' })}</p>
               <nav className="mt-4 space-y-2">
@@ -695,48 +520,6 @@ function HubShell() {
                 })}
               </nav>
             </section>
-
-            <section className="editor-panel p-4">
-              <div className="flex items-center gap-3 text-sm font-medium text-foreground">
-                <ShieldCheck className="size-4 text-primary" />
-                {t('shell.runtimeSnapshot', { ns: 'common' })}
-              </div>
-              <dl className="mt-4 space-y-3 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-muted-foreground">{t('shell.info.channel', { ns: 'common' })}</dt>
-                  <dd className="font-mono text-xs text-foreground">
-                    {appInfo ? t(`shell.buildChannel.${appInfo.buildChannel}`, { ns: 'common' }) : loadingLabel}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-muted-foreground">{t('shell.info.version', { ns: 'common' })}</dt>
-                  <dd className="font-mono text-xs text-foreground">{appInfo ? `v${appInfo.appVersion}` : loadingLabel}</dd>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-muted-foreground">{t('shell.info.platform', { ns: 'common' })}</dt>
-                  <dd className="font-mono text-xs text-foreground">{appInfo?.platform ?? loadingLabel}</dd>
-                </div>
-              </dl>
-            </section>
-
-            {isWorkspaceSection ? (
-              <section className="editor-panel p-4">
-                <div className="flex items-center gap-3 text-sm font-medium text-foreground">
-                  <Github className="size-4 text-primary" />
-                  {t('workspace.actionsHintTitle', { ns: 'github' })}
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div className="panel-muted p-3">
-                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('repoList.metrics.repos', { ns: 'github' })}</p>
-                    <p className="mt-2 font-mono text-lg text-foreground">{repos.length}</p>
-                  </div>
-                  <div className="panel-muted p-3">
-                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('repoList.metrics.private', { ns: 'github' })}</p>
-                    <p className="mt-2 font-mono text-lg text-foreground">{privateRepoCount}</p>
-                  </div>
-                </div>
-              </section>
-            ) : null}
           </aside>
 
           <main className="flex min-w-0 flex-1 flex-col">
@@ -768,17 +551,11 @@ function HubShell() {
               </div>
             </div>
 
-            <div className="grid min-h-0 flex-1 xl:grid-cols-[minmax(0,1fr)_320px]">
-              <section className="min-h-0 overflow-y-auto px-4 py-4 lg:px-5 lg:py-5">
-                {activeSection === 'overview' ? renderOverviewContent() : null}
-                {isWorkspaceSection ? renderWorkspaceContent() : null}
-                {isAccountsSection ? renderAccountsContent() : null}
-                {activeSection === 'settings' ? renderSettingsContent() : null}
-              </section>
-
-              <aside className="hidden min-h-0 flex-col gap-4 border-l border-border/70 bg-[var(--surface-sidebar)]/72 p-4 xl:flex xl:overflow-y-auto">
-                {renderInspector()}
-              </aside>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 lg:px-5 lg:py-5">
+              {activeSection === 'overview' ? renderOverviewContent() : null}
+              {isReposSection ? renderReposContent() : null}
+              {isAccountsSection ? renderAccountsContent() : null}
+              {activeSection === 'settings' ? renderSettingsContent() : null}
             </div>
           </main>
         </div>
@@ -789,9 +566,6 @@ function HubShell() {
             <span className="font-mono">{t('shell.statusBar.account', { ns: 'common' })}: {activeAccount ? `@${activeAccount.login}` : t('shell.statusBar.none', { ns: 'common' })}</span>
             <span className="font-mono">{t('shell.statusBar.repos', { ns: 'common' })}: {repos.length}</span>
             <span className="font-mono">{t('shell.statusBar.orgs', { ns: 'common' })}: {orgs.length}</span>
-            <span className="font-mono">{t('workspace.runningCount', { ns: 'github', count: runningActionCount })}</span>
-            <span className="font-mono">{t('workspace.failedCount', { ns: 'github', count: failedActionCount })}</span>
-            <span className="font-mono">{t('workspace.passedCount', { ns: 'github', count: passedActionCount })}</span>
             <span className="font-mono">{t('shell.statusBar.runtime', { ns: 'common' })}: {loadStatus === 'failed' ? t('shell.runtimeUnavailable', { ns: 'common' }) : t('shell.statusBar.ready', { ns: 'common' })}</span>
           </div>
         </footer>

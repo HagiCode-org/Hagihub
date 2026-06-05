@@ -7,4 +7,3 @@ export { default as RepoCard } from './components/RepoCard';
 export { default as RepoGroup } from './components/RepoGroup';
 export { default as RepoInfoSheet } from './components/RepoInfoSheet';
 export { default as RepoList } from './components/RepoList';
-export { default as WorkspaceAccountEntry } from './components/WorkspaceAccountEntry';
