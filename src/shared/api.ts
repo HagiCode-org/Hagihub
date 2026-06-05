@@ -160,3 +160,66 @@ export interface GitHubActionsResult {
   summaries: GitHubRepoActionsSummary[];
   failedCount: number;
 }
+
+export type GitHubManagedWorkflowState = 'success' | 'failure' | 'in_progress' | 'waiting' | 'unavailable' | 'error';
+
+export type GitHubWorkflowDispatchInputType = 'string' | 'choice' | 'boolean' | 'number' | 'environment';
+
+export interface GitHubWorkflowDispatchInputDefinition {
+  name: string;
+  description: string | null;
+  required: boolean;
+  defaultValue: string | null;
+  type: GitHubWorkflowDispatchInputType;
+  options: string[];
+}
+
+export interface GitHubManagedWorkflowReference {
+  accountId: string;
+  repoFullName: string;
+  repoHtmlUrl: string;
+  defaultBranch: string | null;
+  workflowId: number;
+  workflowName: string;
+  workflowPath: string;
+  workflowHtmlUrl: string;
+  supportsDispatch: boolean;
+}
+
+export interface GitHubWorkflowSummary extends GitHubManagedWorkflowReference {
+  dispatchInputs: GitHubWorkflowDispatchInputDefinition[];
+}
+
+export interface GitHubManagedWorkflow extends GitHubWorkflowSummary {
+  latestRun: GitHubWorkflowRun | null;
+  latestRunState: GitHubManagedWorkflowState;
+  lastScannedAt: string | null;
+  refreshError: string | null;
+}
+
+export interface SearchGitHubWorkflowsResult {
+  workflows: GitHubWorkflowSummary[];
+  scannedRepoCount: number;
+}
+
+export interface ManagedActionsResult {
+  workflows: GitHubManagedWorkflowReference[];
+}
+
+export interface RefreshManagedActionsResult {
+  workflows: GitHubManagedWorkflow[];
+  failedCount: number;
+}
+
+export interface GitHubWorkflowDispatchRequest {
+  repoFullName: string;
+  workflowId: number;
+  ref?: string | null;
+  inputs: Record<string, string>;
+}
+
+export interface GitHubWorkflowDispatchResponse {
+  success: boolean;
+  message: string;
+  dispatchedAt: string;
+}
