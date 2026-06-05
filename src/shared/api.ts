@@ -79,11 +79,14 @@ export interface RepoDetailsResult {
 export interface UpdateRepoPayload {
   description?: string;
   homepage?: string;
-  topics?: string[];
 }
 
 export interface UpdateRepoResult {
   details: GitHubRepoDetails;
+}
+
+export interface UpdateRepoTopicsResult {
+  names: string[];
 }
 
 export type GitHubActionRunState = 'running' | 'failed' | 'passed' | 'empty' | 'error';

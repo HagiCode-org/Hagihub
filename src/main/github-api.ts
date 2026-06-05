@@ -7,6 +7,7 @@ import type {
   GitHubUser,
   GitHubWorkflowRun,
   UpdateRepoPayload,
+  UpdateRepoTopicsResult,
 } from '../shared/api.js';
 
 const GITHUB_API_ROOT = 'https://api.github.com';
@@ -394,6 +395,32 @@ export async function updateRepo(token: string, owner: string, repo: string, upd
   await assertResponse(response);
   const data = await response.json() as RawGitHubRepoDetails;
   return mapRepoDetails(data);
+}
+
+export async function updateRepoTopics(token: string, owner: string, repo: string, names: string[]): Promise<UpdateRepoTopicsResult> {
+  const encodedOwner = encodeURIComponent(owner);
+  const encodedRepo = encodeURIComponent(repo);
+  let response: Response;
+
+  try {
+    response = await fetch(`${GITHUB_API_ROOT}/repos/${encodedOwner}/${encodedRepo}/topics`, {
+      method: 'PUT',
+      headers: {
+        ...buildHeaders(token),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ names }),
+    });
+  } catch (error) {
+    throw new GitHubApiError(
+      error instanceof Error ? error.message : 'Network error while updating repository topics.',
+      'network',
+    );
+  }
+
+  await assertResponse(response);
+  const data = await response.json() as { names: string[] };
+  return { names: data.names ?? [] };
 }
 
 export async function fetchActionsSummaries(token: string, repoFullNames: string[]): Promise<GitHubActionsResult> {
