@@ -417,7 +417,7 @@ function HubShell() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="relative flex min-h-screen flex-col overflow-hidden">
+      <div className="relative flex h-screen flex-col overflow-hidden">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(232,182,96,0.09),transparent_26%),radial-gradient(circle_at_88%_10%,rgba(92,136,194,0.12),transparent_18%),linear-gradient(180deg,rgba(10,13,20,0.24),transparent_26%)]" />
 
         <header className="relative z-10 border-b border-border/70 bg-[var(--surface-chrome)]/92 backdrop-blur-xl">
