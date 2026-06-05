@@ -7,9 +7,9 @@ navigation:
     overview:
       label: Overview
       description: Foundation and runtime status
-    workspace:
-      label: Workspace
-      description: Multi-account GitHub access and repository browsing
+    repos:
+      label: Repositories
+      description: Browse and manage GitHub repositories
     accounts:
       label: Accounts
       description: Account management and credential maintenance
@@ -21,8 +21,8 @@ shell:
   title: HagiCode Hub
   description: A desktop shell for the next phase of Hagihub development, with UI primitives, state management, and Electron bridge wiring already in place.
   chromeBadge: Local shell
-  navigationLabel: Workspaces
-  navigationDescription: Move between foundation, repository workflow, and future settings surfaces without leaving the same desktop shell.
+  navigationLabel: Repositories
+  navigationDescription: Browse and manage GitHub repository information.
   activeSectionLabel: Active lane
   runtimeSnapshot: Runtime snapshot
   loading: Loading
@@ -67,7 +67,7 @@ shell:
         detail: App info from the main process is now fetched through a Redux thunk.
       - title: UI system ready
         detail: New pages can build directly on top of shadcn-style components and shared design tokens.
-    workspace:
+    repos:
       - title: Hub dashboard
         detail: Instance lists, resource monitoring, task panels, and inbox modules can land here next.
       - title: Feature modules
