@@ -6,6 +6,7 @@ import os from 'node:os';
 import { resolveDataRoot, resolveStorePath, ensureBaseDirectories } from '../runtime-data-paths.js';
 import { readStore, writeStore, writeAtomically } from '../json-store.js';
 import * as registry from '../storage-registry.js';
+import { managedActionsStore } from '../stores.js';
 import type { StoreDefinition } from '../../../shared/storage.js';
 
 let tmpDir: string;
@@ -264,5 +265,57 @@ describe('migration', () => {
 
     const result = await readStore(filePath, def);
     assert.equal(result.source, 'default');
+  });
+});
+
+describe('managed actions store validation', () => {
+  it('accepts account-scoped workflow references', () => {
+    const isValid = managedActionsStore.definition.validate?.({
+      accounts: [
+        {
+          accountId: 'account-1',
+          workflows: [
+            {
+              accountId: 'account-1',
+              repoFullName: 'HagiCode-org/Hagihub',
+              repoHtmlUrl: 'https://github.com/HagiCode-org/Hagihub',
+              defaultBranch: 'main',
+              workflowId: 101,
+              workflowName: 'release',
+              workflowPath: '.github/workflows/release.yml',
+              workflowHtmlUrl: 'https://github.com/HagiCode-org/Hagihub/actions/workflows/release.yml',
+              supportsDispatch: true,
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(isValid, true);
+  });
+
+  it('rejects invalid workflow references', () => {
+    const isValid = managedActionsStore.definition.validate?.({
+      accounts: [
+        {
+          accountId: 'account-1',
+          workflows: [
+            {
+              accountId: 'account-1',
+              repoFullName: 'HagiCode-org/Hagihub',
+              repoHtmlUrl: 'https://github.com/HagiCode-org/Hagihub',
+              defaultBranch: 'main',
+              workflowId: 'bad-id',
+              workflowName: 'release',
+              workflowPath: '.github/workflows/release.yml',
+              workflowHtmlUrl: 'https://github.com/HagiCode-org/Hagihub/actions/workflows/release.yml',
+              supportsDispatch: true,
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(isValid, false);
   });
 });

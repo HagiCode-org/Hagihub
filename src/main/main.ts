@@ -1,18 +1,34 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fetchActionsSummaries, fetchOrgs, fetchRepoDetails, fetchRepos, updateRepo, updateRepoTopics } from './github-api.js';
+import {
+  dispatchGitHubWorkflow,
+  fetchActionsSummaries,
+  fetchOrgs,
+  fetchRepoDetails,
+  fetchRepos,
+  refreshManagedActionRuns,
+  searchGitHubWorkflows,
+  updateRepo,
+  updateRepoTopics,
+} from './github-api.js';
 import { GitHubAuthManager, githubDeviceFlowEventChannel } from './github-auth.js';
 import { bootstrapStorage } from './storage/index.js';
-import './storage/stores.js';
+import { managedActionsStore } from './storage/stores.js';
 import type {
   AppInfo,
   ExternalOpenResult,
   GitHubActionsResult,
+  GitHubManagedWorkflowReference,
+  GitHubWorkflowDispatchRequest,
+  GitHubWorkflowDispatchResponse,
+  ManagedActionsResult,
   OrgsResult,
   PlatformId,
+  RefreshManagedActionsResult,
   RepoDetailsResult,
   ReposResult,
+  SearchGitHubWorkflowsResult,
   UpdateRepoPayload,
   UpdateRepoResult,
   UpdateRepoTopicsResult,
@@ -79,6 +95,59 @@ function emitDeviceFlowUpdate(payload: unknown): void {
   mainWindow?.webContents.send(githubDeviceFlowEventChannel, payload);
 }
 
+function requireGitHubAuthManager(): GitHubAuthManager {
+  if (!gitHubAuthManager) {
+    throw new Error('GitHub auth manager is unavailable.');
+  }
+
+  return gitHubAuthManager;
+}
+
+async function readManagedActions(accountId: string): Promise<GitHubManagedWorkflowReference[]> {
+  const { data } = await managedActionsStore.read();
+  return data.accounts.find((entry) => entry.accountId === accountId)?.workflows ?? [];
+}
+
+function normalizeManagedWorkflows(
+  accountId: string,
+  workflows: GitHubManagedWorkflowReference[],
+): GitHubManagedWorkflowReference[] {
+  const deduped = new Map<string, GitHubManagedWorkflowReference>();
+
+  for (const workflow of workflows) {
+    const normalized: GitHubManagedWorkflowReference = {
+      ...workflow,
+      accountId,
+    };
+
+    deduped.set(`${normalized.repoFullName}#${normalized.workflowId}`, normalized);
+  }
+
+  return Array.from(deduped.values()).sort((left, right) => {
+    const repoComparison = left.repoFullName.localeCompare(right.repoFullName);
+    return repoComparison !== 0 ? repoComparison : left.workflowName.localeCompare(right.workflowName);
+  });
+}
+
+async function writeManagedActions(
+  accountId: string,
+  workflows: GitHubManagedWorkflowReference[],
+): Promise<GitHubManagedWorkflowReference[]> {
+  const { data } = await managedActionsStore.read();
+  const normalized = normalizeManagedWorkflows(accountId, workflows);
+  const accounts = data.accounts.filter((entry) => entry.accountId !== accountId);
+  accounts.push({
+    accountId,
+    workflows: normalized,
+  });
+
+  await managedActionsStore.write({
+    accounts,
+  });
+
+  return normalized;
+}
+
 function registerIpcHandlers(): void {
   gitHubAuthManager = new GitHubAuthManager(emitDeviceFlowUpdate);
   ipcMain.handle('hagihub:get-app-info', () => createAppInfo());
@@ -94,56 +163,28 @@ function registerIpcHandlers(): void {
     }
   });
   ipcMain.handle('hagihub:start-device-flow', async () => {
-    if (!gitHubAuthManager) {
-      throw new Error('GitHub auth manager is unavailable.');
-    }
-
-    return await gitHubAuthManager.startDeviceFlow();
+    return await requireGitHubAuthManager().startDeviceFlow();
   });
   ipcMain.handle('hagihub:cancel-device-flow', async () => {
-    if (!gitHubAuthManager) {
-      throw new Error('GitHub auth manager is unavailable.');
-    }
-
-    return await gitHubAuthManager.cancelDeviceFlow();
+    return await requireGitHubAuthManager().cancelDeviceFlow();
   });
   ipcMain.handle('hagihub:remove-github-account', async (_event, accountId: string) => {
-    if (!gitHubAuthManager) {
-      throw new Error('GitHub auth manager is unavailable.');
-    }
-
-    return await gitHubAuthManager.removeAccount(accountId);
+    return await requireGitHubAuthManager().removeAccount(accountId);
   });
   ipcMain.handle('hagihub:get-github-accounts', async () => {
-    if (!gitHubAuthManager) {
-      throw new Error('GitHub auth manager is unavailable.');
-    }
-
-    return await gitHubAuthManager.getAccounts();
+    return await requireGitHubAuthManager().getAccounts();
   });
   ipcMain.handle('hagihub:switch-github-account', async (_event, accountId: string) => {
-    if (!gitHubAuthManager) {
-      throw new Error('GitHub auth manager is unavailable.');
-    }
-
-    return await gitHubAuthManager.switchAccount(accountId);
+    return await requireGitHubAuthManager().switchAccount(accountId);
   });
   ipcMain.handle('hagihub:fetch-github-repos', async (_event, accountId: string): Promise<ReposResult> => {
-    if (!gitHubAuthManager) {
-      throw new Error('GitHub auth manager is unavailable.');
-    }
-
-    const token = await gitHubAuthManager.getDecryptedToken(accountId);
+    const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
     return {
       repos: await fetchRepos(token),
     };
   });
   ipcMain.handle('hagihub:fetch-github-orgs', async (_event, accountId: string): Promise<OrgsResult> => {
-    if (!gitHubAuthManager) {
-      throw new Error('GitHub auth manager is unavailable.');
-    }
-
-    const token = await gitHubAuthManager.getDecryptedToken(accountId);
+    const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
     return {
       orgs: await fetchOrgs(token),
     };
@@ -151,45 +192,64 @@ function registerIpcHandlers(): void {
   ipcMain.handle(
     'hagihub:fetch-github-actions',
     async (_event, accountId: string, repoFullNames: string[]): Promise<GitHubActionsResult> => {
-      if (!gitHubAuthManager) {
-        throw new Error('GitHub auth manager is unavailable.');
-      }
-
-      const token = await gitHubAuthManager.getDecryptedToken(accountId);
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
       return await fetchActionsSummaries(token, repoFullNames);
     },
   );
   ipcMain.handle(
     'hagihub:fetch-repo-details',
     async (_event, accountId: string, owner: string, repo: string): Promise<RepoDetailsResult> => {
-      if (!gitHubAuthManager) {
-        throw new Error('GitHub auth manager is unavailable.');
-      }
-
-      const token = await gitHubAuthManager.getDecryptedToken(accountId);
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
       return { details: await fetchRepoDetails(token, owner, repo) };
     },
   );
   ipcMain.handle(
     'hagihub:update-repo',
     async (_event, accountId: string, owner: string, repo: string, updates: UpdateRepoPayload): Promise<UpdateRepoResult> => {
-      if (!gitHubAuthManager) {
-        throw new Error('GitHub auth manager is unavailable.');
-      }
-
-      const token = await gitHubAuthManager.getDecryptedToken(accountId);
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
       return { details: await updateRepo(token, owner, repo, updates) };
     },
   );
   ipcMain.handle(
     'hagihub:update-repo-topics',
     async (_event, accountId: string, owner: string, repo: string, names: string[]): Promise<UpdateRepoTopicsResult> => {
-      if (!gitHubAuthManager) {
-        throw new Error('GitHub auth manager is unavailable.');
-      }
-
-      const token = await gitHubAuthManager.getDecryptedToken(accountId);
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
       return await updateRepoTopics(token, owner, repo, names);
+    },
+  );
+  ipcMain.handle(
+    'hagihub:search-github-workflows',
+    async (_event, accountId: string, query: string): Promise<SearchGitHubWorkflowsResult> => {
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
+      return await searchGitHubWorkflows(token, accountId, query);
+    },
+  );
+  ipcMain.handle('hagihub:get-managed-actions', async (_event, accountId: string): Promise<ManagedActionsResult> => {
+    return {
+      workflows: await readManagedActions(accountId),
+    };
+  });
+  ipcMain.handle(
+    'hagihub:save-managed-actions',
+    async (_event, accountId: string, workflows: GitHubManagedWorkflowReference[]): Promise<ManagedActionsResult> => {
+      return {
+        workflows: await writeManagedActions(accountId, workflows),
+      };
+    },
+  );
+  ipcMain.handle(
+    'hagihub:refresh-managed-action-runs',
+    async (_event, accountId: string, workflows: GitHubManagedWorkflowReference[]): Promise<RefreshManagedActionsResult> => {
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
+      const targetWorkflows = workflows.length > 0 ? normalizeManagedWorkflows(accountId, workflows) : await readManagedActions(accountId);
+      return await refreshManagedActionRuns(token, targetWorkflows);
+    },
+  );
+  ipcMain.handle(
+    'hagihub:dispatch-github-workflow',
+    async (_event, accountId: string, request: GitHubWorkflowDispatchRequest): Promise<GitHubWorkflowDispatchResponse> => {
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
+      return await dispatchGitHubWorkflow(token, request);
     },
   );
 }

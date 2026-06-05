@@ -6,9 +6,15 @@ import type {
   ExternalOpenResult,
   GitHubActionsResult,
   GitHubAccountsResult,
+  GitHubManagedWorkflowReference,
+  GitHubWorkflowDispatchRequest,
+  GitHubWorkflowDispatchResponse,
   OrgsResult,
+  ManagedActionsResult,
+  RefreshManagedActionsResult,
   RepoDetailsResult,
   ReposResult,
+  SearchGitHubWorkflowsResult,
   UpdateRepoPayload,
   UpdateRepoResult,
   UpdateRepoTopicsResult,
@@ -36,6 +42,11 @@ const hagihubApi = {
   fetchRepoDetails: (accountId: string, owner: string, repo: string) => ipcRenderer.invoke('hagihub:fetch-repo-details', accountId, owner, repo) as Promise<RepoDetailsResult>,
   updateRepo: (accountId: string, owner: string, repo: string, updates: UpdateRepoPayload) => ipcRenderer.invoke('hagihub:update-repo', accountId, owner, repo, updates) as Promise<UpdateRepoResult>,
   updateRepoTopics: (accountId: string, owner: string, repo: string, names: string[]) => ipcRenderer.invoke('hagihub:update-repo-topics', accountId, owner, repo, names) as Promise<UpdateRepoTopicsResult>,
+  searchGitHubWorkflows: (accountId: string, query: string) => ipcRenderer.invoke('hagihub:search-github-workflows', accountId, query) as Promise<SearchGitHubWorkflowsResult>,
+  getManagedActions: (accountId: string) => ipcRenderer.invoke('hagihub:get-managed-actions', accountId) as Promise<ManagedActionsResult>,
+  saveManagedActions: (accountId: string, workflows: GitHubManagedWorkflowReference[]) => ipcRenderer.invoke('hagihub:save-managed-actions', accountId, workflows) as Promise<ManagedActionsResult>,
+  refreshManagedActionRuns: (accountId: string, workflows: GitHubManagedWorkflowReference[]) => ipcRenderer.invoke('hagihub:refresh-managed-action-runs', accountId, workflows) as Promise<RefreshManagedActionsResult>,
+  dispatchGitHubWorkflow: (accountId: string, request: GitHubWorkflowDispatchRequest) => ipcRenderer.invoke('hagihub:dispatch-github-workflow', accountId, request) as Promise<GitHubWorkflowDispatchResponse>,
 };
 
 contextBridge.exposeInMainWorld('hagihub', hagihubApi);
