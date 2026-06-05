@@ -42,7 +42,7 @@ function AccountSelector({ onAddAccount }: AccountSelectorProps) {
         </div>
 
         <Button variant="outline" onClick={onAddAccount}>
-          <Plus /> {t('workspace.addAccount')}
+          <Plus /> {t('repos.addAccount')}
         </Button>
       </div>
 

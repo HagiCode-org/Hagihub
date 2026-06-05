@@ -47,7 +47,7 @@ function AccountManagementPage({ onAddAccount }: AccountManagementPageProps) {
           </div>
 
           <Button onClick={onAddAccount}>
-            <Plus /> {t('workspace.addAccount')}
+            <Plus /> {t('repos.addAccount')}
           </Button>
         </div>
 
@@ -72,7 +72,7 @@ function AccountManagementPage({ onAddAccount }: AccountManagementPageProps) {
           <p className="text-base font-medium text-foreground">{t('accountManagement.emptyTitle')}</p>
           <p className="mt-2 text-sm text-muted-foreground">{t('accountManagement.emptyDescription')}</p>
           <Button className="mt-5" onClick={onAddAccount}>
-            <Plus /> {t('workspace.addAccount')}
+            <Plus /> {t('repos.addAccount')}
           </Button>
         </section>
       ) : (

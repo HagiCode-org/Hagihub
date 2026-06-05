@@ -20,7 +20,7 @@ function EmptyState({ onAddAccount }: EmptyStateProps) {
           <p className="mt-1 text-sm text-muted-foreground">{t('emptyState.addFirst')}</p>
         </div>
         <Button onClick={onAddAccount}>
-          <Plus /> {t('workspace.addAccount')}
+          <Plus /> {t('repos.addAccount')}
         </Button>
       </div>
     </section>
