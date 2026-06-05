@@ -38,10 +38,7 @@ function AccountSelector({ onAddAccount }: AccountSelectorProps) {
             <Badge variant="secondary">{t('accountSelector.eyebrow')}</Badge>
             <Badge variant="outline">{t('accountSelector.connectedCount', { count: accounts.length })}</Badge>
           </div>
-          <div>
-            <h3 className="text-2xl font-semibold tracking-tight text-foreground">{t('accountSelector.title')}</h3>
-            <p className="mt-1 text-sm leading-7 text-muted-foreground">{t('accountSelector.description')}</p>
-          </div>
+          <h3 className="text-2xl font-semibold tracking-tight text-foreground">{t('accountSelector.title')}</h3>
         </div>
 
         <Button variant="outline" onClick={onAddAccount}>

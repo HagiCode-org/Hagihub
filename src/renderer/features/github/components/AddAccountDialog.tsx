@@ -1,7 +1,6 @@
 import { useEffect, useEffectEvent, useState } from 'react';
 import { CheckCircle2, ExternalLink, Github, LoaderCircle, RefreshCw, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAppDispatch, useAppSelector } from '@/store';
 import {
@@ -100,10 +99,7 @@ function AddAccountDialog({ open, onClose }: AddAccountDialogProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(6,10,18,0.78)] px-4 py-6 backdrop-blur-md">
       <div className="w-full max-w-2xl rounded-[2rem] border border-border/80 bg-card/95 shadow-[0_40px_120px_rgba(0,0,0,0.4)]">
         <div className="flex items-center justify-between gap-4 border-b border-border/70 px-6 py-5">
-          <div className="space-y-1">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">GitHub Device Flow</p>
-            <h2 className="text-2xl font-semibold text-foreground">{t('deviceFlow.title')}</h2>
-          </div>
+          <h2 className="text-2xl font-semibold text-foreground">{t('deviceFlow.title')}</h2>
           <Button variant="ghost" size="icon" onClick={() => void closeDialog()} aria-label={t('deviceFlow.close')}>
             <X />
           </Button>
@@ -131,8 +127,6 @@ function AddAccountDialog({ open, onClose }: AddAccountDialogProps) {
                 </div>
               </div>
 
-              <p className="text-sm leading-7 text-muted-foreground">{t('deviceFlow.securityHint')}</p>
-
               <div className="flex justify-end gap-3">
                 <Button variant="outline" onClick={() => void closeDialog()}>{t('deviceFlow.close')}</Button>
                 <Button onClick={() => void closeDialog()}>{t('deviceFlow.done')}</Button>
@@ -140,10 +134,6 @@ function AddAccountDialog({ open, onClose }: AddAccountDialogProps) {
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="space-y-3">
-                <Badge variant="secondary">{t('workspace.heroBadge')}</Badge>
-                <p className="max-w-xl text-sm leading-7 text-muted-foreground">{t('deviceFlow.description')}</p>
-              </div>
 
               <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
                 <div className="rounded-[1.75rem] border border-border/70 bg-background/45 p-5">
@@ -171,8 +161,6 @@ function AddAccountDialog({ open, onClose }: AddAccountDialogProps) {
                   <Button className="w-full" size="lg" onClick={() => void openBrowser()} disabled={!verificationUri}>
                     <ExternalLink /> {t('deviceFlow.openBrowser')}
                   </Button>
-
-                  <p className="text-sm leading-7 text-muted-foreground">{t('deviceFlow.browserHint')}</p>
 
                   {browserError ? (
                     <p className="rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">

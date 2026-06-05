@@ -49,7 +49,6 @@ function RepoList({ activeAccountId }: RepoListProps) {
       <section className="editor-panel px-6 py-12 text-center">
         <LoaderCircle className="mx-auto size-8 animate-spin text-primary" />
         <p className="mt-4 text-base font-medium text-foreground">{t('repoList.loading')}</p>
-        <p className="mt-2 text-sm text-muted-foreground">{t('repoList.loadingHint')}</p>
       </section>
     );
   }
@@ -82,10 +81,7 @@ function RepoList({ activeAccountId }: RepoListProps) {
               <Badge variant="secondary">{t('repoList.eyebrow')}</Badge>
               <Badge variant="outline">{t('repoList.actionsTitle')}</Badge>
             </div>
-            <div>
-              <h3 className="text-2xl font-semibold tracking-tight text-foreground">{t('repoList.title')}</h3>
-              <p className="mt-1 max-w-3xl text-sm leading-7 text-muted-foreground">{t('repoList.actionsDescription')}</p>
-            </div>
+            <h3 className="text-2xl font-semibold tracking-tight text-foreground">{t('repoList.title')}</h3>
           </div>
 
           <Button variant="outline" onClick={() => void refresh()}>
@@ -109,7 +105,6 @@ function RepoList({ activeAccountId }: RepoListProps) {
       {repos.length === 0 ? (
         <section className="editor-panel px-6 py-10 text-center text-sm leading-7 text-muted-foreground">
           <p className="text-base font-medium text-foreground">{t('repoList.emptyTitle')}</p>
-          <p className="mt-2">{t('repoList.emptyDescription')}</p>
         </section>
       ) : (
         <div className="space-y-4">

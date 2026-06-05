@@ -11,7 +11,6 @@ interface RepoGroupProps {
 function RepoGroup({ org, repos }: RepoGroupProps) {
   const { t } = useTranslation('github');
   const title = org ? org.login : t('repoList.personalRepos');
-  const description = org?.description ?? (org ? t('repoList.organizationRepos') : t('repoList.personalDescription'));
 
   return (
     <section className="editor-panel overflow-hidden">
@@ -30,7 +29,6 @@ function RepoGroup({ org, repos }: RepoGroupProps) {
               <h4 className="text-base font-semibold text-foreground">{title}</h4>
               <span className="status-chip">{t('repoList.repoCountLabel', { count: repos.length })}</span>
             </div>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>
           </div>
         </div>
 

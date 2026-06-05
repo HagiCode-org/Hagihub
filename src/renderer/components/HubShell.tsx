@@ -51,7 +51,6 @@ const sectionDefinitions: Array<{
 
 type RoadmapItem = {
   title: string;
-  detail: string;
 };
 
 function ensureStringArray(value: unknown): string[] {
@@ -64,8 +63,7 @@ function ensureRoadmapItems(value: unknown): RoadmapItem[] {
         (item): item is RoadmapItem =>
           typeof item === 'object'
           && item !== null
-          && typeof item.title === 'string'
-          && typeof item.detail === 'string',
+          && typeof item.title === 'string',
       )
     : [];
 }
@@ -133,7 +131,6 @@ function HubShell() {
   const sections = sectionDefinitions.map((section) => ({
     ...section,
     label: t(`navigation.sections.${section.id}.label`, { ns: 'common' }),
-    description: t(`navigation.sections.${section.id}.description`, { ns: 'common' }),
   }));
 
   const sectionMeta = sections.find((section) => section.id === activeSection) ?? sections[0];
@@ -245,16 +242,12 @@ function HubShell() {
           <h2 className="max-w-3xl text-2xl font-semibold tracking-tight text-foreground lg:text-3xl">
             {t('shell.prepareTitle', { ns: 'common' })}
           </h2>
-          <p className="max-w-3xl text-sm leading-7 text-muted-foreground">
-            {t('shell.prepareDescription', { ns: 'common' })}
-          </p>
         </div>
 
         <div className="mt-5 grid gap-3 lg:grid-cols-3">
           <div className="panel-muted p-4">
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('shell.rendererStackLabel', { ns: 'common' })}</p>
             <p className="mt-3 text-lg font-medium text-foreground">{t('shell.rendererStackValue', { ns: 'common' })}</p>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('shell.rendererStackDescription', { ns: 'common' })}</p>
           </div>
           <div className="panel-muted p-4">
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('shell.appModeLabel', { ns: 'common' })}</p>
@@ -295,7 +288,6 @@ function HubShell() {
             {roadmapItems.map((item) => (
               <div key={item.title} className="panel-muted p-4">
                 <p className="text-sm font-medium text-foreground">{item.title}</p>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.detail}</p>
               </div>
             ))}
           </div>
@@ -313,7 +305,6 @@ function HubShell() {
         </div>
         <div className="mt-4 space-y-3">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground lg:text-3xl">{sectionMeta.label}</h2>
-          <p className="max-w-3xl text-sm leading-7 text-muted-foreground">{sectionMeta.description}</p>
         </div>
       </section>
 
@@ -327,7 +318,6 @@ function HubShell() {
             {roadmapItems.map((item) => (
               <div key={item.title} className="list-row px-4 py-3">
                 <p className="text-sm font-medium text-foreground">{item.title}</p>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.detail}</p>
               </div>
             ))}
           </div>
@@ -387,14 +377,9 @@ function HubShell() {
                       : t('workspace.actionsSynced', { ns: 'github' })}
                 </Badge>
               </div>
-              <div className="space-y-2">
-                <h2 className="max-w-3xl text-2xl font-semibold tracking-tight text-foreground lg:text-3xl">
-                  {t('workspace.heroTitle', { ns: 'github' })}
-                </h2>
-                <p className="max-w-3xl text-sm leading-7 text-muted-foreground">
-                  {t('workspace.toolbarHint', { ns: 'github' })}
-                </p>
-              </div>
+              <h2 className="max-w-3xl text-2xl font-semibold tracking-tight text-foreground lg:text-3xl">
+                {t('workspace.heroTitle', { ns: 'github' })}
+              </h2>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -495,7 +480,7 @@ function HubShell() {
               </div>
             ) : (
               <div className="panel-muted px-3 py-3 text-sm leading-6 text-muted-foreground">
-                {t('emptyState.secondary', { ns: 'github' })}
+                {t('emptyState.addFirst', { ns: 'github' })}
               </div>
             )}
 
@@ -587,7 +572,6 @@ function HubShell() {
           {roadmapItems.map((item) => (
             <div key={item.title} className="panel-muted px-3 py-3">
               <p className="text-sm font-medium text-foreground">{item.title}</p>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.detail}</p>
             </div>
           ))}
         </div>
@@ -613,7 +597,7 @@ function HubShell() {
                   <Badge variant="secondary">{sectionMeta.label}</Badge>
                 </div>
                 <p className="truncate text-xs text-muted-foreground">
-                  {isWorkspaceSection ? t('workspace.toolbarHint', { ns: 'github' }) : sectionMeta.description}
+                  {sectionMeta.label}
                 </p>
               </div>
             </div>
@@ -668,8 +652,6 @@ function HubShell() {
           <aside className="hidden min-h-0 w-72 shrink-0 overflow-y-auto border-r border-border/70 bg-[var(--surface-sidebar)]/90 p-3 xl:flex xl:flex-col xl:gap-4">
             <section className="editor-panel p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{t('shell.navigationLabel', { ns: 'common' })}</p>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('shell.navigationDescription', { ns: 'common' })}</p>
-
               <nav className="mt-4 space-y-2">
                 {sections.map((section) => {
                   const Icon = section.icon;
@@ -696,7 +678,6 @@ function HubShell() {
                       </span>
                       <span className="space-y-1">
                         <span className="block text-sm font-medium">{section.label}</span>
-                        <span className="block text-xs leading-5 text-muted-foreground">{section.description}</span>
                       </span>
                     </button>
                   );
@@ -733,7 +714,6 @@ function HubShell() {
                   <Github className="size-4 text-primary" />
                   {t('workspace.actionsHintTitle', { ns: 'github' })}
                 </div>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">{t('workspace.actionsHint', { ns: 'github' })}</p>
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                   <div className="panel-muted p-3">
                     <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('repoList.metrics.repos', { ns: 'github' })}</p>
