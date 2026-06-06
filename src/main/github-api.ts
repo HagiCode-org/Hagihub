@@ -15,6 +15,7 @@ import type {
   GitHubWorkflowDispatchResponse,
   GitHubWorkflowRun,
   GitHubWorkflowSummary,
+  ListGitHubRepoWorkflowsResult,
   RefreshManagedActionsResult,
   SearchGitHubWorkflowsResult,
   UpdateRepoPayload,
@@ -904,53 +905,111 @@ export async function searchGitHubWorkflows(
   ]);
 
   const perRepoResults = await mapWithConcurrency(candidateRepos, 4, async (repo) => {
-    const repoMatch = repoMatchesQuery(repo, normalizedQuery);
-    const rawWorkflows = await fetchRepoWorkflowList(token, repo.owner.login, repo.name);
-    const matchingWorkflows = rawWorkflows
-      .filter((workflow) => repoMatch || workflowMatchesQuery(workflow, normalizedQuery))
-      .slice(0, SEARCH_WORKFLOWS_PER_REPO_LIMIT);
+    try {
+      const repoMatch = repoMatchesQuery(repo, normalizedQuery);
+      const rawWorkflows = await fetchRepoWorkflowList(token, repo.owner.login, repo.name);
+      const matchingWorkflows = rawWorkflows
+        .filter((workflow) => repoMatch || workflowMatchesQuery(workflow, normalizedQuery))
+        .slice(0, SEARCH_WORKFLOWS_PER_REPO_LIMIT);
 
-    if (matchingWorkflows.length === 0) {
-      return [] as GitHubWorkflowSummary[];
-    }
-
-    const repoDetails = await fetchRepoDetails(token, repo.owner.login, repo.name);
-
-    return await mapWithConcurrency(matchingWorkflows, 2, async (workflow) => {
-      let dispatchMetadata: WorkflowDispatchMetadata = { supportsDispatch: false, inputs: [] };
-
-      try {
-        dispatchMetadata = await fetchWorkflowDispatchMetadata(
-          token,
-          repo.owner.login,
-          repo.name,
-          workflow.path,
-          repoDetails.defaultBranch,
-        );
-      } catch {
-        dispatchMetadata = { supportsDispatch: false, inputs: [] };
+      if (matchingWorkflows.length === 0) {
+        return [] as GitHubWorkflowSummary[];
       }
 
-      return toManagedWorkflowSummary(
-        {
-          accountId,
-          repoFullName: repo.fullName,
-          repoHtmlUrl: repo.htmlUrl,
-          defaultBranch: repoDetails.defaultBranch,
-          workflowId: workflow.id,
-          workflowName: workflow.name,
-          workflowPath: workflow.path,
-          workflowHtmlUrl: workflow.html_url,
-          supportsDispatch: dispatchMetadata.supportsDispatch,
-        },
-        dispatchMetadata,
-      );
-    });
+      const repoDetails = await fetchRepoDetails(token, repo.owner.login, repo.name);
+
+      return await mapWithConcurrency(matchingWorkflows, 2, async (workflow) => {
+        let dispatchMetadata: WorkflowDispatchMetadata = { supportsDispatch: false, inputs: [] };
+
+        try {
+          dispatchMetadata = await fetchWorkflowDispatchMetadata(
+            token,
+            repo.owner.login,
+            repo.name,
+            workflow.path,
+            repoDetails.defaultBranch,
+          );
+        } catch {
+          dispatchMetadata = { supportsDispatch: false, inputs: [] };
+        }
+
+        return toManagedWorkflowSummary(
+          {
+            accountId,
+            repoFullName: repo.fullName,
+            repoHtmlUrl: repo.htmlUrl,
+            defaultBranch: repoDetails.defaultBranch,
+            workflowId: workflow.id,
+            workflowName: workflow.name,
+            workflowPath: workflow.path,
+            workflowHtmlUrl: workflow.html_url,
+            supportsDispatch: dispatchMetadata.supportsDispatch,
+          },
+          dispatchMetadata,
+        );
+      });
+    } catch (error) {
+      if (error instanceof GitHubApiError && (error.code === 'unauthorized' || error.code === 'network')) {
+        throw error;
+      }
+
+      console.warn('[github-api] Skipping workflow search for repository', {
+        repoFullName: repo.fullName,
+        error: summarizeError(error),
+      });
+      return [] as GitHubWorkflowSummary[];
+    }
   });
 
   return {
     workflows: perRepoResults.flat().slice(0, SEARCH_RESULT_LIMIT),
     scannedRepoCount: candidateRepos.length,
+  };
+}
+
+export async function listGitHubRepoWorkflows(
+  token: string,
+  accountId: string,
+  repoFullName: string,
+): Promise<ListGitHubRepoWorkflowsResult> {
+  const { owner, repo } = splitRepoFullName(repoFullName);
+  const repoDetails = await fetchRepoDetails(token, owner, repo);
+  const rawWorkflows = await fetchRepoWorkflowList(token, owner, repo);
+
+  const workflows = await mapWithConcurrency(rawWorkflows, 2, async (workflow) => {
+    let dispatchMetadata: WorkflowDispatchMetadata = { supportsDispatch: false, inputs: [] };
+
+    try {
+      dispatchMetadata = await fetchWorkflowDispatchMetadata(
+        token,
+        owner,
+        repo,
+        workflow.path,
+        repoDetails.defaultBranch,
+      );
+    } catch {
+      dispatchMetadata = { supportsDispatch: false, inputs: [] };
+    }
+
+    return toManagedWorkflowSummary(
+      {
+        accountId,
+        repoFullName: repoDetails.fullName,
+        repoHtmlUrl: repoDetails.htmlUrl,
+        defaultBranch: repoDetails.defaultBranch,
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+        workflowPath: workflow.path,
+        workflowHtmlUrl: workflow.html_url,
+        supportsDispatch: dispatchMetadata.supportsDispatch,
+      },
+      dispatchMetadata,
+    );
+  });
+
+  return {
+    repoFullName: repoDetails.fullName,
+    workflows,
   };
 }
 

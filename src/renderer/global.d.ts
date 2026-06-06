@@ -6,6 +6,7 @@ import type {
   GitHubActionsResult,
   GitHubAccountsResult,
   GitHubManagedWorkflowReference,
+  ListGitHubRepoWorkflowsResult,
   GitHubWorkflowDispatchRequest,
   GitHubWorkflowDispatchResponse,
   OrgsResult,
@@ -33,6 +34,7 @@ interface HagihubApi {
   fetchRepoDetails: (accountId: string, owner: string, repo: string) => Promise<RepoDetailsResult>;
   updateRepo: (accountId: string, owner: string, repo: string, updates: UpdateRepoPayload) => Promise<UpdateRepoResult>;
   updateRepoTopics: (accountId: string, owner: string, repo: string, names: string[]) => Promise<UpdateRepoTopicsResult>;
+  listGitHubRepoWorkflows: (accountId: string, repoFullName: string) => Promise<ListGitHubRepoWorkflowsResult>;
   searchGitHubWorkflows: (accountId: string, query: string) => Promise<SearchGitHubWorkflowsResult>;
   getManagedActions: (accountId: string) => Promise<ManagedActionsResult>;
   saveManagedActions: (accountId: string, workflows: GitHubManagedWorkflowReference[]) => Promise<ManagedActionsResult>;

@@ -7,6 +7,7 @@ import {
   fetchOrgs,
   fetchRepoDetails,
   fetchRepos,
+  listGitHubRepoWorkflows,
   refreshManagedActionRuns,
   searchGitHubWorkflows,
   updateRepo,
@@ -22,6 +23,7 @@ import type {
   GitHubManagedWorkflowReference,
   GitHubWorkflowDispatchRequest,
   GitHubWorkflowDispatchResponse,
+  ListGitHubRepoWorkflowsResult,
   ManagedActionsResult,
   OrgsResult,
   PlatformId,
@@ -215,6 +217,13 @@ function registerIpcHandlers(): void {
     async (_event, accountId: string, owner: string, repo: string, names: string[]): Promise<UpdateRepoTopicsResult> => {
       const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
       return await updateRepoTopics(token, owner, repo, names);
+    },
+  );
+  ipcMain.handle(
+    'hagihub:list-github-repo-workflows',
+    async (_event, accountId: string, repoFullName: string): Promise<ListGitHubRepoWorkflowsResult> => {
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
+      return await listGitHubRepoWorkflows(token, accountId, repoFullName);
     },
   );
   ipcMain.handle(

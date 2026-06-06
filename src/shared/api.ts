@@ -202,6 +202,11 @@ export interface SearchGitHubWorkflowsResult {
   scannedRepoCount: number;
 }
 
+export interface ListGitHubRepoWorkflowsResult {
+  repoFullName: string;
+  workflows: GitHubWorkflowSummary[];
+}
+
 export interface ManagedActionsResult {
   workflows: GitHubManagedWorkflowReference[];
 }
