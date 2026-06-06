@@ -239,7 +239,7 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
   }
 
   return (
-    <div className="flex h-[calc(100vh-2rem)] flex-col gap-4 overflow-hidden">
+    <div className="flex h-full flex-col gap-4 overflow-hidden">
       <section className="editor-panel shrink-0 p-5 lg:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">

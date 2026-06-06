@@ -574,7 +574,7 @@ function HubShell() {
 
             <div className={cn(
               'min-h-0 flex-1 px-4 py-4 lg:px-5 lg:py-5',
-              isReposSection ? 'flex flex-col overflow-hidden' : 'overflow-y-auto',
+              isReposSection || isActionsSection ? 'flex flex-col overflow-hidden' : 'overflow-y-auto',
             )}>
               {activeSection === 'overview' ? renderOverviewContent() : null}
               {isReposSection ? renderReposContent() : null}
