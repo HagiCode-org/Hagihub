@@ -76,7 +76,7 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
     }
 
     if (reposAccountId !== activeAccountId || reposStatus === 'idle') {
-      void dispatch(fetchRepos(activeAccountId));
+      void dispatch(fetchRepos({ accountId: activeAccountId }));
     }
   }, [activeAccountId, dispatch, reposAccountId, reposStatus]);
 

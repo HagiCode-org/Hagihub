@@ -131,7 +131,7 @@ function HubShell() {
       return;
     }
 
-    void dispatch(fetchRepos(activeAccountId));
+    void dispatch(fetchRepos({ accountId: activeAccountId }));
   }, [activeAccountId, dispatch, isReposSection]);
 
   const sections = sectionDefinitions.map((section) => ({
@@ -156,7 +156,7 @@ function HubShell() {
 
   const refreshRepos = () => {
     if (activeAccountId) {
-      void dispatch(fetchRepos(activeAccountId));
+      void dispatch(fetchRepos({ accountId: activeAccountId, forceRefresh: true }));
       return;
     }
 

@@ -80,7 +80,7 @@ function RepoList({ activeAccountId }: RepoListProps) {
   }, [activeOrgFilter, deferredGroups, deferredPersonalRepos, searchQuery, visibilityFilter]);
 
   const refresh = async () => {
-    await dispatch(fetchRepos(activeAccountId));
+    await dispatch(fetchRepos({ accountId: activeAccountId, forceRefresh: true }));
   };
 
   if (fetchStatus === 'loading') {
