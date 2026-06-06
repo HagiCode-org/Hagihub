@@ -25,6 +25,8 @@ shell:
   description: A desktop shell for the next phase of Hagihub development, with UI primitives, state management, and Electron bridge wiring already in place.
   chromeBadge: Local shell
   navigationLabel: Workspace
+  expandSidebar: Expand sidebar
+  collapseSidebar: Collapse sidebar
   navigationDescription: Move between repository, workflow, account, and settings surfaces.
   activeSectionLabel: Active lane
   runtimeSnapshot: Runtime snapshot

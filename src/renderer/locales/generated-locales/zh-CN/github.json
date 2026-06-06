@@ -104,6 +104,12 @@
     "actionsLoaded": "已为 {{count}} 个仓库加载工作流状态。",
     "actionsPartialFailure": "有 {{count}} 个仓库的工作流扫描失败。",
     "searchPlaceholder": "搜索仓库名称或描述...",
+    "tableCaption": "{{owner}} 仓库列表，共 {{count}} 个。",
+    "columns": {
+      "repository": "仓库",
+      "visibility": "可见性",
+      "actions": "操作"
+    },
     "visibilityAll": "全部",
     "visibilityPublic": "公开",
     "visibilityPrivate": "私有",

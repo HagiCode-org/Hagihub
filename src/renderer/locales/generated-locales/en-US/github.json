@@ -104,6 +104,12 @@
     "actionsLoaded": "Loaded workflow status for {{count}} repositories.",
     "actionsPartialFailure": "Workflow scans failed for {{count}} repositories.",
     "searchPlaceholder": "Search repositories...",
+    "tableCaption": "{{owner}} repository list, {{count}} total.",
+    "columns": {
+      "repository": "Repository",
+      "visibility": "Visibility",
+      "actions": "Actions"
+    },
     "visibilityAll": "All",
     "visibilityPublic": "Public",
     "visibilityPrivate": "Private",
