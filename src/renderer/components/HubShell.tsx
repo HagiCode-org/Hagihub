@@ -1,7 +1,6 @@
 import { startTransition, useEffect, useState } from 'react';
 import {
   Bolt,
-  Cable,
   Check,
   ChevronsUpDown,
   ExternalLink,
@@ -13,7 +12,6 @@ import {
   Plus,
   RefreshCw,
   Settings2,
-  ShieldCheck,
   TerminalSquare,
   Users,
   Workflow,
@@ -22,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { ActionManagementPage } from '@/features/action-management';
 import { AccountManagementPage, AddAccountDialog, EmptyState, RepoList } from '@/features/github';
+import { SettingsPage } from '@/features/settings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -143,7 +142,6 @@ function HubShell() {
   const sectionMeta = sections.find((section) => section.id === activeSection) ?? sections[0];
   const foundationModules = ensureStringArray(t('shell.foundationModules', { ns: 'common', returnObjects: true }));
   const roadmapItems = ensureRoadmapItems(t(`shell.roadmap.${activeSection}`, { ns: 'common', returnObjects: true }));
-  const nextSteps = ensureStringArray(t('shell.nextSteps', { ns: 'common', returnObjects: true }));
   const loadingLabel = t('shell.loading', { ns: 'common' });
   const activeAccount = accounts.find((account) => account.id === activeAccountId) ?? null;
 
@@ -234,50 +232,6 @@ function HubShell() {
             {roadmapItems.map((item) => (
               <div key={item.title} className="panel-muted p-4">
                 <p className="text-sm font-medium text-foreground">{item.title}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-    </div>
-  );
-
-  const renderSettingsContent = () => (
-    <div className="space-y-4">
-      <section className="editor-panel p-5 lg:p-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge>{sectionMeta.label}</Badge>
-          <Badge variant="outline">{t('shell.runtimeSnapshot', { ns: 'common' })}</Badge>
-        </div>
-        <div className="mt-4 space-y-3">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground lg:text-3xl">{sectionMeta.label}</h2>
-        </div>
-      </section>
-
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)]">
-        <section className="editor-panel p-5 lg:p-6">
-          <div className="flex items-center gap-3 text-sm font-medium text-foreground">
-            <Cable className="size-4 text-primary" />
-            {t('shell.suggestedNextSteps', { ns: 'common' })}
-          </div>
-          <div className="mt-4 space-y-3">
-            {roadmapItems.map((item) => (
-              <div key={item.title} className="list-row px-4 py-3">
-                <p className="text-sm font-medium text-foreground">{item.title}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="editor-panel p-5 lg:p-6">
-          <div className="flex items-center gap-3 text-sm font-medium text-foreground">
-            <ShieldCheck className="size-4 text-primary" />
-            {t('shell.foundationModulesLabel', { ns: 'common' })}
-          </div>
-          <div className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
-            {nextSteps.map((step) => (
-              <div key={step} className="panel-muted px-4 py-3">
-                {step}
               </div>
             ))}
           </div>
@@ -595,7 +549,7 @@ function HubShell() {
               {isReposSection ? renderReposContent() : null}
               {isActionsSection ? renderActionsContent() : null}
               {isAccountsSection ? renderAccountsContent() : null}
-              {activeSection === 'settings' ? renderSettingsContent() : null}
+              {activeSection === 'settings' ? <SettingsPage /> : null}
             </div>
           </main>
         </div>
