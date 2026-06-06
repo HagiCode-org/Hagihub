@@ -7,6 +7,7 @@ type FetchStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
 interface FetchActionsArgs {
   accountId: string;
   repoFullNames: string[];
+  forceRefresh?: boolean;
 }
 
 export interface GitHubActionsState {
@@ -49,8 +50,12 @@ export const fetchActionsSummaries = createAsyncThunk<
   { rejectValue: string }
 >(
   'githubActions/fetchActionsSummaries',
-  async ({ accountId, repoFullNames }, { rejectWithValue }) => {
+  async ({ accountId, repoFullNames, forceRefresh = false }, { rejectWithValue }) => {
     try {
+      if (forceRefresh) {
+        await window.hagihub.invalidateGitHubCache();
+      }
+
       const result = await window.hagihub.fetchGitHubActions(accountId, repoFullNames);
       return { accountId, result };
     } catch (error) {

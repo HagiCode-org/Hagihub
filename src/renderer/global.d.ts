@@ -36,6 +36,7 @@ interface HagihubApi {
   removeGitHubAccount: (accountId: string) => Promise<GitHubAccountsResult>;
   getGitHubAccounts: () => Promise<GitHubAccountsResult>;
   switchGitHubAccount: (accountId: string) => Promise<GitHubAccountsResult>;
+  invalidateGitHubCache: () => Promise<void>;
   fetchGitHubRepos: (accountId: string) => Promise<ReposResult>;
   fetchGitHubOrgs: (accountId: string) => Promise<OrgsResult>;
   fetchGitHubActions: (accountId: string, repoFullNames: string[]) => Promise<GitHubActionsResult>;

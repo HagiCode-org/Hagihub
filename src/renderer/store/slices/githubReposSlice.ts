@@ -16,6 +16,11 @@ interface FetchReposPayload {
   orgError: string | null;
 }
 
+interface FetchReposArgs {
+  accountId: string;
+  forceRefresh?: boolean;
+}
+
 export type OrgFilterValue = 'all' | 'personal' | string;
 export type VisibilityFilter = 'all' | 'public' | 'private';
 
@@ -94,9 +99,13 @@ function buildGroups(orgs: GitHubOrg[], repos: GitHubRepo[]): Pick<GitHubReposSt
   };
 }
 
-export const fetchRepos = createAsyncThunk<FetchReposPayload, string, { rejectValue: string }>(
+export const fetchRepos = createAsyncThunk<FetchReposPayload, FetchReposArgs, { rejectValue: string }>(
   'githubRepos/fetchRepos',
-  async (accountId, { rejectWithValue }) => {
+  async ({ accountId, forceRefresh = false }, { rejectWithValue }) => {
+    if (forceRefresh) {
+      await window.hagihub.invalidateGitHubCache();
+    }
+
     const [orgsResult, reposResult] = await Promise.allSettled([
       window.hagihub.fetchGitHubOrgs(accountId),
       window.hagihub.fetchGitHubRepos(accountId),
@@ -150,7 +159,7 @@ const githubReposSlice = createSlice({
         state.repos = [];
         state.groupedRepos = [];
         state.personalRepos = [];
-        state.activeAccountId = action.meta.arg;
+        state.activeAccountId = action.meta.arg.accountId;
         state.activeOrgFilter = 'all';
         state.searchQuery = '';
         state.visibilityFilter = 'all';

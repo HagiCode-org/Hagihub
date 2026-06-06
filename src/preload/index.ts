@@ -63,6 +63,7 @@ const hagihubApi = {
   removeGitHubAccount: (accountId: string) => ipcRenderer.invoke('hagihub:remove-github-account', accountId) as Promise<GitHubAccountsResult>,
   getGitHubAccounts: () => ipcRenderer.invoke('hagihub:get-github-accounts') as Promise<GitHubAccountsResult>,
   switchGitHubAccount: (accountId: string) => ipcRenderer.invoke('hagihub:switch-github-account', accountId) as Promise<GitHubAccountsResult>,
+  invalidateGitHubCache: () => ipcRenderer.invoke('hagihub:invalidate-github-cache') as Promise<void>,
   fetchGitHubRepos: (accountId: string) => ipcRenderer.invoke('hagihub:fetch-github-repos', accountId) as Promise<ReposResult>,
   fetchGitHubOrgs: (accountId: string) => ipcRenderer.invoke('hagihub:fetch-github-orgs', accountId) as Promise<OrgsResult>,
   fetchGitHubActions: (accountId: string, repoFullNames: string[]) => ipcRenderer.invoke('hagihub:fetch-github-actions', accountId, repoFullNames) as Promise<GitHubActionsResult>,
