@@ -247,6 +247,7 @@ errors:
   fetchActionsFailed: 加载 GitHub Actions 工作流数据失败。
   loadManagedActionsFailed: 恢复已托管工作流失败。
   loadRepoWorkflowsFailed: 加载所选仓库的工作流失败。
+  loadRepoWorkflowsTimedOut: 加载所选仓库的工作流超时。
   searchWorkflowsFailed: 搜索 GitHub 工作流失败。
   saveManagedActionsFailed: 更新托管工作流列表失败。
   refreshManagedActionsFailed: 刷新托管工作流状态失败。

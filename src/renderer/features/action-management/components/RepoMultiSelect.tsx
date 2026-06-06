@@ -35,7 +35,7 @@ function RepoMultiSelect({
   const [searchQuery, setSearchQuery] = useState('');
   const deferredQuery = useDeferredValue(searchQuery.trim().toLowerCase());
   const selectedRepoSet = new Set(selectedRepoFullNames);
-  const repoGroups = [
+  const allRepoGroups = [
     ...(personalRepos.length > 0
       ? [{
         key: 'personal',
@@ -48,7 +48,8 @@ function RepoMultiSelect({
       label: group.org.login,
       repos: group.repos,
     })),
-  ].map((group) => ({
+  ];
+  const repoGroups = allRepoGroups.map((group) => ({
     ...group,
     repos: group.repos.filter((repo) => {
       if (!deferredQuery) {
@@ -91,7 +92,7 @@ function RepoMultiSelect({
     );
   }
 
-  if (repoGroups.length === 0) {
+  if (allRepoGroups.length === 0) {
     return (
       <div className='panel-muted px-4 py-5 text-sm leading-6 text-muted-foreground'>
         {t('actionManagement.transfer.noReposAvailable')}

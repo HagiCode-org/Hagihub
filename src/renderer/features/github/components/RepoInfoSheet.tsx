@@ -108,15 +108,15 @@ function RepoInfoSheet({ owner, repo, onClose }: RepoInfoSheetProps) {
         ) : details ? (
           <Tabs defaultValue="info" className="flex min-h-0 flex-1 flex-col">
             <div className="border-b border-border/70 px-6 py-4">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div>
-                  <p className="text-lg font-semibold text-foreground">{details.fullName}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{t('repoCard.tabs.description')}</p>
-                </div>
-                <TabsList className="grid w-full grid-cols-3 xl:w-auto">
-                  <TabsTrigger value="info" className="w-full">{t('repoCard.tabs.info')}</TabsTrigger>
-                  <TabsTrigger value="readme" className="w-full">{t('repoCard.tabs.readme')}</TabsTrigger>
-                  <TabsTrigger value="license" className="w-full">{t('repoCard.tabs.license')}</TabsTrigger>
+              <div>
+                <p className="text-lg font-semibold text-foreground">{details.fullName}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{t('repoCard.tabs.description')}</p>
+              </div>
+              <div className="mt-4">
+                <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-xl bg-transparent p-0">
+                  <TabsTrigger value="info" className="min-w-fit justify-start border border-border/70 bg-background/35 px-4">{t('repoCard.tabs.info')}</TabsTrigger>
+                  <TabsTrigger value="readme" className="min-w-fit justify-start border border-border/70 bg-background/35 px-4">{t('repoCard.tabs.readme')}</TabsTrigger>
+                  <TabsTrigger value="license" className="min-w-fit justify-start border border-border/70 bg-background/35 px-4">{t('repoCard.tabs.license')}</TabsTrigger>
                 </TabsList>
               </div>
             </div>

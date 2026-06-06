@@ -213,8 +213,14 @@ function ActionTransferModal({
                   <div className="space-y-2">
                     {loadErrorEntries.map(([repoFullName, message]) => (
                       <p key={repoFullName}>
-                        <span className="font-mono">{repoFullName}</span>
-                        {`: ${message}`}
+                        {repoFullName === '__global__' ? (
+                          message
+                        ) : (
+                          <>
+                            <span className="font-mono">{repoFullName}</span>
+                            {`: ${message}`}
+                          </>
+                        )}
                       </p>
                     ))}
                   </div>

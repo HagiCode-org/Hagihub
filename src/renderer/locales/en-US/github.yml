@@ -247,6 +247,7 @@ errors:
   fetchActionsFailed: Failed to load GitHub Actions workflow data.
   loadManagedActionsFailed: Failed to restore managed workflows.
   loadRepoWorkflowsFailed: Failed to load workflows for the selected repository.
+  loadRepoWorkflowsTimedOut: Timed out while loading workflows for the selected repository.
   searchWorkflowsFailed: Failed to search GitHub workflows.
   saveManagedActionsFailed: Failed to update the managed workflow list.
   refreshManagedActionsFailed: Failed to refresh managed workflow status.
