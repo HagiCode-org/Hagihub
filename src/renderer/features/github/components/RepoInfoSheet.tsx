@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Info, LoaderCircle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -66,9 +67,13 @@ function RepoInfoSheet({ owner, repo, onClose }: RepoInfoSheetProps) {
     }
   };
 
-  return (
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-[80] flex justify-end bg-black/40 backdrop-blur-sm"
       onClick={handleOverlayClick}
       role="dialog"
       aria-modal="true"
@@ -145,7 +150,8 @@ function RepoInfoSheet({ owner, repo, onClose }: RepoInfoSheetProps) {
           </Tabs>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
