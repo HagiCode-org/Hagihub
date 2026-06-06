@@ -116,4 +116,43 @@
     background: color-mix(in srgb, var(--primary) 14%, transparent);
     @apply inline-flex items-center rounded-lg border border-primary/20 px-2.5 py-1 font-mono text-[11px] text-primary;
   }
+
+  .repo-table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .repo-table thead {
+    background: color-mix(in srgb, var(--surface-panel-muted) 74%, transparent);
+  }
+
+  .repo-table th {
+    @apply px-5 py-3 text-left text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground;
+  }
+
+  .repo-table td {
+    @apply px-5 py-4 align-top;
+  }
+
+  .repo-table__row td {
+    border-top: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
+  }
+
+  .repo-table tbody tr {
+    transition: background-color 160ms ease;
+  }
+
+  .repo-table tbody tr:hover {
+    background: color-mix(in srgb, var(--accent) 24%, transparent);
+  }
+
+  .repo-table__repo {
+    width: 46%;
+    min-width: 360px;
+  }
+
+  .repo-table__actions {
+    width: 1%;
+    white-space: nowrap;
+  }
 }
