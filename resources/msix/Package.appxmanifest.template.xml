@@ -3,7 +3,6 @@
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
-  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap uap10">
   <Identity
     Name="{{PACKAGE_IDENTITY}}"
@@ -27,7 +26,6 @@
     <Resource Language="zh-CN" />
   </Resources>
   <Capabilities>
-    <rescap:Capability Name="runFullTrust" />
     <Capability Name="internetClient" />
   </Capabilities>
   <Applications>
