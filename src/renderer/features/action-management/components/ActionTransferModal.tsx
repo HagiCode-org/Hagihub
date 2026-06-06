@@ -141,7 +141,7 @@ function ActionTransferModal({
       aria-modal="true"
       aria-label={t('actionManagement.transfer.title')}
     >
-      <div className="w-full max-w-6xl rounded-[2rem] border border-border/80 bg-card/95 shadow-[0_40px_120px_rgba(0,0,0,0.4)]">
+      <div className="flex max-h-[calc(100vh-3rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-border/80 bg-card/95 shadow-[0_40px_120px_rgba(0,0,0,0.4)]">
         <div className="flex items-center justify-between gap-4 border-b border-border/70 px-6 py-5">
           <div>
             <h2 className="text-2xl font-semibold text-foreground">{t('actionManagement.transfer.title')}</h2>
@@ -152,7 +152,7 @@ function ActionTransferModal({
           </Button>
         </div>
 
-        <div className="space-y-6 px-6 py-6">
+        <div className="min-h-0 space-y-6 overflow-y-auto px-6 py-6">
           <div className="grid gap-3 md:grid-cols-3">
             {phases.map((label, index) => {
               const phaseNumber = (index + 1) as 1 | 2 | 3;

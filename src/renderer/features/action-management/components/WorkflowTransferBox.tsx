@@ -62,8 +62,8 @@ function WorkflowTransferBox({
   const selectedStaged = stagedWorkflows.filter((workflow) => selectedStagedKeys.includes(workflowKey(workflow)));
 
   return (
-    <div className='grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]'>
-      <section className='editor-panel flex min-h-[24rem] flex-col p-4'>
+    <div className='grid min-h-0 gap-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]'>
+      <section className='editor-panel flex h-[20rem] min-h-0 flex-col p-4 sm:h-[24rem] lg:h-[min(30rem,calc(100vh-24rem))]'>
         <div className='flex flex-wrap items-center justify-between gap-3'>
           <div>
             <p className='text-sm font-semibold text-foreground'>
@@ -87,7 +87,7 @@ function WorkflowTransferBox({
           </div>
         </label>
 
-        <div className='mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto'>
+        <div className='mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1'>
           {visibleAvailableWorkflows.length === 0 ? (
             <div className='panel-muted px-4 py-6 text-sm leading-6 text-muted-foreground'>
               {availableWorkflows.length === stagedWorkflows.length
@@ -137,7 +137,7 @@ function WorkflowTransferBox({
         </div>
       </section>
 
-      <div className='flex flex-row items-center justify-center gap-2 lg:flex-col'>
+      <div className='flex flex-row items-center justify-center gap-2 lg:self-center lg:flex-col'>
         <Button
           type='button'
           variant='outline'
@@ -180,7 +180,7 @@ function WorkflowTransferBox({
         </Button>
       </div>
 
-      <section className='editor-panel flex min-h-[24rem] flex-col p-4'>
+      <section className='editor-panel flex h-[20rem] min-h-0 flex-col p-4 sm:h-[24rem] lg:h-[min(30rem,calc(100vh-24rem))]'>
         <div className='flex flex-wrap items-center justify-between gap-3'>
           <div>
             <p className='text-sm font-semibold text-foreground'>
@@ -191,7 +191,7 @@ function WorkflowTransferBox({
           <Badge variant='outline'>{stagedWorkflows.length}</Badge>
         </div>
 
-        <div className='mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto'>
+        <div className='mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1'>
           {stagedWorkflows.length === 0 ? (
             <div className='panel-muted px-4 py-6 text-sm leading-6 text-muted-foreground'>
               {t('actionManagement.transfer.emptySelected')}
