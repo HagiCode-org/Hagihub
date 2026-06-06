@@ -152,7 +152,7 @@ function ActionTransferModal({
           </Button>
         </div>
 
-        <div className="min-h-0 space-y-6 overflow-y-auto px-6 py-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 py-6">
           <div className="grid gap-3 md:grid-cols-3">
             {phases.map((label, index) => {
               const phaseNumber = (index + 1) as 1 | 2 | 3;
@@ -258,8 +258,8 @@ function ActionTransferModal({
           ) : null}
 
           {phase === 3 ? (
-            <div className="space-y-5">
-              <section className="editor-panel p-5">
+            <div className="flex min-h-0 flex-1 flex-col gap-5">
+              <section className="editor-panel flex min-h-0 flex-1 flex-col p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <Badge>{t('actionManagement.transfer.phaseConfirm')}</Badge>
@@ -270,7 +270,7 @@ function ActionTransferModal({
                   <div className="status-chip">{t('actionManagement.transfer.selected', { count: stagedSelection.length })}</div>
                 </div>
 
-                <div className="mt-5 h-[calc(80vh-22rem)] min-h-0 overflow-auto">
+                <div className="mt-5 min-h-0 flex-1 overflow-auto">
                   {stagedSelection.length === 0 ? (
                     <div className="panel-muted px-4 py-6 text-sm leading-6 text-muted-foreground">
                       {t('actionManagement.transfer.emptySelected')}
