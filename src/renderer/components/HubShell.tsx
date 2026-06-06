@@ -372,7 +372,7 @@ function HubShell() {
     }
 
     return (
-      <div className="space-y-4">
+      <div className="flex min-h-full flex-col gap-4 overflow-hidden">
         <section className="editor-panel p-5 lg:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
@@ -572,7 +572,10 @@ function HubShell() {
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 lg:px-5 lg:py-5">
+            <div className={cn(
+              'min-h-0 flex-1 px-4 py-4 lg:px-5 lg:py-5',
+              isReposSection ? 'overflow-hidden' : 'overflow-y-auto',
+            )}>
               {activeSection === 'overview' ? renderOverviewContent() : null}
               {isReposSection ? renderReposContent() : null}
               {isActionsSection ? renderActionsContent() : null}

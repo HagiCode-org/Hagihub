@@ -21,60 +21,69 @@ function RepoCard({ repo }: RepoCardProps) {
   });
 
   return (
-    <div className="grid gap-4 px-5 py-4 transition-colors hover:bg-accent/18 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.95fr)_auto] lg:items-center">
-      <div className="min-w-0 space-y-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <img src={repo.owner.avatarUrl} alt={repo.owner.login} className="size-10 rounded-xl border border-border/70 object-cover" />
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h4 className="truncate text-base font-semibold text-foreground">{repo.fullName}</h4>
-              <Badge variant={repo.isPrivate ? 'default' : 'outline'}>
-                {repo.isPrivate ? <LockKeyhole className="size-3.5" /> : <Radio className="size-3.5" />}
-                {repo.isPrivate ? t('repoCard.private') : t('repoCard.public')}
-              </Badge>
-              {repo.isFork ? (
-                <Badge variant="secondary">
-                  <GitFork className="size-3.5" /> {t('repoCard.fork')}
-                </Badge>
-              ) : null}
+    <>
+      <tr className="repo-table__row">
+        <td className="repo-table__repo">
+          <div className="flex min-w-0 items-start gap-3">
+            <img src={repo.owner.avatarUrl} alt={repo.owner.login} className="mt-0.5 size-10 rounded-xl border border-border/70 object-cover" />
+            <div className="min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="truncate text-sm font-semibold text-foreground md:text-base">{repo.fullName}</p>
+                {repo.isFork ? (
+                  <Badge variant="secondary">
+                    <GitFork className="size-3.5" /> {t('repoCard.fork')}
+                  </Badge>
+                ) : null}
+              </div>
+              <p className="font-mono text-[11px] text-muted-foreground md:text-xs">{repo.name}</p>
+              <p className="max-w-[72ch] text-sm leading-6 text-muted-foreground">
+                {repo.description?.trim().length ? repo.description : t('repoCard.noDescription')}
+              </p>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">{repo.name}</p>
           </div>
-        </div>
+        </td>
 
-        <p className="text-sm leading-6 text-muted-foreground">
-          {repo.description?.trim().length ? repo.description : t('repoCard.noDescription')}
-        </p>
-      </div>
+        <td className="hidden lg:table-cell">
+          <div className="space-y-1">
+            <p className="font-mono text-xs text-foreground">@{repo.owner.login}</p>
+            <p className="text-xs text-muted-foreground">{repo.owner.type}</p>
+          </div>
+        </td>
 
-      <dl className="grid gap-x-4 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-2">
-        <div>
-          <dt className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('repoCard.owner')}</dt>
-          <dd className="mt-1 font-mono text-xs text-foreground">@{repo.owner.login}</dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('repoCard.updated')}</dt>
-          <dd className="mt-1 font-mono text-xs text-foreground">{updatedAt}</dd>
-        </div>
-      </dl>
+        <td>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={repo.isPrivate ? 'default' : 'outline'}>
+              {repo.isPrivate ? <LockKeyhole className="size-3.5" /> : <Radio className="size-3.5" />}
+              {repo.isPrivate ? t('repoCard.private') : t('repoCard.public')}
+            </Badge>
+            <span className="font-mono text-[11px] text-muted-foreground lg:hidden">@{repo.owner.login}</span>
+          </div>
+        </td>
 
-      <div className="flex flex-wrap gap-2 lg:flex-col lg:items-stretch">
-        <Button variant="outline" size="sm" onClick={() => setShowInfo(true)}>
-          <Info /> {t('repoCard.info.title')}
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => void window.hagihub.openExternal(repo.htmlUrl)}>
-          <ArrowUpRight /> {t('repoCard.openRepo')}
-        </Button>
-      </div>
+        <td className="hidden md:table-cell">
+          <span className="font-mono text-xs text-foreground">{updatedAt}</span>
+        </td>
 
-      {showInfo ? (
-        <RepoInfoSheet
-          owner={repo.owner.login}
-          repo={repo.name}
-          onClose={() => setShowInfo(false)}
-        />
-      ) : null}
-    </div>
+        <td className="repo-table__actions">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowInfo(true)}>
+              <Info /> {t('repoCard.info.title')}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => void window.hagihub.openExternal(repo.htmlUrl)}>
+              <ArrowUpRight /> {t('repoCard.openRepo')}
+            </Button>
+          </div>
+
+          {showInfo ? (
+            <RepoInfoSheet
+              owner={repo.owner.login}
+              repo={repo.name}
+              onClose={() => setShowInfo(false)}
+            />
+          ) : null}
+        </td>
+      </tr>
+    </>
   );
 }
 

@@ -11,6 +11,7 @@ interface RepoGroupProps {
 function RepoGroup({ org, repos }: RepoGroupProps) {
   const { t } = useTranslation('github');
   const title = org ? org.login : t('repoList.personalRepos');
+  const caption = t('repoList.tableCaption', { owner: title, count: repos.length });
 
   return (
     <section className="editor-panel overflow-hidden">
@@ -38,10 +39,24 @@ function RepoGroup({ org, repos }: RepoGroupProps) {
         </div>
       </div>
 
-      <div className="divide-y divide-border/70">
-        {repos.map((repo) => (
-          <RepoCard key={repo.id} repo={repo} />
-        ))}
+      <div className="overflow-x-auto">
+        <table className="repo-table min-w-full">
+          <caption className="sr-only">{caption}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{t('repoList.columns.repository')}</th>
+              <th scope="col" className="hidden lg:table-cell">{t('repoCard.owner')}</th>
+              <th scope="col">{t('repoList.columns.visibility')}</th>
+              <th scope="col" className="hidden md:table-cell">{t('repoCard.updated')}</th>
+              <th scope="col" className="repo-table__actions">{t('repoList.columns.actions')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {repos.map((repo) => (
+              <RepoCard key={repo.id} repo={repo} />
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
   );

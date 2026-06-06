@@ -120,7 +120,7 @@ function RepoList({ activeAccountId }: RepoListProps) {
   }
 
   return (
-    <div className="flex min-h-0 flex-col gap-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
       <section className="editor-panel flex-shrink-0 p-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative min-w-0 flex-1">
@@ -165,11 +165,13 @@ function RepoList({ activeAccountId }: RepoListProps) {
         </div>
       </section>
 
-      <div className="space-y-4 overflow-y-auto">
-        {filteredGroups.groups.map((group) => (
-          <RepoGroup key={group.org.id} org={group.org} repos={group.repos} />
-        ))}
-        {filteredGroups.personal.length > 0 ? <RepoGroup org={null} repos={filteredGroups.personal} /> : null}
+      <div className="min-h-0 overflow-y-auto pr-1">
+        <div className="space-y-4 pb-1">
+          {filteredGroups.groups.map((group) => (
+            <RepoGroup key={group.org.id} org={group.org} repos={group.repos} />
+          ))}
+          {filteredGroups.personal.length > 0 ? <RepoGroup org={null} repos={filteredGroups.personal} /> : null}
+        </div>
       </div>
     </div>
   );
