@@ -167,6 +167,31 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
           </div>
         ) : (
           <div className="flex h-full min-h-0 flex-col gap-5 overflow-hidden">
+            <div className="flex flex-wrap items-center gap-2">
+              {isEditing ? (
+                <>
+                  <Button variant="outline" size="sm" onClick={cancelEditing} disabled={submitStatus === 'loading'}>
+                    {t('repoCard.readme.cancel')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setDialogError(null);
+                      setDialogOpen(true);
+                    }}
+                    disabled={submitStatus === 'loading' || !accountId}
+                  >
+                    {t('repoCard.readme.save')}
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" size="sm" onClick={startEditing} disabled={loadState !== 'loaded' || !accountId}>
+                  <PencilLine className="size-3.5" />
+                  {exists ? t('repoCard.readme.edit') : t('repoCard.readme.create')}
+                </Button>
+              )}
+            </div>
+
             <div className="flex items-center gap-3">
               <span className="rounded-xl bg-primary/12 p-2 text-primary">
                 <FileText className="size-4" />
@@ -228,31 +253,6 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
               </div>
             )}
           </div>
-        )}
-      </div>
-
-      <div className="flex items-center justify-end gap-2 border-t border-border/70 px-6 py-4">
-        {isEditing ? (
-          <>
-            <Button variant="outline" size="sm" onClick={cancelEditing} disabled={submitStatus === 'loading'}>
-              {t('repoCard.readme.cancel')}
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                setDialogError(null);
-                setDialogOpen(true);
-              }}
-              disabled={submitStatus === 'loading' || !accountId}
-            >
-              {t('repoCard.readme.save')}
-            </Button>
-          </>
-        ) : (
-          <Button variant="outline" size="sm" onClick={startEditing} disabled={loadState !== 'loaded' || !accountId}>
-            <PencilLine className="size-3.5" />
-            {exists ? t('repoCard.readme.edit') : t('repoCard.readme.create')}
-          </Button>
         )}
       </div>
 

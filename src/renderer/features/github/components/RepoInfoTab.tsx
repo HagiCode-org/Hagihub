@@ -106,6 +106,25 @@ function RepoInfoTab({ accountId, owner, repo, locale, details, onDetailsChange 
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-y-auto px-6 py-5">
         <div className="space-y-5">
+          <div className="flex flex-wrap items-center gap-2">
+            {isEditing ? (
+              <>
+                <Button variant="outline" size="sm" onClick={cancelEditing} disabled={saving}>
+                  {t('repoCard.info.cancel')}
+                </Button>
+                <Button size="sm" onClick={() => void saveChanges()} disabled={saving || !accountId}>
+                  {saving ? <LoaderCircle className="size-3.5 animate-spin" /> : null}
+                  {saving ? t('repoCard.info.saving') : t('repoCard.info.save')}
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" size="sm" onClick={startEditing} disabled={!accountId}>
+                <Tag className="size-3.5" />
+                {t('repoCard.info.edit')}
+              </Button>
+            )}
+          </div>
+
           <div className="flex flex-wrap items-center gap-3">
             <h3 className="text-lg font-semibold text-foreground">{details.fullName}</h3>
             <Badge variant={details.visibility === 'private' ? 'default' : 'outline'}>
@@ -247,24 +266,6 @@ function RepoInfoTab({ accountId, owner, repo, locale, details, onDetailsChange 
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-2 border-t border-border/70 px-6 py-4">
-        {isEditing ? (
-          <>
-            <Button variant="outline" size="sm" onClick={cancelEditing} disabled={saving}>
-              {t('repoCard.info.cancel')}
-            </Button>
-            <Button size="sm" onClick={() => void saveChanges()} disabled={saving || !accountId}>
-              {saving ? <LoaderCircle className="size-3.5 animate-spin" /> : null}
-              {saving ? t('repoCard.info.saving') : t('repoCard.info.save')}
-            </Button>
-          </>
-        ) : (
-          <Button variant="outline" size="sm" onClick={startEditing} disabled={!accountId}>
-            <Tag className="size-3.5" />
-            {t('repoCard.info.edit')}
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

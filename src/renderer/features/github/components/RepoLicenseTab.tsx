@@ -198,6 +198,31 @@ function RepoLicenseTab({ accountId, owner, repo, defaultBranch }: RepoLicenseTa
           </div>
         ) : (
           <div className="space-y-5">
+            <div className="flex flex-wrap items-center gap-2">
+              {isEditing ? (
+                <>
+                  <Button variant="outline" size="sm" onClick={cancelEditing} disabled={submitStatus === 'loading'}>
+                    {t('repoCard.license.cancel')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setDialogError(null);
+                      setDialogOpen(true);
+                    }}
+                    disabled={submitStatus === 'loading' || !accountId}
+                  >
+                    {t('repoCard.license.save')}
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" size="sm" onClick={startEditing} disabled={loadState !== 'loaded' || !accountId}>
+                  <PencilLine className="size-3.5" />
+                  {exists ? t('repoCard.license.edit') : t('repoCard.license.create')}
+                </Button>
+              )}
+            </div>
+
             <div className="flex items-center gap-3">
               <span className="rounded-xl bg-primary/12 p-2 text-primary">
                 <Scale className="size-4" />
@@ -252,31 +277,6 @@ function RepoLicenseTab({ accountId, owner, repo, defaultBranch }: RepoLicenseTa
               </div>
             )}
           </div>
-        )}
-      </div>
-
-      <div className="flex items-center justify-end gap-2 border-t border-border/70 px-6 py-4">
-        {isEditing ? (
-          <>
-            <Button variant="outline" size="sm" onClick={cancelEditing} disabled={submitStatus === 'loading'}>
-              {t('repoCard.license.cancel')}
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                setDialogError(null);
-                setDialogOpen(true);
-              }}
-              disabled={submitStatus === 'loading' || !accountId}
-            >
-              {t('repoCard.license.save')}
-            </Button>
-          </>
-        ) : (
-          <Button variant="outline" size="sm" onClick={startEditing} disabled={loadState !== 'loaded' || !accountId}>
-            <PencilLine className="size-3.5" />
-            {exists ? t('repoCard.license.edit') : t('repoCard.license.create')}
-          </Button>
         )}
       </div>
 
