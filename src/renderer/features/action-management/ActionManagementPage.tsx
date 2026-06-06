@@ -1,30 +1,27 @@
-import { startTransition, useDeferredValue, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { LoaderCircle, Plus, RefreshCw, Settings2, Workflow } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAppDispatch, useAppSelector } from '@/store';
 import {
-  addManagedWorkflow,
-  clearWorkflowList,
   closeDispatchDialog,
+  closeTransferModal,
   dispatchManagedWorkflow,
   loadManagedWorkflows,
-  loadRepoWorkflows,
   openDispatchDialog,
+  openTransferModal,
   refreshManagedWorkflows,
   removeManagedWorkflow,
   resetActionManagement,
   setDispatchInput,
-  setSearchQuery,
-  setSelectedOwnerKey,
-  setSelectedRepoFullName,
+  toggleMonitoring,
 } from '@/store/slices/actionManagementSlice';
-import { switchAccount } from '@/store/slices/githubAccountsSlice';
 import { clearRepos, fetchRepos } from '@/store/slices/githubReposSlice';
-import type { GitHubRepo, GitHubWorkflowSummary } from '../../../shared/api';
-import ActionSearchPanel from './components/ActionSearchPanel';
+import { setActiveSection } from '@/store/slices/navigationSlice';
 import ManagedActionRow from './components/ManagedActionRow';
+import ActionTransferModal from './components/ActionTransferModal';
+import useActionMonitoring from './hooks/useActionMonitoring';
 import WorkflowDispatchDialog from './components/WorkflowDispatchDialog';
 
 interface ActionManagementPageProps {
@@ -32,63 +29,10 @@ interface ActionManagementPageProps {
   onOpenAccounts: () => void;
 }
 
-interface OwnerOption {
-  key: string;
-  label: string;
-  repoCount: number;
-}
-
-function filterWorkflows(workflows: GitHubWorkflowSummary[], query: string): GitHubWorkflowSummary[] {
-  const normalizedQuery = query.trim().toLowerCase();
-
-  if (normalizedQuery.length === 0) {
-    return workflows;
-  }
-
-  return workflows.filter((workflow) =>
-    workflow.workflowName.toLowerCase().includes(normalizedQuery)
-      || workflow.workflowPath.toLowerCase().includes(normalizedQuery)
-      || workflow.repoFullName.toLowerCase().includes(normalizedQuery),
-  );
-}
-
-function resolveOwnerOptions(personalRepos: GitHubRepo[], groupedRepos: Array<{ org: { login: string }; repos: GitHubRepo[] }>, t: ReturnType<typeof useTranslation>['t']): OwnerOption[] {
-  const options: OwnerOption[] = [];
-
-  if (personalRepos.length > 0) {
-    options.push({
-      key: 'personal',
-      label: t('actionManagement.search.personalOwner'),
-      repoCount: personalRepos.length,
-    });
-  }
-
-  for (const group of groupedRepos) {
-    options.push({
-      key: group.org.login,
-      label: group.org.login,
-      repoCount: group.repos.length,
-    });
-  }
-
-  return options;
-}
-
-function resolveRepoOptions(selectedOwnerKey: string | null, personalRepos: GitHubRepo[], groupedRepos: Array<{ org: { login: string }; repos: GitHubRepo[] }>): GitHubRepo[] {
-  if (selectedOwnerKey === 'personal') {
-    return personalRepos;
-  }
-
-  if (selectedOwnerKey === null) {
-    return [];
-  }
-
-  return groupedRepos.find((group) => group.org.login === selectedOwnerKey)?.repos ?? [];
-}
-
 function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagementPageProps) {
   const { t } = useTranslation('github');
   const dispatch = useAppDispatch();
+  const previousLoadStatusRef = useRef<'idle' | 'loading' | 'succeeded' | 'failed'>('idle');
   const { accounts, activeAccountId } = useAppSelector((state) => state.githubAccounts);
   const {
     groupedRepos,
@@ -98,7 +42,6 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
     error: reposError,
   } = useAppSelector((state) => state.githubRepos);
   const {
-    availableWorkflows,
     dispatchDialog,
     failedRefreshCount,
     loadError,
@@ -109,24 +52,18 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
     persistStatus,
     refreshError,
     refreshStatus,
-    searchQuery,
-    selectedOwnerKey,
-    selectedRepoFullName,
-    workflowListError,
-    workflowListStatus,
+    transferModal,
   } = useAppSelector((state) => state.actionManagement);
   const activeAccount = accounts.find((account) => account.id === activeAccountId) ?? null;
-  const deferredQuery = useDeferredValue(searchQuery);
-  const referenceSignature = managedReferences.map((workflow) => `${workflow.repoFullName}#${workflow.workflowId}`).join('|');
-  const managedKeys = new Set(managedReferences.map((workflow) => `${workflow.repoFullName}#${workflow.workflowId}`));
-  const ownerOptions = resolveOwnerOptions(personalRepos, groupedRepos, t);
-  const repoOptions = resolveRepoOptions(selectedOwnerKey, personalRepos, groupedRepos);
-  const filteredWorkflows = filterWorkflows(availableWorkflows, deferredQuery);
+  const monitoredCount = managedReferences.filter((workflow) => workflow.monitored === true).length;
+
+  useActionMonitoring(activeAccountId);
 
   useEffect(() => {
     if (!activeAccountId) {
       dispatch(resetActionManagement());
       dispatch(clearRepos());
+      previousLoadStatusRef.current = 'idle';
       return;
     }
 
@@ -144,7 +81,10 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
   }, [activeAccountId, dispatch, reposAccountId, reposStatus]);
 
   useEffect(() => {
-    if (!activeAccountId || referenceSignature.length === 0) {
+    const previousLoadStatus = previousLoadStatusRef.current;
+    previousLoadStatusRef.current = loadStatus;
+
+    if (!activeAccountId || loadStatus !== 'succeeded' || previousLoadStatus === 'succeeded' || managedReferences.length === 0) {
       return;
     }
 
@@ -152,40 +92,20 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
       accountId: activeAccountId,
       workflows: managedReferences,
     }));
-  }, [activeAccountId, dispatch, managedReferences, referenceSignature]);
+  }, [activeAccountId, dispatch, loadStatus, managedReferences]);
 
   useEffect(() => {
-    if (selectedOwnerKey === null) {
-      return;
-    }
+    const handleNavigateToSection = (event: WindowEventMap['hagihub:navigate-to-section']) => {
+      if (event.detail === 'actions') {
+        dispatch(setActiveSection('actions'));
+      }
+    };
 
-    const ownerExists = ownerOptions.some((owner) => owner.key === selectedOwnerKey);
-    if (!ownerExists) {
-      dispatch(setSelectedOwnerKey(null));
-    }
-  }, [dispatch, ownerOptions, selectedOwnerKey]);
-
-  useEffect(() => {
-    if (selectedRepoFullName === null) {
-      return;
-    }
-
-    const repoExists = repoOptions.some((repo) => repo.fullName === selectedRepoFullName);
-    if (!repoExists) {
-      dispatch(setSelectedRepoFullName(null));
-    }
-  }, [dispatch, repoOptions, selectedRepoFullName]);
-
-  useEffect(() => {
-    if (!activeAccountId || !selectedRepoFullName) {
-      return;
-    }
-
-    void dispatch(loadRepoWorkflows({
-      accountId: activeAccountId,
-      repoFullName: selectedRepoFullName,
-    }));
-  }, [activeAccountId, dispatch, selectedRepoFullName]);
+    window.addEventListener('hagihub:navigate-to-section', handleNavigateToSection);
+    return () => {
+      window.removeEventListener('hagihub:navigate-to-section', handleNavigateToSection);
+    };
+  }, [dispatch]);
 
   if (!activeAccountId || !activeAccount) {
     return (
@@ -254,6 +174,10 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" onClick={() => dispatch(openTransferModal())}>
+              <Workflow />
+              {t('actionManagement.transfer.configure')}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -268,138 +192,108 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
 
         <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
           <span className="status-chip">{t('actionManagement.managedCount', { count: managedReferences.length })}</span>
-          <span>{t('actionManagement.loadedWorkflowCount', { count: availableWorkflows.length })}</span>
+          {monitoredCount > 0 ? <span className="status-chip">{t('actionManagement.actionMonitoring.monitoredCount', { count: monitoredCount })}</span> : null}
           {failedRefreshCount > 0 ? <span>{t('actionManagement.failedRefreshCount', { count: failedRefreshCount })}</span> : null}
         </div>
       </section>
 
-      <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-        <ActionSearchPanel
-          accounts={accounts.map((account) => ({ id: account.id, login: account.login }))}
-          activeAccountId={activeAccountId}
-          ownerOptions={ownerOptions}
-          selectedOwnerKey={selectedOwnerKey}
-          repoOptions={repoOptions}
-          selectedRepoFullName={selectedRepoFullName}
-          query={searchQuery}
-          workflowListStatus={workflowListStatus}
-          workflowListError={workflowListError}
-          reposStatus={reposStatus}
-          reposError={reposError}
-          workflows={filteredWorkflows}
-          managedKeys={managedKeys}
-          persistStatus={persistStatus}
-          onAccountChange={(accountId) => {
-            void dispatch(switchAccount(accountId));
-          }}
-          onOwnerChange={(ownerKey) => {
-            startTransition(() => {
-              dispatch(setSelectedOwnerKey(ownerKey));
-            });
-          }}
-          onRepoChange={(repoFullName) => {
-            startTransition(() => {
-              dispatch(setSelectedRepoFullName(repoFullName));
-            });
-          }}
-          onLoadWorkflows={() => {
-            if (!selectedRepoFullName) {
-              return;
-            }
-
-            void dispatch(loadRepoWorkflows({
-              accountId: activeAccountId,
-              repoFullName: selectedRepoFullName,
-            }));
-          }}
-          onQueryChange={(value) => {
-            startTransition(() => {
-              dispatch(setSearchQuery(value));
-            });
-          }}
-          onAdd={(workflow) => {
-            void dispatch(addManagedWorkflow({
-              accountId: activeAccountId,
-              workflow,
-            }));
-          }}
-        />
-
-        <section className="editor-panel flex min-h-0 flex-col p-5 lg:p-6">
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-            <div className="space-y-2">
-              <Badge>{t('actionManagement.managed.badge')}</Badge>
-              <h3 className="text-xl font-semibold tracking-tight text-foreground">{t('actionManagement.managed.title')}</h3>
-              <p className="text-sm leading-6 text-muted-foreground">{t('actionManagement.managed.description')}</p>
-            </div>
-            <div className="status-chip">{t('actionManagement.managedCount', { count: managedReferences.length })}</div>
+      <section className="editor-panel flex min-h-0 flex-1 flex-col p-5 lg:p-6">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+          <div className="space-y-2">
+            <Badge>{t('actionManagement.managed.badge')}</Badge>
+            <h3 className="text-xl font-semibold tracking-tight text-foreground">{t('actionManagement.managed.title')}</h3>
+            <p className="text-sm leading-6 text-muted-foreground">{t('actionManagement.managed.description')}</p>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="status-chip">{t('actionManagement.managedCount', { count: managedReferences.length })}</div>
+            {monitoredCount > 0 ? <div className="status-chip">{t('actionManagement.actionMonitoring.monitoredCount', { count: monitoredCount })}</div> : null}
+          </div>
+        </div>
 
-          {persistError ? (
-            <div className="mt-5 shrink-0 rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
-              {persistError}
-            </div>
-          ) : null}
+        {persistError ? (
+          <div className="mt-5 shrink-0 rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
+            {persistError}
+          </div>
+        ) : null}
 
-          {refreshError ? (
-            <div className="mt-5 shrink-0 rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
-              {refreshError}
-            </div>
-          ) : null}
+        {refreshError ? (
+          <div className="mt-5 shrink-0 rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
+            {refreshError}
+          </div>
+        ) : null}
 
-          {managedReferences.length === 0 ? (
-            <div className="mt-5 shrink-0 rounded-[1.5rem] border border-dashed border-border/70 bg-background/25 px-6 py-10 text-center">
-              <Workflow className="mx-auto size-8 text-primary" />
-              <p className="mt-4 text-base font-medium text-foreground">{t('actionManagement.managed.emptyTitle')}</p>
-              <p className="mt-2 text-sm leading-7 text-muted-foreground">{t('actionManagement.managed.emptyDescription')}</p>
-            </div>
-          ) : managedWorkflows.length === 0 && refreshStatus === 'loading' ? (
-            <div className="mt-5 shrink-0 flex items-center gap-3 rounded-2xl border border-border/70 bg-background/35 px-4 py-5 text-sm text-muted-foreground">
-              <LoaderCircle className="size-4 animate-spin text-primary" />
-              {t('actionManagement.managed.refreshing')}
-            </div>
-          ) : (
-            <div className="mt-5 min-h-0 flex-1 overflow-auto">
-              <table className="w-full border-collapse">
-                <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
-                  <tr className="border-b border-border/70 text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                    <th className="px-4 py-3 font-medium">{t('actionManagement.table.status')}</th>
-                    <th className="px-4 py-3 font-medium">{t('actionManagement.table.workflow')}</th>
-                    <th className="hidden px-4 py-3 font-medium lg:table-cell">{t('actionManagement.table.path')}</th>
-                    <th className="hidden px-4 py-3 font-medium xl:table-cell">{t('actionManagement.table.latestRun')}</th>
-                    <th className="hidden px-4 py-3 font-medium xl:table-cell">{t('actionManagement.table.updated')}</th>
-                    <th className="px-4 py-3 font-medium">{t('actionManagement.table.actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {managedWorkflows.map((workflow) => {
-                    const workflowKey = `${workflow.repoFullName}#${workflow.workflowId}`;
+        {managedReferences.length === 0 ? (
+          <div className="mt-5 shrink-0 rounded-[1.5rem] border border-dashed border-border/70 bg-background/25 px-6 py-10 text-center">
+            <Workflow className="mx-auto size-8 text-primary" />
+            <p className="mt-4 text-base font-medium text-foreground">{t('actionManagement.managed.emptyTitle')}</p>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">{t('actionManagement.managed.emptyDescription')}</p>
+          </div>
+        ) : managedWorkflows.length === 0 && refreshStatus === 'loading' ? (
+          <div className="mt-5 flex shrink-0 items-center gap-3 rounded-2xl border border-border/70 bg-background/35 px-4 py-5 text-sm text-muted-foreground">
+            <LoaderCircle className="size-4 animate-spin text-primary" />
+            {t('actionManagement.managed.refreshing')}
+          </div>
+        ) : (
+          <div className="mt-5 min-h-0 flex-1 overflow-auto">
+            <table className="w-full border-collapse">
+              <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
+                <tr className="border-b border-border/70 text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  <th className="px-4 py-3 font-medium">{t('actionManagement.table.status')}</th>
+                  <th className="px-4 py-3 font-medium">{t('actionManagement.table.workflow')}</th>
+                  <th className="hidden px-4 py-3 font-medium lg:table-cell">{t('actionManagement.table.path')}</th>
+                  <th className="hidden px-4 py-3 font-medium xl:table-cell">{t('actionManagement.table.latestRun')}</th>
+                  <th className="hidden px-4 py-3 font-medium xl:table-cell">{t('actionManagement.table.updated')}</th>
+                  <th className="px-4 py-3 font-medium">{t('actionManagement.table.actions')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {managedWorkflows.map((workflow) => {
+                  const workflowKey = `${workflow.repoFullName}#${workflow.workflowId}`;
 
-                    return (
-                      <ManagedActionRow
-                        key={workflowKey}
-                        workflow={workflow}
-                        removing={persistStatus === 'loading'}
-                        onDispatch={(item) => dispatch(openDispatchDialog(item))}
-                        onOpenExternal={(url) => {
-                          void window.hagihub.openExternal(url);
-                        }}
-                        onRemove={(item) => {
-                          void dispatch(removeManagedWorkflow({
-                            accountId: activeAccountId,
-                            repoFullName: item.repoFullName,
-                            workflowId: item.workflowId,
-                          }));
-                        }}
-                      />
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </div>
+                  return (
+                    <ManagedActionRow
+                      key={workflowKey}
+                      workflow={workflow}
+                      removing={persistStatus === 'loading'}
+                      onDispatch={(item) => dispatch(openDispatchDialog(item))}
+                      onToggleMonitoring={(item) => {
+                        void dispatch(toggleMonitoring({
+                          accountId: activeAccountId,
+                          repoFullName: item.repoFullName,
+                          workflowId: item.workflowId,
+                        }));
+                      }}
+                      onOpenExternal={(url) => {
+                        void window.hagihub.openExternal(url);
+                      }}
+                      onRemove={(item) => {
+                        void dispatch(removeManagedWorkflow({
+                          accountId: activeAccountId,
+                          repoFullName: item.repoFullName,
+                          workflowId: item.workflowId,
+                        }));
+                      }}
+                    />
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <ActionTransferModal
+        open={transferModal.open}
+        accountId={activeAccountId}
+        personalRepos={personalRepos}
+        groupedRepos={groupedRepos}
+        reposStatus={reposStatus}
+        reposError={reposError}
+        onClose={() => dispatch(closeTransferModal())}
+        onSaved={() => {
+          void dispatch(refreshManagedWorkflows({ accountId: activeAccountId }));
+        }}
+      />
 
       <WorkflowDispatchDialog
         open={dispatchDialog.open}

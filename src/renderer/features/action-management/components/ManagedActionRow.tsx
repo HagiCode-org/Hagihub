@@ -1,6 +1,8 @@
 import {
   CheckCircle2,
   Clock3,
+  Eye,
+  EyeOff,
   ExternalLink,
   LoaderCircle,
   Play,
@@ -19,6 +21,7 @@ interface ManagedActionRowProps {
   workflow: GitHubManagedWorkflow;
   removing: boolean;
   onDispatch: (workflow: GitHubManagedWorkflow) => void;
+  onToggleMonitoring: (workflow: GitHubManagedWorkflow) => void;
   onOpenExternal: (url: string) => void;
   onRemove: (workflow: GitHubManagedWorkflow) => void;
 }
@@ -37,9 +40,10 @@ function formatDate(value: string | null, locale: string): string {
   });
 }
 
-function ManagedActionRow({ workflow, removing, onDispatch, onOpenExternal, onRemove }: ManagedActionRowProps) {
+function ManagedActionRow({ workflow, removing, onDispatch, onToggleMonitoring, onOpenExternal, onRemove }: ManagedActionRowProps) {
   const { t, i18n } = useTranslation('github');
   const locale = i18n.resolvedLanguage ?? i18n.language;
+  const isMonitored = workflow.monitored === true;
   const statusMeta = workflow.latestRunState === 'success'
     ? { icon: CheckCircle2, className: 'text-emerald-400', label: t('actionManagement.state.success') }
     : workflow.latestRunState === 'failure'
@@ -116,6 +120,23 @@ function ManagedActionRow({ workflow, removing, onDispatch, onOpenExternal, onRe
               <Play className="size-3.5" />
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`size-8 ${isMonitored ? 'text-primary hover:text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+            disabled={removing}
+            onClick={() => onToggleMonitoring(workflow)}
+            title={isMonitored
+              ? t('actionManagement.actionMonitoring.toggle.stop')
+              : t('actionManagement.actionMonitoring.toggle.start')}
+            aria-label={isMonitored
+              ? t('actionManagement.actionMonitoring.toggle.stop')
+              : t('actionManagement.actionMonitoring.toggle.start')}
+          >
+            {isMonitored
+              ? <Eye className="size-3.5 fill-current" />
+              : <EyeOff className="size-3.5" />}
+          </Button>
           <Button
             variant="ghost"
             size="icon"
