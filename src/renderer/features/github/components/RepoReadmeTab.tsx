@@ -152,7 +152,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto px-6 py-5">
+      <div className="min-h-0 flex-1 overflow-hidden px-6 py-5">
         {loadState === 'loading' ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <LoaderCircle className="size-6 animate-spin text-primary" />
@@ -166,7 +166,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
             </Button>
           </div>
         ) : (
-          <div className="space-y-5">
+          <div className="flex h-full min-h-0 flex-col gap-5 overflow-hidden">
             <div className="flex items-center gap-3">
               <span className="rounded-xl bg-primary/12 p-2 text-primary">
                 <FileText className="size-4" />
@@ -184,8 +184,8 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
             ) : null}
 
             {isEditing ? (
-              <div className="grid gap-4 xl:grid-cols-2">
-                <section className="space-y-3">
+              <div className="grid gap-4 overflow-auto xl:min-h-0 xl:flex-1 xl:grid-cols-2 xl:overflow-hidden">
+                <section className="space-y-3 xl:flex xl:min-h-0 xl:flex-col xl:gap-3 xl:space-y-0">
                   <div className="flex items-center justify-between gap-3">
                     <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                       {t('repoCard.readme.editorTitle')}
@@ -195,20 +195,23 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
                     </span>
                   </div>
                   <textarea
-                    className="min-h-[30rem] w-full rounded-[1.5rem] border border-border/70 bg-background/45 px-4 py-4 font-mono text-sm leading-6 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-[3px] focus:ring-primary/20"
+                    className="min-h-[18rem] w-full rounded-[1.5rem] border border-border/70 bg-background/45 px-4 py-4 font-mono text-sm leading-6 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-[3px] focus:ring-primary/20 xl:min-h-0 xl:flex-1 xl:resize-none"
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
                     placeholder={t('repoCard.readme.editorPlaceholder')}
                   />
                 </section>
 
-                <section className="space-y-3">
+                <section className="space-y-3 xl:flex xl:min-h-0 xl:flex-col xl:gap-3 xl:space-y-0">
                   <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                     {t('repoCard.readme.previewTitle')}
                   </h4>
                   <MarkdownPreview
                     content={draft}
                     emptyText={t('repoCard.readme.previewEmpty')}
+                    className="xl:flex xl:h-full xl:min-h-0 xl:flex-col"
+                    bodyClassName="min-h-[18rem] xl:min-h-0 xl:flex-1 xl:max-h-none"
+                    emptyClassName="min-h-[18rem] xl:min-h-0 xl:flex-1"
                   />
                 </section>
               </div>

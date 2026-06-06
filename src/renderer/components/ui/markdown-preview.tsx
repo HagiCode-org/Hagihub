@@ -6,15 +6,17 @@ interface MarkdownPreviewProps {
   content: string;
   emptyText: string;
   className?: string;
+  bodyClassName?: string;
+  emptyClassName?: string;
 }
 
-function MarkdownPreview({ content, emptyText, className }: MarkdownPreviewProps) {
+function MarkdownPreview({ content, emptyText, className, bodyClassName, emptyClassName }: MarkdownPreviewProps) {
   const hasContent = content.trim().length > 0;
 
   return (
     <div className={cn('rounded-[1.5rem] border border-border/70 bg-background/35', className)}>
       {hasContent ? (
-        <div className="max-h-[60vh] min-h-[30rem] overflow-auto px-5 py-5">
+        <div className={cn('max-h-[60vh] min-h-[30rem] overflow-auto px-5 py-5', bodyClassName)}>
           <div className="markdown-preview prose-reset text-sm leading-7 text-foreground">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
@@ -61,7 +63,7 @@ function MarkdownPreview({ content, emptyText, className }: MarkdownPreviewProps
           </div>
         </div>
       ) : (
-        <div className="flex min-h-[30rem] items-center justify-center px-6 py-8 text-center text-sm leading-6 text-muted-foreground">
+        <div className={cn('flex min-h-[30rem] items-center justify-center px-6 py-8 text-center text-sm leading-6 text-muted-foreground', emptyClassName)}>
           {emptyText}
         </div>
       )}
