@@ -76,6 +76,40 @@ export interface RepoDetailsResult {
   details: GitHubRepoDetails;
 }
 
+export interface FileContentResult {
+  content: string;
+  sha: string;
+  exists: boolean;
+}
+
+export interface CommitFilePayload {
+  content: string;
+  message: string;
+  branch: string;
+  sha?: string | null;
+}
+
+export interface CommitFileResult {
+  newSha: string;
+}
+
+export interface CreateRefPayload {
+  ref: string;
+  sha: string;
+}
+
+export interface CreatePullRequestPayload {
+  title: string;
+  head: string;
+  base: string;
+}
+
+export interface PullRequestResult {
+  url: string;
+  number: number;
+  htmlUrl: string;
+}
+
 export interface UpdateRepoPayload {
   description?: string;
   homepage?: string;
@@ -163,6 +197,27 @@ export interface GitHubActionsResult {
 
 export type GitHubManagedWorkflowState = 'success' | 'failure' | 'in_progress' | 'waiting' | 'unavailable' | 'error';
 
+export type SendNotificationLevel = 'info' | 'success' | 'warning' | 'error';
+
+export type SendNotificationClickAction =
+  | { type: 'open-url'; url: string }
+  | { type: 'focus-window'; section?: string };
+
+export interface SendNotificationParams {
+  title: string;
+  body: string;
+  level: SendNotificationLevel;
+  clickAction?: SendNotificationClickAction;
+  duration?: number;
+  icon?: string;
+  silent?: boolean;
+}
+
+export interface SendNotificationResult {
+  success: boolean;
+  error?: string;
+}
+
 export type GitHubWorkflowDispatchInputType = 'string' | 'choice' | 'boolean' | 'number' | 'environment';
 
 export interface GitHubWorkflowDispatchInputDefinition {
@@ -184,6 +239,7 @@ export interface GitHubManagedWorkflowReference {
   workflowPath: string;
   workflowHtmlUrl: string;
   supportsDispatch: boolean;
+  monitored?: boolean;
 }
 
 export interface GitHubWorkflowSummary extends GitHubManagedWorkflowReference {
