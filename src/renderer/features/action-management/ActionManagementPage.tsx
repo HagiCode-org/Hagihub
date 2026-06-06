@@ -176,6 +176,17 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
     }
   }, [dispatch, repoOptions, selectedRepoFullName]);
 
+  useEffect(() => {
+    if (!activeAccountId || !selectedRepoFullName) {
+      return;
+    }
+
+    void dispatch(loadRepoWorkflows({
+      accountId: activeAccountId,
+      repoFullName: selectedRepoFullName,
+    }));
+  }, [activeAccountId, dispatch, selectedRepoFullName]);
+
   if (!activeAccountId || !activeAccount) {
     return (
       <div className="space-y-4">
