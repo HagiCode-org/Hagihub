@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createAction, createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import i18n from '@/locales';
 import type { RootState } from '@/store';
 import type {
@@ -6,17 +6,12 @@ import type {
   GitHubManagedWorkflowReference,
   GitHubWorkflowDispatchResponse,
   GitHubWorkflowSummary,
-  ListGitHubRepoWorkflowsResult,
   ManagedActionsResult,
   RefreshManagedActionsResult,
 } from '../../../shared/api';
 
-type FetchStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
-
-interface LoadRepoWorkflowsArgs {
-  accountId: string;
-  repoFullName: string;
-}
+export type FetchStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
+export type TransferPhase = 1 | 2 | 3;
 
 interface PersistManagedWorkflowArgs {
   accountId: string;
@@ -24,6 +19,12 @@ interface PersistManagedWorkflowArgs {
 }
 
 interface RemoveManagedWorkflowArgs {
+  accountId: string;
+  repoFullName: string;
+  workflowId: number;
+}
+
+interface ToggleMonitoringArgs {
   accountId: string;
   repoFullName: string;
   workflowId: number;
@@ -40,6 +41,11 @@ interface DispatchManagedWorkflowArgs {
   inputs: Record<string, string>;
 }
 
+interface BatchSaveManagedWorkflowsArgs {
+  accountId: string;
+  stagedSelection: GitHubManagedWorkflowReference[];
+}
+
 interface DispatchDialogState {
   open: boolean;
   workflow: GitHubManagedWorkflow | null;
@@ -49,52 +55,90 @@ interface DispatchDialogState {
   successMessage: string | null;
 }
 
+interface TransferLoadProgress {
+  current: number;
+  total: number;
+}
+
+export interface TransferModalState {
+  open: boolean;
+  phase: TransferPhase;
+  selectedRepoFullNames: string[];
+  candidateWorkflows: GitHubWorkflowSummary[];
+  stagedSelection: GitHubManagedWorkflowReference[];
+  loadProgress: TransferLoadProgress;
+  loadErrors: Record<string, string>;
+  saveStatus: FetchStatus;
+  saveError: string | null;
+}
+
 export interface ActionManagementState {
   activeAccountId: string | null;
   loadStatus: FetchStatus;
   persistStatus: FetchStatus;
-  workflowListStatus: FetchStatus;
   refreshStatus: FetchStatus;
   loadError: string | null;
   persistError: string | null;
-  workflowListError: string | null;
   refreshError: string | null;
-  selectedOwnerKey: string | null;
-  selectedRepoFullName: string | null;
-  searchQuery: string;
-  availableWorkflows: GitHubWorkflowSummary[];
   managedReferences: GitHubManagedWorkflowReference[];
   managedWorkflows: GitHubManagedWorkflow[];
   failedRefreshCount: number;
   dispatchDialog: DispatchDialogState;
+  transferModal: TransferModalState;
 }
 
-const initialState: ActionManagementState = {
-  activeAccountId: null,
-  loadStatus: 'idle',
-  persistStatus: 'idle',
-  workflowListStatus: 'idle',
-  refreshStatus: 'idle',
-  loadError: null,
-  persistError: null,
-  workflowListError: null,
-  refreshError: null,
-  selectedOwnerKey: null,
-  selectedRepoFullName: null,
-  searchQuery: '',
-  availableWorkflows: [],
-  managedReferences: [],
-  managedWorkflows: [],
-  failedRefreshCount: 0,
-  dispatchDialog: {
+interface TransferLoadProgressPayload {
+  candidateWorkflows: GitHubWorkflowSummary[];
+  loadErrors: Record<string, string>;
+  loadProgress: TransferLoadProgress;
+}
+
+const transferLoadProgressUpdated = createAction<TransferLoadProgressPayload>(
+  'actionManagement/transferLoadProgressUpdated',
+);
+
+function createInitialTransferModalState(): TransferModalState {
+  return {
     open: false,
-    workflow: null,
-    formValues: {},
-    submitStatus: 'idle',
-    error: null,
-    successMessage: null,
-  },
-};
+    phase: 1,
+    selectedRepoFullNames: [],
+    candidateWorkflows: [],
+    stagedSelection: [],
+    loadProgress: {
+      current: 0,
+      total: 0,
+    },
+    loadErrors: {},
+    saveStatus: 'idle',
+    saveError: null,
+  };
+}
+
+function createInitialState(): ActionManagementState {
+  return {
+    activeAccountId: null,
+    loadStatus: 'idle',
+    persistStatus: 'idle',
+    refreshStatus: 'idle',
+    loadError: null,
+    persistError: null,
+    refreshError: null,
+    managedReferences: [],
+    managedWorkflows: [],
+    failedRefreshCount: 0,
+    dispatchDialog: {
+      open: false,
+      workflow: null,
+      formValues: {},
+      submitStatus: 'idle',
+      error: null,
+      successMessage: null,
+    },
+    transferModal: createInitialTransferModalState(),
+  };
+}
+
+const initialState = createInitialState();
 
 function toMessage(error: unknown, fallbackKey: string): string {
   if (error instanceof Error && error.message.trim().length > 0) {
@@ -109,7 +153,7 @@ function toMessage(error: unknown, fallbackKey: string): string {
 }
 
 function toWorkflowReference(
-  workflow: GitHubWorkflowSummary | GitHubManagedWorkflow,
+  workflow: GitHubWorkflowSummary | GitHubManagedWorkflow | GitHubManagedWorkflowReference,
 ): GitHubManagedWorkflowReference {
   return {
     accountId: workflow.accountId,
@@ -121,6 +165,7 @@ function toWorkflowReference(
     workflowPath: workflow.workflowPath,
     workflowHtmlUrl: workflow.workflowHtmlUrl,
     supportsDispatch: workflow.supportsDispatch,
+    monitored: workflow.monitored ?? false,
   };
 }
 
@@ -128,6 +173,49 @@ function buildDispatchDefaults(workflow: GitHubManagedWorkflow): Record<string, 
   return Object.fromEntries(
     workflow.dispatchInputs.map((input) => [input.name, input.defaultValue ?? '']),
   );
+}
+
+function workflowKey(workflow: Pick<GitHubManagedWorkflowReference, 'repoFullName' | 'workflowId'>): string {
+  return workflow.repoFullName + '#' + workflow.workflowId;
+}
+
+function dedupeWorkflowReferences(
+  workflows: Array<GitHubWorkflowSummary | GitHubManagedWorkflow | GitHubManagedWorkflowReference>,
+): GitHubManagedWorkflowReference[] {
+  const seen = new Set<string>();
+  const deduped: GitHubManagedWorkflowReference[] = [];
+
+  for (const workflow of workflows) {
+    const reference = toWorkflowReference(workflow);
+    const key = workflowKey(reference);
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    deduped.push(reference);
+  }
+
+  return deduped;
+}
+
+function dedupeWorkflowSummaries(workflows: GitHubWorkflowSummary[]): GitHubWorkflowSummary[] {
+  const seen = new Set<string>();
+  const deduped: GitHubWorkflowSummary[] = [];
+
+  for (const workflow of workflows) {
+    const key = workflowKey(workflow);
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    deduped.push(workflow);
+  }
+
+  return deduped;
 }
 
 export const loadManagedWorkflows = createAsyncThunk<
@@ -146,19 +234,52 @@ export const loadManagedWorkflows = createAsyncThunk<
   },
 );
 
-export const loadRepoWorkflows = createAsyncThunk<
-  { accountId: string; repoFullName: string; result: ListGitHubRepoWorkflowsResult },
-  LoadRepoWorkflowsArgs,
-  { rejectValue: string }
+export const loadMultiRepoWorkflows = createAsyncThunk<
+  { accountId: string; candidateWorkflows: GitHubWorkflowSummary[]; loadErrors: Record<string, string> },
+  { accountId: string },
+  { state: RootState }
 >(
-  'actionManagement/loadRepoWorkflows',
-  async ({ accountId, repoFullName }, { rejectWithValue }) => {
-    try {
-      const result = await window.hagihub.listGitHubRepoWorkflows(accountId, repoFullName);
-      return { accountId, repoFullName, result };
-    } catch (error) {
-      return rejectWithValue(toMessage(error, 'errors.loadRepoWorkflowsFailed'));
+  'actionManagement/loadMultiRepoWorkflows',
+  async ({ accountId }, { dispatch, getState }) => {
+    const selectedRepoFullNames = getState().actionManagement.transferModal.selectedRepoFullNames;
+    const total = selectedRepoFullNames.length;
+    const candidateWorkflows: GitHubWorkflowSummary[] = [];
+    const loadErrors: Record<string, string> = {};
+
+    dispatch(transferLoadProgressUpdated({
+      candidateWorkflows,
+      loadErrors,
+      loadProgress: {
+        current: 0,
+        total,
+      },
+    }));
+
+    for (let index = 0; index < selectedRepoFullNames.length; index += 1) {
+      const repoFullName = selectedRepoFullNames[index];
+
+      try {
+        const result = await window.hagihub.listGitHubRepoWorkflows(accountId, repoFullName);
+        candidateWorkflows.push(...result.workflows);
+      } catch (error) {
+        loadErrors[repoFullName] = toMessage(error, 'errors.loadRepoWorkflowsFailed');
+      }
+
+      dispatch(transferLoadProgressUpdated({
+        candidateWorkflows: dedupeWorkflowSummaries(candidateWorkflows),
+        loadErrors: { ...loadErrors },
+        loadProgress: {
+          current: index + 1,
+          total,
+        },
+      }));
     }
+
+    return {
+      accountId,
+      candidateWorkflows: dedupeWorkflowSummaries(candidateWorkflows),
+      loadErrors,
+    };
   },
 );
 
@@ -174,6 +295,7 @@ export const addManagedWorkflow = createAsyncThunk<
       const nextReference = {
         ...toWorkflowReference(workflow),
         accountId,
+        monitored: false,
       };
 
       const isAlreadyManaged = existing.some(
@@ -185,6 +307,51 @@ export const addManagedWorkflow = createAsyncThunk<
       }
 
       const result = await window.hagihub.saveManagedActions(accountId, [...existing, nextReference]);
+      return { accountId, result };
+    } catch (error) {
+      return rejectWithValue(toMessage(error, 'errors.saveManagedActionsFailed'));
+    }
+  },
+);
+
+export const batchSaveManagedWorkflows = createAsyncThunk<
+  { accountId: string; result: ManagedActionsResult },
+  BatchSaveManagedWorkflowsArgs,
+  { rejectValue: string }
+>(
+  'actionManagement/batchSaveManagedWorkflows',
+  async ({ accountId, stagedSelection }, { rejectWithValue }) => {
+    try {
+      const result = await window.hagihub.saveManagedActions(accountId, stagedSelection);
+      return { accountId, result };
+    } catch (error) {
+      return rejectWithValue(toMessage(error, 'errors.saveManagedActionsFailed'));
+    }
+  },
+);
+
+export const toggleMonitoring = createAsyncThunk<
+  { accountId: string; result: ManagedActionsResult },
+  ToggleMonitoringArgs,
+  { state: RootState; rejectValue: string }
+>(
+  'actionManagement/toggleMonitoring',
+  async ({ accountId, repoFullName, workflowId }, { getState, rejectWithValue }) => {
+    try {
+      const nextWorkflows = getState().actionManagement.managedReferences.map((workflow) => {
+        if (workflow.repoFullName === repoFullName && workflow.workflowId === workflowId) {
+          return {
+            ...workflow,
+            monitored: !(workflow.monitored === true),
+          };
+        }
+
+        return {
+          ...workflow,
+          monitored: workflow.monitored ?? false,
+        };
+      });
+      const result = await window.hagihub.saveManagedActions(accountId, nextWorkflows);
       return { accountId, result };
     } catch (error) {
       return rejectWithValue(toMessage(error, 'errors.saveManagedActionsFailed'));
@@ -255,7 +422,7 @@ export const dispatchManagedWorkflow = createAsyncThunk<
       });
       return {
         accountId,
-        workflowKey: `${workflow.repoFullName}#${workflow.workflowId}`,
+        workflowKey: workflow.repoFullName + '#' + workflow.workflowId,
         result,
       };
     } catch (error) {
@@ -269,31 +436,54 @@ const actionManagementSlice = createSlice({
   initialState,
   reducers: {
     resetActionManagement() {
-      return initialState;
+      return createInitialState();
     },
-    setSelectedOwnerKey(state, action: PayloadAction<string | null>) {
-      state.selectedOwnerKey = action.payload;
-      state.selectedRepoFullName = null;
-      state.searchQuery = '';
-      state.workflowListStatus = 'idle';
-      state.workflowListError = null;
-      state.availableWorkflows = [];
+    openTransferModal(state) {
+      state.transferModal = {
+        ...createInitialTransferModalState(),
+        open: true,
+        stagedSelection: [...state.managedReferences],
+      };
     },
-    setSelectedRepoFullName(state, action: PayloadAction<string | null>) {
-      state.selectedRepoFullName = action.payload;
-      state.searchQuery = '';
-      state.workflowListStatus = 'idle';
-      state.workflowListError = null;
-      state.availableWorkflows = [];
+    closeTransferModal(state) {
+      state.transferModal = createInitialTransferModalState();
     },
-    setSearchQuery(state, action: PayloadAction<string>) {
-      state.searchQuery = action.payload;
+    setTransferPhase(state, action: PayloadAction<TransferPhase>) {
+      state.transferModal.phase = action.payload;
     },
-    clearWorkflowList(state) {
-      state.searchQuery = '';
-      state.workflowListStatus = 'idle';
-      state.workflowListError = null;
-      state.availableWorkflows = [];
+    toggleRepoSelection(state, action: PayloadAction<string>) {
+      const repoFullName = action.payload;
+      const currentSelection = new Set(state.transferModal.selectedRepoFullNames);
+
+      if (currentSelection.has(repoFullName)) {
+        state.transferModal.selectedRepoFullNames = state.transferModal.selectedRepoFullNames.filter(
+          (item) => item !== repoFullName,
+        );
+        return;
+      }
+
+      state.transferModal.selectedRepoFullNames.push(repoFullName);
+    },
+    moveToStaged(
+      state,
+      action: PayloadAction<Array<GitHubWorkflowSummary | GitHubManagedWorkflowReference>>,
+    ) {
+      state.transferModal.stagedSelection = dedupeWorkflowReferences([
+        ...state.transferModal.stagedSelection,
+        ...action.payload,
+      ]);
+    },
+    removeFromStaged(
+      state,
+      action: PayloadAction<Array<GitHubWorkflowSummary | GitHubManagedWorkflowReference>>,
+    ) {
+      const removedKeys = new Set(action.payload.map((workflow) => workflowKey(workflow)));
+      state.transferModal.stagedSelection = state.transferModal.stagedSelection.filter(
+        (workflow) => !removedKeys.has(workflowKey(workflow)),
+      );
+    },
+    clearTransferLoadErrors(state) {
+      state.transferModal.loadErrors = {};
     },
     openDispatchDialog(state, action: PayloadAction<GitHubManagedWorkflow>) {
       state.dispatchDialog.open = true;
@@ -317,21 +507,25 @@ const actionManagementSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(transferLoadProgressUpdated, (state, action) => {
+        if (!state.transferModal.open) {
+          return;
+        }
+
+        state.transferModal.candidateWorkflows = action.payload.candidateWorkflows;
+        state.transferModal.loadErrors = action.payload.loadErrors;
+        state.transferModal.loadProgress = action.payload.loadProgress;
+      })
       .addCase(loadManagedWorkflows.pending, (state, action) => {
         state.activeAccountId = action.meta.arg;
         state.loadStatus = 'loading';
         state.loadError = null;
         state.persistError = null;
-        state.workflowListError = null;
         state.refreshError = null;
-        state.selectedOwnerKey = null;
-        state.selectedRepoFullName = null;
-        state.searchQuery = '';
-        state.availableWorkflows = [];
-        state.workflowListStatus = 'idle';
         state.failedRefreshCount = 0;
         state.managedReferences = [];
         state.managedWorkflows = [];
+        state.transferModal = createInitialTransferModalState();
       })
       .addCase(loadManagedWorkflows.fulfilled, (state, action) => {
         state.activeAccountId = action.payload.accountId;
@@ -344,24 +538,30 @@ const actionManagementSlice = createSlice({
         state.loadStatus = 'failed';
         state.loadError = action.payload ?? i18n.t('errors.loadManagedActionsFailed', { ns: 'github' });
       })
-      .addCase(loadRepoWorkflows.pending, (state, action) => {
-        state.activeAccountId = action.meta.arg.accountId;
-        state.selectedRepoFullName = action.meta.arg.repoFullName;
-        state.workflowListStatus = 'loading';
-        state.workflowListError = null;
-        state.availableWorkflows = [];
+      .addCase(loadMultiRepoWorkflows.pending, (state) => {
+        if (!state.transferModal.open) {
+          return;
+        }
+
+        state.transferModal.candidateWorkflows = [];
+        state.transferModal.loadErrors = {};
+        state.transferModal.loadProgress = {
+          current: 0,
+          total: state.transferModal.selectedRepoFullNames.length,
+        };
       })
-      .addCase(loadRepoWorkflows.fulfilled, (state, action) => {
+      .addCase(loadMultiRepoWorkflows.fulfilled, (state, action) => {
+        if (!state.transferModal.open) {
+          return;
+        }
+
         state.activeAccountId = action.payload.accountId;
-        state.selectedRepoFullName = action.payload.repoFullName;
-        state.workflowListStatus = 'succeeded';
-        state.workflowListError = null;
-        state.availableWorkflows = action.payload.result.workflows;
-      })
-      .addCase(loadRepoWorkflows.rejected, (state, action) => {
-        state.workflowListStatus = 'failed';
-        state.workflowListError = action.payload ?? i18n.t('errors.loadRepoWorkflowsFailed', { ns: 'github' });
-        state.availableWorkflows = [];
+        state.transferModal.candidateWorkflows = action.payload.candidateWorkflows;
+        state.transferModal.loadErrors = action.payload.loadErrors;
+        state.transferModal.loadProgress = {
+          current: state.transferModal.selectedRepoFullNames.length,
+          total: state.transferModal.selectedRepoFullNames.length,
+        };
       })
       .addCase(addManagedWorkflow.pending, (state) => {
         state.persistStatus = 'loading';
@@ -377,6 +577,47 @@ const actionManagementSlice = createSlice({
         state.persistStatus = 'failed';
         state.persistError = action.payload ?? i18n.t('errors.saveManagedActionsFailed', { ns: 'github' });
       })
+      .addCase(batchSaveManagedWorkflows.pending, (state) => {
+        state.transferModal.saveStatus = 'loading';
+        state.transferModal.saveError = null;
+      })
+      .addCase(batchSaveManagedWorkflows.fulfilled, (state, action) => {
+        state.activeAccountId = action.payload.accountId;
+        state.managedReferences = action.payload.result.workflows;
+        state.managedWorkflows = state.managedWorkflows.filter((workflow) =>
+          action.payload.result.workflows.some(
+            (reference) => reference.repoFullName === workflow.repoFullName && reference.workflowId === workflow.workflowId,
+          ),
+        );
+        state.transferModal.stagedSelection = action.payload.result.workflows;
+        state.transferModal.saveStatus = 'succeeded';
+        state.transferModal.saveError = null;
+      })
+      .addCase(batchSaveManagedWorkflows.rejected, (state, action) => {
+        state.transferModal.saveStatus = 'failed';
+        state.transferModal.saveError = action.payload ?? i18n.t('errors.saveManagedActionsFailed', { ns: 'github' });
+      })
+      .addCase(toggleMonitoring.pending, (state) => {
+        state.persistStatus = 'loading';
+        state.persistError = null;
+      })
+      .addCase(toggleMonitoring.fulfilled, (state, action) => {
+        state.activeAccountId = action.payload.accountId;
+        state.persistStatus = 'succeeded';
+        state.managedReferences = action.payload.result.workflows;
+        state.managedWorkflows = state.managedWorkflows.map((workflow) => {
+          const reference = action.payload.result.workflows.find(
+            (item) => item.repoFullName === workflow.repoFullName && item.workflowId === workflow.workflowId,
+          );
+
+          return reference ? { ...workflow, monitored: reference.monitored ?? false } : workflow;
+        });
+        state.persistError = null;
+      })
+      .addCase(toggleMonitoring.rejected, (state, action) => {
+        state.persistStatus = 'failed';
+        state.persistError = action.payload ?? i18n.t('errors.saveManagedActionsFailed', { ns: 'github' });
+      })
       .addCase(removeManagedWorkflow.pending, (state) => {
         state.persistStatus = 'loading';
         state.persistError = null;
@@ -388,7 +629,8 @@ const actionManagementSlice = createSlice({
         state.managedWorkflows = state.managedWorkflows.filter((workflow) =>
           action.payload.result.workflows.some(
             (reference) => reference.repoFullName === workflow.repoFullName && reference.workflowId === workflow.workflowId,
-          ));
+          ),
+        );
         state.persistError = null;
       })
       .addCase(removeManagedWorkflow.rejected, (state, action) => {
@@ -430,14 +672,17 @@ const actionManagementSlice = createSlice({
 });
 
 export const {
-  clearWorkflowList,
+  clearTransferLoadErrors,
   closeDispatchDialog,
+  closeTransferModal,
+  moveToStaged,
   openDispatchDialog,
+  openTransferModal,
+  removeFromStaged,
   resetActionManagement,
   setDispatchInput,
-  setSearchQuery,
-  setSelectedOwnerKey,
-  setSelectedRepoFullName,
+  setTransferPhase,
+  toggleRepoSelection,
 } = actionManagementSlice.actions;
 
 export default actionManagementSlice.reducer;
