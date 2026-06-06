@@ -164,6 +164,71 @@ repoCard:
     saving: Saving
     saveSuccess: Changes saved
     saveFailed: Failed to save changes
+  tabs:
+    description: Review repository metadata, README content, and license text without leaving Hagihub.
+    info: Repository Info
+    readme: README
+    license: LICENSE
+  commitDialog:
+    title: Save {{filename}}
+    description: Choose whether Hagihub should write directly to the default branch or open a pull request.
+    close: Close
+    selected: Selected
+    directTitle: Commit to {{branch}}
+    directDescription: Write the file directly to the repository default branch immediately.
+    prTitle: Create Pull Request
+    prDescription: Create a new branch from {{branch}}, commit the file there, then open a pull request.
+    branchLabel: Pull request branch name
+    branchPlaceholder: Enter a branch name
+    branchHint: Hagihub suggests a branch name automatically, but you can edit it before the branch is created.
+    cancel: Cancel
+    submitting: Saving
+    confirmDirect: Commit to branch
+    confirmPr: Create pull request
+  readme:
+    description: View or edit the repository README.md file as plain text.
+    loading: Loading README.md
+    loadFailed: Failed to load README.md.
+    editorPlaceholder: Start writing the repository README here.
+    emptyTitle: No README.md yet
+    emptyDescription: Start with an empty README or choose the create action to draft one inside Hagihub.
+    edit: Edit README
+    create: Create README
+    save: Save README
+    cancel: Cancel
+    saveSuccess: README.md saved.
+    saveFailed: Failed to save README.md.
+    prSuccess: Pull request #{{number}} created for README.md.
+    conflict: README.md was modified elsewhere. Refresh and try again.
+  license:
+    description: View, draft, or replace the repository LICENSE file.
+    loading: Loading LICENSE
+    loadFailed: Failed to load LICENSE.
+    editorPlaceholder: Paste or draft a license text here.
+    emptyTitle: No LICENSE file yet
+    emptyDescription: Choose a preset or start with a blank license file.
+    presetTitle: License presets
+    presetDescription: Load a common open-source license template and then adjust it before saving.
+    presetPlaceholder: Select a license preset
+    presetSearchPlaceholder: Search license presets...
+    presetEmpty: No license presets match the current search.
+    edit: Edit LICENSE
+    create: Create LICENSE
+    save: Save LICENSE
+    cancel: Cancel
+    saveSuccess: LICENSE saved.
+    saveFailed: Failed to save LICENSE.
+    prSuccess: Pull request #{{number}} created for LICENSE.
+    conflict: LICENSE was modified elsewhere. Refresh and try again.
+    presets:
+      mit: MIT License
+      "apache-2.0": Apache License 2.0
+      "gpl-3.0": GNU GPL v3.0
+      "lgpl-3.0": GNU LGPL v3.0
+      "bsd-2-clause": BSD 2-Clause License
+      "bsd-3-clause": BSD 3-Clause License
+      "mpl-2.0": Mozilla Public License 2.0
+      "agpl-3.0": GNU AGPL v3.0
 errors:
   loadAccountsFailed: Failed to load GitHub accounts.
   startDeviceFlowFailed: Failed to start GitHub Device Flow.
@@ -185,7 +250,7 @@ errors:
 actionManagement:
   badge: Workflow workspace
   title: Action Management
-  description: Choose an account, owner, and repository first, then load that repository's workflows and filter them locally before pinning the ones that matter.
+  description: Keep the managed workflow board on the page, then open Configure Actions when you need to batch-load repositories and adjust the selected set.
   refresh: Refresh managed workflows
   retry: Retry
   loading: Restoring managed workflows
@@ -194,38 +259,44 @@ actionManagement:
   openAccounts: Open accounts
   noAccountBadge: Account required
   noAccountTitle: Connect a GitHub account before managing workflows.
-  noAccountDescription: Action Management relies on the active account to search repositories, restore pinned workflows, and trigger manual runs.
+  noAccountDescription: Action Management relies on the active account to restore pinned workflows, batch-load repository actions, and trigger manual runs.
   managedCount: '{{count}} managed'
-  loadedWorkflowCount: '{{count}} workflows loaded'
   failedRefreshCount: '{{count}} workflows need attention'
-  search:
-    badge: Workflow source
-    title: Choose account, owner, and repository
-    description: Load one repository at a time, then filter the returned workflows locally instead of searching GitHub across repositories.
-    accountLabel: Account
-    ownerLabel: Owner
-    repoLabel: Repository
-    ownerPlaceholder: Choose an owner
-    repoPlaceholder: Choose a repository
-    repoSearchPlaceholder: Search repositories...
-    noRepoResults: No repositories found
+  transfer:
+    title: Configure Actions
+    description: Select repositories first, move workflows between both panes, then confirm the final managed set.
+    configure: Configure Actions
     personalOwner: Personal repositories
-    inputLabel: Filter loaded workflows
-    placeholder: Filter by workflow name or path...
-    loading: Loading workflows from the selected repository
-    loadingList: Loading list
-    noResults: No workflows matched the current filter in this repository.
-    loadedCount: '{{count}} workflows loaded'
-    loadList: Load workflows
-    refreshList: Refresh workflows
-    chooseOwner: Choose an owner before selecting a repository.
-    chooseRepo: Choose a repository, then load its workflows.
-    noReposForOwner: No repositories are available under this owner for the active account.
-    readyToLoad: The repository is selected. Load its workflows to browse and filter them locally.
-    dispatchReady: Dispatch ready
-    dispatchUnavailable: View only
-    add: Add
-    added: Added
+    phaseRepos: ① Select Repos
+    phaseTransfer: ② Transfer
+    phaseConfirm: ③ Confirm
+    repoSelectionHint: Choose one or more repositories before loading workflows into the transfer box.
+    reposSelected: '{{count}} repos selected'
+    ownerSelectionSummary: '{{selected}} of {{total}} selected'
+    selectAll: Select all
+    deselectAll: Deselect all
+    loadingRepos: Loading repository inventory
+    noReposAvailable: No repositories are available for the active account yet.
+    cancel: Cancel
+    back: Back
+    loadWorkflows: Load Workflows
+    save: Save
+    saving: Saving
+    loadingProgress: Loading {{current}}/{{total}} repos...
+    loadErrorsTitle: Some repositories could not be loaded
+    available: 'Available ({{count}})'
+    availableHint: Double-click or use the arrow controls to add workflows.
+    selected: 'Selected ({{count}})'
+    selectedHint: This list becomes the next managed workflow set when you save.
+    searchPlaceholder: Search workflows by name, path, or repository...
+    emptyAvailable: All workflows are already added.
+    emptySelected: No workflows selected.
+    noSearchResults: No workflows match the current filter.
+    moveSelectedToChosen: Move selected workflows to Selected
+    moveAllToChosen: Move all visible workflows to Selected
+    moveSelectedBack: Remove selected workflows from Selected
+    moveAllBack: Remove all workflows from Selected
+    confirmDescription: Review the {{count}} workflows below, then save to replace the managed workflow set.
   table:
     status: Status
     workflow: Workflow
@@ -239,7 +310,17 @@ actionManagement:
     description: Every pinned workflow refreshes on page entry so the latest state is visible without opening GitHub.
     refreshing: Refreshing workflow status
     emptyTitle: No workflows pinned yet
-    emptyDescription: Search for a workflow on the left, add it, then Hagihub will restore and refresh it here on future visits.
+    emptyDescription: Open Configure Actions to load repositories, select workflows, and save the first managed set.
+  actionMonitoring:
+    notification:
+      completed: completed
+    state:
+      success: Success
+      failure: Failed
+    toggle:
+      start: Start monitoring
+      stop: Stop monitoring
+    monitoredCount: '{{count}} monitored'
   state:
     success: Success
     failure: Failure

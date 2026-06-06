@@ -164,6 +164,71 @@ repoCard:
     saving: 保存中
     saveSuccess: 更改已保存
     saveFailed: 保存失败
+  tabs:
+    description: 在 Hagihub 里查看仓库元数据、README 内容和许可证文本，无需切回 GitHub 网页。
+    info: 仓库信息
+    readme: README
+    license: LICENSE
+  commitDialog:
+    title: 保存 {{filename}}
+    description: 选择直接写入默认分支，或先创建分支并发起拉取请求。
+    close: 关闭
+    selected: 已选择
+    directTitle: 直接提交到 {{branch}}
+    directDescription: 立即将文件写入仓库默认分支。
+    prTitle: 创建拉取请求
+    prDescription: 从 {{branch}} 创建新分支，在新分支上提交文件，然后自动发起拉取请求。
+    branchLabel: 拉取请求分支名
+    branchPlaceholder: 输入分支名
+    branchHint: Hagihub 会先生成一个建议分支名，你也可以在创建前自行修改。
+    cancel: 取消
+    submitting: 保存中
+    confirmDirect: 提交到分支
+    confirmPr: 创建拉取请求
+  readme:
+    description: 以纯文本方式查看或编辑仓库的 README.md 文件。
+    loading: 正在加载 README.md
+    loadFailed: 加载 README.md 失败。
+    editorPlaceholder: 在这里编写仓库 README 内容。
+    emptyTitle: 还没有 README.md
+    emptyDescription: 可以直接从空白内容开始，也可以点击创建来起草 README。
+    edit: 编辑 README
+    create: 创建 README
+    save: 保存 README
+    cancel: 取消
+    saveSuccess: README.md 已保存。
+    saveFailed: 保存 README.md 失败。
+    prSuccess: 已为 README.md 创建拉取请求 #{{number}}。
+    conflict: README.md 已被其他人修改，请刷新后再试。
+  license:
+    description: 查看、起草或替换仓库的 LICENSE 文件。
+    loading: 正在加载 LICENSE
+    loadFailed: 加载 LICENSE 失败。
+    editorPlaceholder: 在这里粘贴或编辑许可证文本。
+    emptyTitle: 还没有 LICENSE 文件
+    emptyDescription: 可以先选择一个常见许可证模板，或从空白内容开始。
+    presetTitle: 许可证模板
+    presetDescription: 先载入常见开源许可证模板，再根据仓库情况微调内容。
+    presetPlaceholder: 选择许可证模板
+    presetSearchPlaceholder: 搜索许可证模板...
+    presetEmpty: 没有匹配的许可证模板。
+    edit: 编辑 LICENSE
+    create: 创建 LICENSE
+    save: 保存 LICENSE
+    cancel: 取消
+    saveSuccess: LICENSE 已保存。
+    saveFailed: 保存 LICENSE 失败。
+    prSuccess: 已为 LICENSE 创建拉取请求 #{{number}}。
+    conflict: LICENSE 已被其他人修改，请刷新后再试。
+    presets:
+      mit: MIT 许可证
+      "apache-2.0": Apache 2.0 许可证
+      "gpl-3.0": GNU GPL v3.0
+      "lgpl-3.0": GNU LGPL v3.0
+      "bsd-2-clause": BSD 2 条款许可证
+      "bsd-3-clause": BSD 3 条款许可证
+      "mpl-2.0": Mozilla Public License 2.0
+      "agpl-3.0": GNU AGPL v3.0
 errors:
   loadAccountsFailed: 加载 GitHub 账号失败。
   startDeviceFlowFailed: 启动 GitHub Device Flow 失败。
@@ -185,7 +250,7 @@ errors:
 actionManagement:
   badge: 工作流工作区
   title: Action 管理
-  description: 先选择账号、归属方和仓库，再加载该仓库的全部工作流，并在本地过滤后固定常用项。
+  description: 页面只保留托管工作流看板，需要批量配置时再打开“配置工作流”完成仓库加载与选择调整。
   refresh: 刷新托管工作流
   retry: 重试
   loading: 正在恢复托管工作流
@@ -194,38 +259,44 @@ actionManagement:
   openAccounts: 打开账号管理
   noAccountBadge: 需要账号
   noAccountTitle: 先连接 GitHub 账号，再开始管理工作流。
-  noAccountDescription: Action 管理依赖当前活跃账号来搜索仓库、恢复已固定工作流并发起手动运行。
+  noAccountDescription: Action 管理依赖当前活跃账号来恢复已托管工作流、批量加载仓库工作流并发起手动运行。
   managedCount: 已托管 {{count}} 个
-  loadedWorkflowCount: 已加载 {{count}} 个工作流
   failedRefreshCount: 有 {{count}} 个工作流需要关注
-  search:
-    badge: 工作流来源
-    title: 先选择账号、归属方和仓库
-    description: 每次只加载一个仓库的工作流，随后只在当前列表里做本地过滤，不再跨仓库搜索 GitHub。
-    accountLabel: 账号
-    ownerLabel: 归属方
-    repoLabel: 仓库
-    ownerPlaceholder: 选择归属方
-    repoPlaceholder: 选择仓库
-    repoSearchPlaceholder: 搜索仓库...
-    noRepoResults: 未找到仓库
+  transfer:
+    title: 配置工作流
+    description: 先选仓库，再在双栏之间移动工作流，最后确认并保存新的托管集合。
+    configure: 配置工作流
     personalOwner: 个人仓库
-    inputLabel: 过滤已加载工作流
-    placeholder: 按工作流名称或路径过滤...
-    loading: 正在从所选仓库加载工作流
-    loadingList: 正在加载列表
-    noResults: 当前仓库里没有匹配当前过滤条件的工作流。
-    loadedCount: 已加载 {{count}} 个工作流
-    loadList: 加载工作流
-    refreshList: 刷新工作流
-    chooseOwner: 先选择归属方，再选择仓库。
-    chooseRepo: 选择仓库后，再加载这个仓库的工作流。
-    noReposForOwner: 当前活跃账号在这个归属方下没有可用仓库。
-    readyToLoad: 仓库已选定，接下来加载它的工作流，再在本地浏览和过滤。
-    dispatchReady: 可手动触发
-    dispatchUnavailable: 仅查看
-    add: 添加
-    added: 已添加
+    phaseRepos: ① 选择仓库
+    phaseTransfer: ② 转移选择
+    phaseConfirm: ③ 确认保存
+    repoSelectionHint: 先选择一个或多个仓库，再把工作流加载到转移框中。
+    reposSelected: 已选择 {{count}} 个仓库
+    ownerSelectionSummary: 已选 {{selected}} / {{total}}
+    selectAll: 全选
+    deselectAll: 取消全选
+    loadingRepos: 正在加载仓库列表
+    noReposAvailable: 当前活跃账号还没有可用仓库。
+    cancel: 取消
+    back: 返回
+    loadWorkflows: 加载工作流
+    save: 保存
+    saving: 保存中
+    loadingProgress: 正在加载第 {{current}} / {{total}} 个仓库...
+    loadErrorsTitle: 部分仓库加载失败
+    available: '可选项（{{count}}）'
+    availableHint: 双击条目，或使用中间箭头把工作流加入右侧。
+    selected: '已选择（{{count}}）'
+    selectedHint: 保存后，右侧列表会成为新的托管工作流集合。
+    searchPlaceholder: 按工作流名称、路径或仓库名搜索...
+    emptyAvailable: 所有工作流都已经加入右侧。
+    emptySelected: 还没有选择任何工作流。
+    noSearchResults: 当前筛选条件下没有匹配的工作流。
+    moveSelectedToChosen: 将选中的工作流移入已选择列表
+    moveAllToChosen: 将当前可见工作流全部移入已选择列表
+    moveSelectedBack: 将选中的工作流移出已选择列表
+    moveAllBack: 将全部工作流移出已选择列表
+    confirmDescription: 请确认下面这 {{count}} 个工作流，保存后会直接替换当前托管集合。
   table:
     status: 状态
     workflow: 工作流
@@ -239,7 +310,17 @@ actionManagement:
     description: 每次进入页面都会自动刷新已固定工作流，因此无需打开 GitHub 也能先看到最新状态。
     refreshing: 正在刷新工作流状态
     emptyTitle: 还没有固定工作流
-    emptyDescription: 先在左侧搜索并添加工作流，之后 Hagihub 会在下次进入时自动恢复并刷新它。
+    emptyDescription: 打开“配置工作流”，加载仓库并保存第一批托管工作流。
+  actionMonitoring:
+    notification:
+      completed: 运行完成
+    state:
+      success: 成功
+      failure: 失败
+    toggle:
+      start: 开始监控
+      stop: 停止监控
+    monitoredCount: 已监控 {{count}} 个
   state:
     success: 成功
     failure: 失败
