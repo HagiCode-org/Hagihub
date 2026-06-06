@@ -1,6 +1,12 @@
-import { describe, it } from 'node:test';
+import { afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractWorkflowDispatchMetadata, resolveManagedWorkflowState } from '../github-api.js';
+import { commitFile, extractWorkflowDispatchMetadata, fetchFileContent, resolveManagedWorkflowState } from '../github-api.js';
+
+const originalFetch = globalThis.fetch;
+
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+});
 
 describe('extractWorkflowDispatchMetadata', () => {
   it('parses workflow_dispatch inputs from workflow yaml', () => {
@@ -123,5 +129,112 @@ describe('resolveManagedWorkflowState', () => {
     }), 'failure');
 
     assert.equal(resolveManagedWorkflowState(null), 'unavailable');
+  });
+});
+
+describe('fetchFileContent', () => {
+  it('decodes file content and preserves sha when the file exists', async () => {
+    globalThis.fetch = async () => new Response(JSON.stringify({
+      type: 'file',
+      sha: 'blob-sha',
+      encoding: 'base64',
+      content: Buffer.from('# hello\n', 'utf8').toString('base64'),
+    }), {
+      status: 200,
+      headers: {
+        'content-type': 'application/json',
+      },
+    });
+
+    const result = await fetchFileContent('token', 'owner', 'repo', 'README.md');
+
+    assert.deepEqual(result, {
+      content: '# hello\n',
+      sha: 'blob-sha',
+      exists: true,
+    });
+  });
+
+  it('returns an empty result when the file is missing', async () => {
+    globalThis.fetch = async () => new Response(JSON.stringify({ message: 'Not Found' }), {
+      status: 404,
+      headers: {
+        'content-type': 'application/json',
+      },
+    });
+
+    const result = await fetchFileContent('token', 'owner', 'repo', 'README.md');
+
+    assert.deepEqual(result, {
+      content: '',
+      sha: '',
+      exists: false,
+    });
+  });
+});
+
+describe('commitFile', () => {
+  it('omits sha for file creation and returns the new blob sha', async () => {
+    let body: Record<string, unknown> | null = null;
+
+    globalThis.fetch = async (_input, init) => {
+      body = JSON.parse(String(init?.body));
+      return new Response(JSON.stringify({
+        content: {
+          sha: 'new-blob-sha',
+        },
+      }), {
+        status: 201,
+        headers: {
+          'content-type': 'application/json',
+        },
+      });
+    };
+
+    const result = await commitFile('token', 'owner', 'repo', 'README.md', {
+      content: '# title\n',
+      message: 'Create README',
+      branch: 'main',
+      sha: '',
+    });
+
+    assert.deepEqual(result, { newSha: 'new-blob-sha' });
+    assert.deepEqual(body, {
+      message: 'Create README',
+      content: Buffer.from('# title\n', 'utf8').toString('base64'),
+      branch: 'main',
+    });
+  });
+
+  it('includes sha for file updates', async () => {
+    let body: Record<string, unknown> | null = null;
+
+    globalThis.fetch = async (_input, init) => {
+      body = JSON.parse(String(init?.body));
+      return new Response(JSON.stringify({
+        content: {
+          sha: 'updated-sha',
+        },
+      }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      });
+    };
+
+    await commitFile('token', 'owner', 'repo', 'README.md', {
+      content: '# title\n',
+      message: 'Update README',
+      branch: 'feature/readme',
+      sha: 'current-sha',
+    });
+
+    assert.deepEqual(body, {
+      message: 'Update README',
+      content: Buffer.from('# title\n', 'utf8').toString('base64'),
+      branch: 'feature/readme',
+      sha: 'current-sha',
+    });
   });
 });

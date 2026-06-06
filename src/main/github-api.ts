@@ -1,5 +1,8 @@
 import { load as loadYaml } from 'js-yaml';
 import type {
+  CommitFilePayload,
+  CommitFileResult,
+  FileContentResult,
   GitHubActionsResult,
   GitHubManagedWorkflow,
   GitHubManagedWorkflowReference,
@@ -16,6 +19,7 @@ import type {
   GitHubWorkflowRun,
   GitHubWorkflowSummary,
   ListGitHubRepoWorkflowsResult,
+  PullRequestResult,
   RefreshManagedActionsResult,
   SearchGitHubWorkflowsResult,
   UpdateRepoPayload,
@@ -121,8 +125,28 @@ interface RawGitHubWorkflowRunsResponse {
 
 interface RawGitHubContentFile {
   type: string;
+  sha?: string;
   encoding?: string;
   content?: string;
+}
+
+interface RawGitHubRefResponse {
+  ref: string;
+  object?: {
+    sha?: string;
+  };
+}
+
+interface RawGitHubCommitFileResponse {
+  content?: {
+    sha?: string;
+  };
+}
+
+interface RawGitHubPullRequest {
+  url: string;
+  number: number;
+  html_url: string;
 }
 
 interface WorkflowDispatchMetadata {
@@ -694,6 +718,155 @@ function buildDispatchInputsPayload(
   }
 
   return payload;
+}
+
+export async function fetchFileContent(token: string, owner: string, repo: string, path: string): Promise<FileContentResult> {
+  const encodedOwner = encodeURIComponent(owner);
+  const encodedRepo = encodeURIComponent(repo);
+  const encodedPath = encodeRepoPath(path);
+
+  try {
+    const { data } = await requestJson<RawGitHubContentFile | RawGitHubContentFile[]>(
+      `${GITHUB_API_ROOT}/repos/${encodedOwner}/${encodedRepo}/contents/${encodedPath}`,
+      token,
+    );
+
+    if (Array.isArray(data) || data.type !== 'file') {
+      throw new GitHubApiError(`Repository path ${path} is not a file.`, 'unknown');
+    }
+
+    if (data.encoding !== 'base64' || typeof data.content !== 'string' || typeof data.sha !== 'string') {
+      throw new GitHubApiError(`Repository file ${path} could not be decoded.`, 'unknown');
+    }
+
+    return {
+      content: Buffer.from(data.content.replace(/\n/g, ''), 'base64').toString('utf8'),
+      sha: data.sha,
+      exists: true,
+    };
+  } catch (error) {
+    if (error instanceof GitHubApiError && error.status === 404) {
+      return {
+        content: '',
+        sha: '',
+        exists: false,
+      };
+    }
+
+    throw error;
+  }
+}
+
+export async function commitFile(
+  token: string,
+  owner: string,
+  repo: string,
+  path: string,
+  payload: CommitFilePayload,
+): Promise<CommitFileResult> {
+  const encodedOwner = encodeURIComponent(owner);
+  const encodedRepo = encodeURIComponent(repo);
+  const encodedPath = encodeRepoPath(path);
+  const requestBody: Record<string, string> = {
+    message: payload.message,
+    content: Buffer.from(payload.content, 'utf8').toString('base64'),
+    branch: payload.branch,
+  };
+
+  if (payload.sha && payload.sha.trim().length > 0) {
+    requestBody.sha = payload.sha.trim();
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${GITHUB_API_ROOT}/repos/${encodedOwner}/${encodedRepo}/contents/${encodedPath}`, {
+      method: 'PUT',
+      headers: {
+        ...buildHeaders(token),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+  } catch (error) {
+    throw new GitHubApiError(
+      error instanceof Error ? error.message : 'Network error while committing the repository file.',
+      'network',
+    );
+  }
+
+  await assertResponse(response);
+  const data = await response.json() as RawGitHubCommitFileResponse;
+  const newSha = data.content?.sha;
+
+  if (!newSha) {
+    throw new GitHubApiError(`GitHub did not return a blob SHA for ${path}.`, 'unknown');
+  }
+
+  return { newSha };
+}
+
+export async function createRef(token: string, owner: string, repo: string, ref: string, sha: string): Promise<void> {
+  const encodedOwner = encodeURIComponent(owner);
+  const encodedRepo = encodeURIComponent(repo);
+  const resolvedSha = /^[0-9a-f]{40}$/iu.test(sha)
+    ? sha
+    : (await requestJson<RawGitHubRefResponse>(
+      `${GITHUB_API_ROOT}/repos/${encodedOwner}/${encodedRepo}/git/ref/heads/${encodeURIComponent(sha)}`,
+      token,
+    )).data.object?.sha;
+
+  if (!resolvedSha) {
+    throw new GitHubApiError(`GitHub did not return a commit SHA for base reference ${sha}.`, 'unknown');
+  }
+
+  await requestJson<RawGitHubRefResponse>(
+    `${GITHUB_API_ROOT}/repos/${encodedOwner}/${encodedRepo}/git/refs`,
+    token,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ref: `refs/heads/${ref}`,
+        sha: resolvedSha,
+      }),
+    },
+  );
+}
+
+export async function createPullRequest(
+  token: string,
+  owner: string,
+  repo: string,
+  title: string,
+  head: string,
+  base: string,
+): Promise<PullRequestResult> {
+  const encodedOwner = encodeURIComponent(owner);
+  const encodedRepo = encodeURIComponent(repo);
+  const { data } = await requestJson<RawGitHubPullRequest>(
+    `${GITHUB_API_ROOT}/repos/${encodedOwner}/${encodedRepo}/pulls`,
+    token,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title,
+        head,
+        base,
+      }),
+    },
+  );
+
+  return {
+    url: data.url,
+    number: data.number,
+    htmlUrl: data.html_url,
+  };
 }
 
 async function resolveDefaultBranch(token: string, owner: string, repo: string, fallback?: string | null): Promise<string> {

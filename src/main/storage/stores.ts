@@ -53,7 +53,8 @@ function isManagedWorkflowReference(data: unknown): data is GitHubManagedWorkflo
     && typeof item.workflowName === 'string'
     && typeof item.workflowPath === 'string'
     && typeof item.workflowHtmlUrl === 'string'
-    && typeof item.supportsDispatch === 'boolean';
+    && typeof item.supportsDispatch === 'boolean'
+    && (typeof item.monitored === 'boolean' || typeof item.monitored === 'undefined');
 }
 
 export const accountsStore = createStoreHandle<GitHubAccountsData>({
