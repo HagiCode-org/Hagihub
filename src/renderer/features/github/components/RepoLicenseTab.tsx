@@ -214,26 +214,24 @@ function RepoLicenseTab({ accountId, owner, repo, defaultBranch }: RepoLicenseTa
               </p>
             ) : null}
 
-            {!exists ? (
-              <div className="rounded-[1.5rem] border border-border/70 bg-background/30 px-5 py-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h4 className="text-sm font-semibold text-foreground">{t('repoCard.license.presetTitle')}</h4>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">{t('repoCard.license.presetDescription')}</p>
-                  </div>
-                  <div className="w-full max-w-sm">
-                    <SearchableSelect
-                      options={presetOptions}
-                      value={selectedPreset}
-                      onChange={handlePresetChange}
-                      placeholder={t('repoCard.license.presetPlaceholder')}
-                      searchPlaceholder={t('repoCard.license.presetSearchPlaceholder')}
-                      emptyMessage={t('repoCard.license.presetEmpty')}
-                    />
-                  </div>
+            <div className="rounded-[1.5rem] border border-border/70 bg-background/30 px-5 py-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">{t('repoCard.license.presetTitle')}</h4>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">{t('repoCard.license.presetDescription')}</p>
+                </div>
+                <div className="w-full max-w-sm">
+                  <SearchableSelect
+                    options={presetOptions}
+                    value={selectedPreset}
+                    onChange={handlePresetChange}
+                    placeholder={t('repoCard.license.presetPlaceholder')}
+                    searchPlaceholder={t('repoCard.license.presetSearchPlaceholder')}
+                    emptyMessage={t('repoCard.license.presetEmpty')}
+                  />
                 </div>
               </div>
-            ) : null}
+            </div>
 
             {isEditing ? (
               <textarea
