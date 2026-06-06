@@ -141,7 +141,7 @@ function ActionTransferModal({
       aria-modal="true"
       aria-label={t('actionManagement.transfer.title')}
     >
-      <div className="flex max-h-[calc(100vh-3rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-border/80 bg-card/95 shadow-[0_40px_120px_rgba(0,0,0,0.4)]">
+      <div className="flex h-[80vh] w-[80vw] max-w-none flex-col overflow-hidden rounded-[2rem] border border-border/80 bg-card/95 shadow-[0_40px_120px_rgba(0,0,0,0.4)]">
         <div className="flex items-center justify-between gap-4 border-b border-border/70 px-6 py-5">
           <div>
             <h2 className="text-2xl font-semibold text-foreground">{t('actionManagement.transfer.title')}</h2>
@@ -270,26 +270,38 @@ function ActionTransferModal({
                   <div className="status-chip">{t('actionManagement.transfer.selected', { count: stagedSelection.length })}</div>
                 </div>
 
-                <div className="mt-5 max-h-[22rem] space-y-2 overflow-y-auto">
+                <div className="mt-5 h-[calc(80vh-22rem)] min-h-0 overflow-auto">
                   {stagedSelection.length === 0 ? (
                     <div className="panel-muted px-4 py-6 text-sm leading-6 text-muted-foreground">
                       {t('actionManagement.transfer.emptySelected')}
                     </div>
                   ) : (
-                    stagedSelection.map((workflow) => (
-                      <div key={`${workflow.repoFullName}#${workflow.workflowId}`} className="list-row px-4 py-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-foreground">{workflow.workflowName}</p>
-                          <Badge variant={workflow.supportsDispatch ? 'default' : 'outline'}>
-                            {workflow.supportsDispatch
-                              ? t('actionManagement.card.dispatchReady')
-                              : t('actionManagement.card.dispatchUnavailable')}
-                          </Badge>
-                        </div>
-                        <p className="mt-2 font-mono text-xs text-muted-foreground">{workflow.repoFullName}</p>
-                        <p className="mt-1 font-mono text-xs text-muted-foreground/90">{workflow.workflowPath}</p>
-                      </div>
-                    ))
+                    <table className="w-full border-collapse">
+                      <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
+                        <tr className="border-b border-border/70 text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                          <th className="px-3 py-3 font-medium">{t('actionManagement.table.workflow')}</th>
+                          <th className="px-3 py-3 font-medium">{t('repoList.columns.repository')}</th>
+                          <th className="hidden px-3 py-3 font-medium xl:table-cell">{t('actionManagement.table.path')}</th>
+                          <th className="px-3 py-3 font-medium">{t('actionManagement.table.status')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stagedSelection.map((workflow) => (
+                          <tr key={`${workflow.repoFullName}#${workflow.workflowId}`} className="border-b border-border/60">
+                            <td className="px-3 py-3 align-top text-sm font-medium text-foreground">{workflow.workflowName}</td>
+                            <td className="px-3 py-3 align-top font-mono text-xs text-muted-foreground">{workflow.repoFullName}</td>
+                            <td className="hidden px-3 py-3 align-top font-mono text-xs text-muted-foreground/90 xl:table-cell">{workflow.workflowPath}</td>
+                            <td className="px-3 py-3 align-top">
+                              <Badge variant={workflow.supportsDispatch ? 'default' : 'outline'}>
+                                {workflow.supportsDispatch
+                                  ? t('actionManagement.card.dispatchReady')
+                                  : t('actionManagement.card.dispatchUnavailable')}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   )}
                 </div>
               </section>

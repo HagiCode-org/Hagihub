@@ -79,7 +79,7 @@ function RepoMultiSelect({
       return true;
     }
 
-    const haystack = [repo.fullName, repo.name, repo.description ?? '']
+    const haystack = [repo.fullName, repo.name]
       .join(' ')
       .toLowerCase();
 
@@ -231,14 +231,11 @@ function RepoMultiSelect({
                         className='mt-1 size-4 rounded border border-border/80 bg-background'
                         onChange={() => onToggleRepo(repo.fullName)}
                       />
-                      <div className='min-w-0 flex-1 space-y-1'>
+                      <div className='min-w-0 flex-1'>
                         <div className='flex items-center gap-2 text-sm font-medium text-foreground'>
                           <FolderGit2 className='size-4 shrink-0 text-primary' />
                           <span className='font-mono'>{repo.fullName}</span>
                         </div>
-                        {repo.description ? (
-                          <p className='text-sm leading-6 text-muted-foreground'>{repo.description}</p>
-                        ) : null}
                       </div>
                     </label>
                   );

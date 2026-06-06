@@ -1,5 +1,5 @@
-import { useDeferredValue, useEffect, useState } from 'react';
-import { ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Search, Workflow } from 'lucide-react';
+import { useDeferredValue, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -61,9 +61,86 @@ function WorkflowTransferBox({
   );
   const selectedStaged = stagedWorkflows.filter((workflow) => selectedStagedKeys.includes(workflowKey(workflow)));
 
+  const renderWorkflowTable = <T extends GitHubManagedWorkflowReference | GitHubWorkflowSummary>(options: {
+    emptyState: string;
+    rows: T[];
+    selectedKeys: string[];
+    setSelectedKeys: Dispatch<SetStateAction<string[]>>;
+    onRowDoubleClick: (workflow: T) => void;
+  }) => {
+    const { emptyState, rows, selectedKeys, setSelectedKeys, onRowDoubleClick } = options;
+
+    if (rows.length === 0) {
+      return (
+        <div className='panel-muted px-4 py-6 text-sm leading-6 text-muted-foreground'>
+          {emptyState}
+        </div>
+      );
+    }
+
+    return (
+      <table className='w-full border-collapse'>
+        <thead className='sticky top-0 z-10 bg-background/95 backdrop-blur-sm'>
+          <tr className='border-b border-border/70 text-left text-xs uppercase tracking-[0.18em] text-muted-foreground'>
+            <th className='w-12 px-3 py-3 font-medium'>
+              <span className='sr-only'>{t('actionManagement.transfer.selected')}</span>
+            </th>
+            <th className='px-3 py-3 font-medium'>{t('actionManagement.table.workflow')}</th>
+            <th className='px-3 py-3 font-medium'>{t('repoList.columns.repository')}</th>
+            <th className='hidden px-3 py-3 font-medium xl:table-cell'>{t('actionManagement.table.path')}</th>
+            <th className='px-3 py-3 font-medium'>{t('actionManagement.table.status')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((workflow) => {
+            const key = workflowKey(workflow);
+            const checked = selectedKeys.includes(key);
+
+            return (
+              <tr
+                key={key}
+                className='border-b border-border/60 transition-colors hover:bg-accent/10'
+                onDoubleClick={() => onRowDoubleClick(workflow)}
+              >
+                <td className='px-3 py-3 align-top'>
+                  <input
+                    type='checkbox'
+                    checked={checked}
+                    className='mt-0.5 size-4 rounded border border-border/80 bg-background'
+                    onChange={() => {
+                      setSelectedKeys((current) => (
+                        checked ? current.filter((item) => item !== key) : [...current, key]
+                      ));
+                    }}
+                  />
+                </td>
+                <td className='px-3 py-3 align-top'>
+                  <p className='text-sm font-medium text-foreground'>{workflow.workflowName}</p>
+                </td>
+                <td className='px-3 py-3 align-top font-mono text-xs text-muted-foreground'>
+                  {workflow.repoFullName}
+                </td>
+                <td className='hidden px-3 py-3 align-top font-mono text-xs text-muted-foreground/90 xl:table-cell'>
+                  {workflow.workflowPath}
+                </td>
+                <td className='px-3 py-3 align-top'>
+                  <Badge variant={workflow.supportsDispatch ? 'default' : 'outline'}>
+                    {workflow.supportsDispatch
+                      ? t('actionManagement.card.dispatchReady')
+                      : t('actionManagement.card.dispatchUnavailable')}
+                  </Badge>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    );
+  };
+
   return (
     <div className='grid min-h-0 gap-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]'>
-      <section className='editor-panel flex h-[20rem] min-h-0 flex-col p-4 sm:h-[24rem] lg:h-[min(30rem,calc(100vh-24rem))]'>
+      <section className='editor-panel flex h-[18rem] min-h-0 flex-col overflow-hidden p-4 sm:h-[22rem] lg:h-[calc(80vh-20rem)]'>
         <div className='flex flex-wrap items-center justify-between gap-3'>
           <div>
             <p className='text-sm font-semibold text-foreground'>
@@ -87,53 +164,16 @@ function WorkflowTransferBox({
           </div>
         </label>
 
-        <div className='mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1'>
-          {visibleAvailableWorkflows.length === 0 ? (
-            <div className='panel-muted px-4 py-6 text-sm leading-6 text-muted-foreground'>
-              {availableWorkflows.length === stagedWorkflows.length
-                ? t('actionManagement.transfer.emptyAvailable')
-                : t('actionManagement.transfer.noSearchResults')}
-            </div>
-          ) : (
-            visibleAvailableWorkflows.map((workflow) => {
-              const key = workflowKey(workflow);
-              const checked = selectedAvailableKeys.includes(key);
-
-              return (
-                <label
-                  key={key}
-                  className='list-row flex cursor-pointer items-start gap-3 px-4 py-4 transition-colors hover:bg-accent/12'
-                  onDoubleClick={() => onMoveToStaged([workflow])}
-                >
-                  <input
-                    type='checkbox'
-                    checked={checked}
-                    className='mt-1 size-4 rounded border border-border/80 bg-background'
-                    onChange={() => {
-                      setSelectedAvailableKeys((current) =>
-                        checked ? current.filter((item) => item !== key) : [...current, key],
-                      );
-                    }}
-                  />
-                  <div className='min-w-0 flex-1 space-y-2'>
-                    <div className='flex flex-wrap items-center gap-2'>
-                      <p className='text-sm font-semibold text-foreground'>{workflow.workflowName}</p>
-                      <Badge variant={workflow.supportsDispatch ? 'default' : 'outline'}>
-                        {workflow.supportsDispatch
-                          ? t('actionManagement.card.dispatchReady')
-                          : t('actionManagement.card.dispatchUnavailable')}
-                      </Badge>
-                    </div>
-                    <div className='flex items-center gap-2 text-xs text-muted-foreground'>
-                      <Workflow className='size-3.5 shrink-0 text-primary' />
-                      <span className='font-mono'>{workflow.repoFullName}</span>
-                    </div>
-                    <p className='font-mono text-xs text-muted-foreground/90'>{workflow.workflowPath}</p>
-                  </div>
-                </label>
-              );
-            })
-          )}
+        <div className='mt-4 min-h-0 flex-1 overflow-auto'>
+          {renderWorkflowTable({
+            emptyState: availableWorkflows.length === stagedWorkflows.length
+              ? t('actionManagement.transfer.emptyAvailable')
+              : t('actionManagement.transfer.noSearchResults'),
+            rows: visibleAvailableWorkflows,
+            selectedKeys: selectedAvailableKeys,
+            setSelectedKeys: setSelectedAvailableKeys,
+            onRowDoubleClick: (workflow) => onMoveToStaged([workflow]),
+          })}
         </div>
       </section>
 
@@ -180,7 +220,7 @@ function WorkflowTransferBox({
         </Button>
       </div>
 
-      <section className='editor-panel flex h-[20rem] min-h-0 flex-col p-4 sm:h-[24rem] lg:h-[min(30rem,calc(100vh-24rem))]'>
+      <section className='editor-panel flex h-[18rem] min-h-0 flex-col overflow-hidden p-4 sm:h-[22rem] lg:h-[calc(80vh-20rem)]'>
         <div className='flex flex-wrap items-center justify-between gap-3'>
           <div>
             <p className='text-sm font-semibold text-foreground'>
@@ -191,51 +231,14 @@ function WorkflowTransferBox({
           <Badge variant='outline'>{stagedWorkflows.length}</Badge>
         </div>
 
-        <div className='mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1'>
-          {stagedWorkflows.length === 0 ? (
-            <div className='panel-muted px-4 py-6 text-sm leading-6 text-muted-foreground'>
-              {t('actionManagement.transfer.emptySelected')}
-            </div>
-          ) : (
-            stagedWorkflows.map((workflow) => {
-              const key = workflowKey(workflow);
-              const checked = selectedStagedKeys.includes(key);
-
-              return (
-                <label
-                  key={key}
-                  className='list-row flex cursor-pointer items-start gap-3 px-4 py-4 transition-colors hover:bg-accent/12'
-                  onDoubleClick={() => onRemoveFromStaged([workflow])}
-                >
-                  <input
-                    type='checkbox'
-                    checked={checked}
-                    className='mt-1 size-4 rounded border border-border/80 bg-background'
-                    onChange={() => {
-                      setSelectedStagedKeys((current) =>
-                        checked ? current.filter((item) => item !== key) : [...current, key],
-                      );
-                    }}
-                  />
-                  <div className='min-w-0 flex-1 space-y-2'>
-                    <div className='flex flex-wrap items-center gap-2'>
-                      <p className='text-sm font-semibold text-foreground'>{workflow.workflowName}</p>
-                      <Badge variant={workflow.supportsDispatch ? 'default' : 'outline'}>
-                        {workflow.supportsDispatch
-                          ? t('actionManagement.card.dispatchReady')
-                          : t('actionManagement.card.dispatchUnavailable')}
-                      </Badge>
-                    </div>
-                    <div className='flex items-center gap-2 text-xs text-muted-foreground'>
-                      <Workflow className='size-3.5 shrink-0 text-primary' />
-                      <span className='font-mono'>{workflow.repoFullName}</span>
-                    </div>
-                    <p className='font-mono text-xs text-muted-foreground/90'>{workflow.workflowPath}</p>
-                  </div>
-                </label>
-              );
-            })
-          )}
+        <div className='mt-4 min-h-0 flex-1 overflow-auto'>
+          {renderWorkflowTable({
+            emptyState: t('actionManagement.transfer.emptySelected'),
+            rows: stagedWorkflows,
+            selectedKeys: selectedStagedKeys,
+            setSelectedKeys: setSelectedStagedKeys,
+            onRowDoubleClick: (workflow) => onRemoveFromStaged([workflow]),
+          })}
         </div>
       </section>
     </div>
