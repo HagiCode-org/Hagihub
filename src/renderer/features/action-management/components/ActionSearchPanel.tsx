@@ -1,34 +1,68 @@
-import { LoaderCircle, Plus, Search, Workflow } from 'lucide-react';
+import { LoaderCircle, Plus, RefreshCw, Search, Workflow } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { GitHubWorkflowSummary } from '../../../../shared/api';
+import type { GitHubRepo, GitHubWorkflowSummary } from '../../../../shared/api';
+
+interface AccountOption {
+  id: string;
+  login: string;
+}
+
+interface OwnerOption {
+  key: string;
+  label: string;
+  repoCount: number;
+}
 
 interface ActionSearchPanelProps {
+  accounts: AccountOption[];
+  activeAccountId: string;
+  ownerOptions: OwnerOption[];
+  selectedOwnerKey: string | null;
+  repoOptions: GitHubRepo[];
+  selectedRepoFullName: string | null;
   query: string;
-  searchStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
-  searchError: string | null;
-  scannedRepoCount: number;
-  searchResults: GitHubWorkflowSummary[];
+  workflowListStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  workflowListError: string | null;
+  reposStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  reposError: string | null;
+  workflows: GitHubWorkflowSummary[];
   managedKeys: Set<string>;
   persistStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  onAccountChange: (accountId: string) => void;
+  onOwnerChange: (ownerKey: string | null) => void;
+  onRepoChange: (repoFullName: string | null) => void;
+  onLoadWorkflows: () => void;
   onQueryChange: (value: string) => void;
   onAdd: (workflow: GitHubWorkflowSummary) => void;
 }
 
 function ActionSearchPanel({
+  accounts,
+  activeAccountId,
+  ownerOptions,
+  selectedOwnerKey,
+  repoOptions,
+  selectedRepoFullName,
   query,
-  searchStatus,
-  searchError,
-  scannedRepoCount,
-  searchResults,
+  workflowListStatus,
+  workflowListError,
+  reposStatus,
+  reposError,
+  workflows,
   managedKeys,
   persistStatus,
+  onAccountChange,
+  onOwnerChange,
+  onRepoChange,
+  onLoadWorkflows,
   onQueryChange,
   onAdd,
 }: ActionSearchPanelProps) {
   const { t } = useTranslation('github');
+  const canLoadWorkflows = selectedRepoFullName !== null && reposStatus === 'succeeded';
 
   return (
     <section className="editor-panel p-5 lg:p-6">
@@ -39,39 +73,96 @@ function ActionSearchPanel({
           <p className="text-sm leading-6 text-muted-foreground">{t('actionManagement.search.description')}</p>
         </div>
         <div className="status-chip hidden lg:inline-flex">
-          {searchStatus === 'loading'
-            ? t('actionManagement.search.scanning')
-            : t('actionManagement.search.scannedRepos', { count: scannedRepoCount })}
+          {workflowListStatus === 'loading'
+            ? t('actionManagement.search.loadingList')
+            : t('actionManagement.search.loadedCount', { count: workflows.length })}
         </div>
       </div>
 
       <div className="mt-5 space-y-4">
-        <label className="block">
-          <span className="sr-only">{t('actionManagement.search.inputLabel')}</span>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(event) => onQueryChange(event.target.value)}
-              placeholder={t('actionManagement.search.placeholder')}
-              className="h-11 pl-10"
-            />
-          </div>
+        <label className="block space-y-2">
+          <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('actionManagement.search.accountLabel')}</span>
+          <select
+            value={activeAccountId}
+            className="flex h-10 w-full rounded-lg border border-border/70 bg-background/45 px-3 py-2 text-sm text-foreground shadow-sm transition-colors focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20"
+            onChange={(event) => onAccountChange(event.target.value)}
+          >
+            {accounts.map((account) => (
+              <option key={account.id} value={account.id}>@{account.login}</option>
+            ))}
+          </select>
         </label>
 
-        {searchError ? (
+        <label className="block space-y-2">
+          <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('actionManagement.search.ownerLabel')}</span>
+          <select
+            value={selectedOwnerKey ?? ''}
+            disabled={reposStatus === 'loading' || ownerOptions.length === 0}
+            className="flex h-10 w-full rounded-lg border border-border/70 bg-background/45 px-3 py-2 text-sm text-foreground shadow-sm transition-colors focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+            onChange={(event) => onOwnerChange(event.target.value || null)}
+          >
+            <option value="">{t('actionManagement.search.ownerPlaceholder')}</option>
+            {ownerOptions.map((owner) => (
+              <option key={owner.key} value={owner.key}>{owner.label} ({owner.repoCount})</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block space-y-2">
+          <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('actionManagement.search.repoLabel')}</span>
+          <select
+            value={selectedRepoFullName ?? ''}
+            disabled={selectedOwnerKey === null || repoOptions.length === 0}
+            className="flex h-10 w-full rounded-lg border border-border/70 bg-background/45 px-3 py-2 text-sm text-foreground shadow-sm transition-colors focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+            onChange={(event) => onRepoChange(event.target.value || null)}
+          >
+            <option value="">{t('actionManagement.search.repoPlaceholder')}</option>
+            {repoOptions.map((repo) => (
+              <option key={repo.id} value={repo.fullName}>{repo.fullName}</option>
+            ))}
+          </select>
+        </label>
+
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" disabled={!canLoadWorkflows || workflowListStatus === 'loading'} onClick={onLoadWorkflows}>
+            {workflowListStatus === 'loading' ? <LoaderCircle className="animate-spin" /> : <RefreshCw />}
+            {workflowListStatus === 'succeeded'
+              ? t('actionManagement.search.refreshList')
+              : t('actionManagement.search.loadList')}
+          </Button>
+        </div>
+
+        {reposError ? (
           <div className="rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
-            {searchError}
+            {reposError}
           </div>
         ) : null}
 
-        {query.trim().length === 0 ? (
+        {workflowListError ? (
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
+            {workflowListError}
+          </div>
+        ) : null}
+
+        {selectedOwnerKey === null ? (
           <div className="rounded-2xl border border-border/70 bg-background/35 px-4 py-4 text-sm leading-6 text-muted-foreground">
-            {t('actionManagement.search.emptyQuery')}
+            {t('actionManagement.search.chooseOwner')}
           </div>
         ) : null}
 
-        {searchStatus === 'loading' ? (
+        {selectedOwnerKey !== null && selectedRepoFullName === null ? (
+          <div className="rounded-2xl border border-border/70 bg-background/35 px-4 py-4 text-sm leading-6 text-muted-foreground">
+            {repoOptions.length > 0 ? t('actionManagement.search.chooseRepo') : t('actionManagement.search.noReposForOwner')}
+          </div>
+        ) : null}
+
+        {selectedRepoFullName !== null && workflowListStatus === 'idle' ? (
+          <div className="rounded-2xl border border-border/70 bg-background/35 px-4 py-4 text-sm leading-6 text-muted-foreground">
+            {t('actionManagement.search.readyToLoad')}
+          </div>
+        ) : null}
+
+        {workflowListStatus === 'loading' ? (
           <div className="rounded-2xl border border-border/70 bg-background/35 px-4 py-6 text-sm text-muted-foreground">
             <div className="flex items-center gap-3">
               <LoaderCircle className="size-4 animate-spin text-primary" />
@@ -80,15 +171,30 @@ function ActionSearchPanel({
           </div>
         ) : null}
 
-        {query.trim().length > 0 && searchStatus === 'succeeded' && searchResults.length === 0 ? (
+        {workflowListStatus === 'succeeded' ? (
+          <label className="block">
+            <span className="sr-only">{t('actionManagement.search.inputLabel')}</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(event) => onQueryChange(event.target.value)}
+                placeholder={t('actionManagement.search.placeholder')}
+                className="h-11 pl-10"
+              />
+            </div>
+          </label>
+        ) : null}
+
+        {workflowListStatus === 'succeeded' && workflows.length === 0 ? (
           <div className="rounded-2xl border border-border/70 bg-background/35 px-4 py-5 text-sm leading-6 text-muted-foreground">
             {t('actionManagement.search.noResults')}
           </div>
         ) : null}
 
-        {searchResults.length > 0 ? (
+        {workflowListStatus === 'succeeded' && workflows.length > 0 ? (
           <div className="space-y-3" style={{ contentVisibility: 'auto' }}>
-            {searchResults.map((workflow) => {
+            {workflows.map((workflow) => {
               const workflowKey = `${workflow.repoFullName}#${workflow.workflowId}`;
               const isManaged = managedKeys.has(workflowKey);
 

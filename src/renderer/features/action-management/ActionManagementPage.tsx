@@ -6,18 +6,23 @@ import { Button } from '@/components/ui/button';
 import { useAppDispatch, useAppSelector } from '@/store';
 import {
   addManagedWorkflow,
-  clearSearchResults,
+  clearWorkflowList,
   closeDispatchDialog,
   dispatchManagedWorkflow,
   loadManagedWorkflows,
+  loadRepoWorkflows,
   openDispatchDialog,
   refreshManagedWorkflows,
   removeManagedWorkflow,
   resetActionManagement,
-  searchManagedWorkflows,
   setDispatchInput,
   setSearchQuery,
+  setSelectedOwnerKey,
+  setSelectedRepoFullName,
 } from '@/store/slices/actionManagementSlice';
+import { switchAccount } from '@/store/slices/githubAccountsSlice';
+import { clearRepos, fetchRepos } from '@/store/slices/githubReposSlice';
+import type { GitHubRepo, GitHubWorkflowSummary } from '../../../shared/api';
 import ActionSearchPanel from './components/ActionSearchPanel';
 import ManagedActionCard from './components/ManagedActionCard';
 import WorkflowDispatchDialog from './components/WorkflowDispatchDialog';
@@ -27,11 +32,73 @@ interface ActionManagementPageProps {
   onOpenAccounts: () => void;
 }
 
+interface OwnerOption {
+  key: string;
+  label: string;
+  repoCount: number;
+}
+
+function filterWorkflows(workflows: GitHubWorkflowSummary[], query: string): GitHubWorkflowSummary[] {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (normalizedQuery.length === 0) {
+    return workflows;
+  }
+
+  return workflows.filter((workflow) =>
+    workflow.workflowName.toLowerCase().includes(normalizedQuery)
+      || workflow.workflowPath.toLowerCase().includes(normalizedQuery)
+      || workflow.repoFullName.toLowerCase().includes(normalizedQuery),
+  );
+}
+
+function resolveOwnerOptions(personalRepos: GitHubRepo[], groupedRepos: Array<{ org: { login: string }; repos: GitHubRepo[] }>, t: ReturnType<typeof useTranslation>['t']): OwnerOption[] {
+  const options: OwnerOption[] = [];
+
+  if (personalRepos.length > 0) {
+    options.push({
+      key: 'personal',
+      label: t('actionManagement.search.personalOwner'),
+      repoCount: personalRepos.length,
+    });
+  }
+
+  for (const group of groupedRepos) {
+    options.push({
+      key: group.org.login,
+      label: group.org.login,
+      repoCount: group.repos.length,
+    });
+  }
+
+  return options;
+}
+
+function resolveRepoOptions(selectedOwnerKey: string | null, personalRepos: GitHubRepo[], groupedRepos: Array<{ org: { login: string }; repos: GitHubRepo[] }>): GitHubRepo[] {
+  if (selectedOwnerKey === 'personal') {
+    return personalRepos;
+  }
+
+  if (selectedOwnerKey === null) {
+    return [];
+  }
+
+  return groupedRepos.find((group) => group.org.login === selectedOwnerKey)?.repos ?? [];
+}
+
 function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagementPageProps) {
   const { t } = useTranslation('github');
   const dispatch = useAppDispatch();
   const { accounts, activeAccountId } = useAppSelector((state) => state.githubAccounts);
   const {
+    groupedRepos,
+    personalRepos,
+    activeAccountId: reposAccountId,
+    fetchStatus: reposStatus,
+    error: reposError,
+  } = useAppSelector((state) => state.githubRepos);
+  const {
+    availableWorkflows,
     dispatchDialog,
     failedRefreshCount,
     loadError,
@@ -42,20 +109,24 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
     persistStatus,
     refreshError,
     refreshStatus,
-    searchError,
     searchQuery,
-    searchResults,
-    searchScannedRepoCount,
-    searchStatus,
+    selectedOwnerKey,
+    selectedRepoFullName,
+    workflowListError,
+    workflowListStatus,
   } = useAppSelector((state) => state.actionManagement);
   const activeAccount = accounts.find((account) => account.id === activeAccountId) ?? null;
-  const deferredQuery = useDeferredValue(searchQuery.trim());
+  const deferredQuery = useDeferredValue(searchQuery);
   const referenceSignature = managedReferences.map((workflow) => `${workflow.repoFullName}#${workflow.workflowId}`).join('|');
   const managedKeys = new Set(managedReferences.map((workflow) => `${workflow.repoFullName}#${workflow.workflowId}`));
+  const ownerOptions = resolveOwnerOptions(personalRepos, groupedRepos, t);
+  const repoOptions = resolveRepoOptions(selectedOwnerKey, personalRepos, groupedRepos);
+  const filteredWorkflows = filterWorkflows(availableWorkflows, deferredQuery);
 
   useEffect(() => {
     if (!activeAccountId) {
       dispatch(resetActionManagement());
+      dispatch(clearRepos());
       return;
     }
 
@@ -67,16 +138,10 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
       return;
     }
 
-    if (deferredQuery.length === 0) {
-      dispatch(clearSearchResults());
-      return;
+    if (reposAccountId !== activeAccountId || reposStatus === 'idle') {
+      void dispatch(fetchRepos(activeAccountId));
     }
-
-    void dispatch(searchManagedWorkflows({
-      accountId: activeAccountId,
-      query: deferredQuery,
-    }));
-  }, [activeAccountId, deferredQuery, dispatch]);
+  }, [activeAccountId, dispatch, reposAccountId, reposStatus]);
 
   useEffect(() => {
     if (!activeAccountId || referenceSignature.length === 0) {
@@ -88,6 +153,28 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
       workflows: managedReferences,
     }));
   }, [activeAccountId, dispatch, managedReferences, referenceSignature]);
+
+  useEffect(() => {
+    if (selectedOwnerKey === null) {
+      return;
+    }
+
+    const ownerExists = ownerOptions.some((owner) => owner.key === selectedOwnerKey);
+    if (!ownerExists) {
+      dispatch(setSelectedOwnerKey(null));
+    }
+  }, [dispatch, ownerOptions, selectedOwnerKey]);
+
+  useEffect(() => {
+    if (selectedRepoFullName === null) {
+      return;
+    }
+
+    const repoExists = repoOptions.some((repo) => repo.fullName === selectedRepoFullName);
+    if (!repoExists) {
+      dispatch(setSelectedRepoFullName(null));
+    }
+  }, [dispatch, repoOptions, selectedRepoFullName]);
 
   if (!activeAccountId || !activeAccount) {
     return (
@@ -170,20 +257,50 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
 
         <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
           <span className="status-chip">{t('actionManagement.managedCount', { count: managedReferences.length })}</span>
-          <span>{t('actionManagement.searchScannedCount', { count: searchScannedRepoCount })}</span>
+          <span>{t('actionManagement.loadedWorkflowCount', { count: availableWorkflows.length })}</span>
           {failedRefreshCount > 0 ? <span>{t('actionManagement.failedRefreshCount', { count: failedRefreshCount })}</span> : null}
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
+      <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
         <ActionSearchPanel
+          accounts={accounts.map((account) => ({ id: account.id, login: account.login }))}
+          activeAccountId={activeAccountId}
+          ownerOptions={ownerOptions}
+          selectedOwnerKey={selectedOwnerKey}
+          repoOptions={repoOptions}
+          selectedRepoFullName={selectedRepoFullName}
           query={searchQuery}
-          searchStatus={searchStatus}
-          searchError={searchError}
-          scannedRepoCount={searchScannedRepoCount}
-          searchResults={searchResults}
+          workflowListStatus={workflowListStatus}
+          workflowListError={workflowListError}
+          reposStatus={reposStatus}
+          reposError={reposError}
+          workflows={filteredWorkflows}
           managedKeys={managedKeys}
           persistStatus={persistStatus}
+          onAccountChange={(accountId) => {
+            void dispatch(switchAccount(accountId));
+          }}
+          onOwnerChange={(ownerKey) => {
+            startTransition(() => {
+              dispatch(setSelectedOwnerKey(ownerKey));
+            });
+          }}
+          onRepoChange={(repoFullName) => {
+            startTransition(() => {
+              dispatch(setSelectedRepoFullName(repoFullName));
+            });
+          }}
+          onLoadWorkflows={() => {
+            if (!selectedRepoFullName) {
+              return;
+            }
+
+            void dispatch(loadRepoWorkflows({
+              accountId: activeAccountId,
+              repoFullName: selectedRepoFullName,
+            }));
+          }}
           onQueryChange={(value) => {
             startTransition(() => {
               dispatch(setSearchQuery(value));
