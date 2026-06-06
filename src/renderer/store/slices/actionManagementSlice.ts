@@ -13,6 +13,9 @@ import type {
 export type FetchStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
 export type TransferPhase = 1 | 2 | 3;
 
+const WORKFLOW_LOAD_TIMEOUT_MS = 30_000;
+const GLOBAL_TRANSFER_LOAD_ERROR_KEY = '__global__';
+
 interface PersistManagedWorkflowArgs {
   accountId: string;
   workflow: GitHubWorkflowSummary | GitHubManagedWorkflow;
@@ -218,6 +221,24 @@ function dedupeWorkflowSummaries(workflows: GitHubWorkflowSummary[]): GitHubWork
   return deduped;
 }
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(timeoutMessage));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 export const loadManagedWorkflows = createAsyncThunk<
   { accountId: string; result: ManagedActionsResult },
   string,
@@ -259,10 +280,19 @@ export const loadMultiRepoWorkflows = createAsyncThunk<
       const repoFullName = selectedRepoFullNames[index];
 
       try {
-        const result = await window.hagihub.listGitHubRepoWorkflows(accountId, repoFullName);
+        const result = await withTimeout(
+          window.hagihub.listGitHubRepoWorkflows(accountId, repoFullName),
+          WORKFLOW_LOAD_TIMEOUT_MS,
+          i18n.t('errors.loadRepoWorkflowsTimedOut', { ns: 'github' }),
+        );
         candidateWorkflows.push(...result.workflows);
       } catch (error) {
         loadErrors[repoFullName] = toMessage(error, 'errors.loadRepoWorkflowsFailed');
+        console.warn('[action-management] Failed to load workflows for repository.', {
+          accountId,
+          repoFullName,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
 
       dispatch(transferLoadProgressUpdated({
@@ -558,6 +588,19 @@ const actionManagementSlice = createSlice({
         state.activeAccountId = action.payload.accountId;
         state.transferModal.candidateWorkflows = action.payload.candidateWorkflows;
         state.transferModal.loadErrors = action.payload.loadErrors;
+        state.transferModal.loadProgress = {
+          current: state.transferModal.selectedRepoFullNames.length,
+          total: state.transferModal.selectedRepoFullNames.length,
+        };
+      })
+      .addCase(loadMultiRepoWorkflows.rejected, (state, action) => {
+        if (!state.transferModal.open) {
+          return;
+        }
+
+        state.transferModal.loadErrors = {
+          [GLOBAL_TRANSFER_LOAD_ERROR_KEY]: action.error.message ?? i18n.t('errors.loadRepoWorkflowsFailed', { ns: 'github' }),
+        };
         state.transferModal.loadProgress = {
           current: state.transferModal.selectedRepoFullNames.length,
           total: state.transferModal.selectedRepoFullNames.length,
