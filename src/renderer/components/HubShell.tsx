@@ -103,6 +103,21 @@ function HubShell() {
     }
   }, [accountsFetchStatus, dispatch]);
 
+  useEffect(() => {
+    const handleNavigateToSection = (event: WindowEventMap['hagihub:navigate-to-section']) => {
+      const section = event.detail;
+
+      if (section === 'overview' || section === 'repos' || section === 'actions' || section === 'accounts' || section === 'settings') {
+        dispatch(setActiveSection(section));
+      }
+    };
+
+    window.addEventListener('hagihub:navigate-to-section', handleNavigateToSection);
+    return () => {
+      window.removeEventListener('hagihub:navigate-to-section', handleNavigateToSection);
+    };
+  }, [dispatch]);
+
   const isReposSection = activeSection === 'repos';
   const isActionsSection = activeSection === 'actions';
   const isAccountsSection = activeSection === 'accounts';
