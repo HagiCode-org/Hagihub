@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import type { GitHubRepo, GitHubWorkflowSummary } from '../../../../shared/api';
 
 interface AccountOption {
@@ -65,8 +66,8 @@ function ActionSearchPanel({
   const canLoadWorkflows = selectedRepoFullName !== null && reposStatus === 'succeeded';
 
   return (
-    <section className="editor-panel p-5 lg:p-6">
-      <div className="flex items-start justify-between gap-4">
+    <section className="editor-panel flex min-h-0 flex-col p-5 lg:p-6">
+      <div className="flex shrink-0 items-start justify-between gap-4">
         <div className="space-y-2">
           <Badge>{t('actionManagement.search.badge')}</Badge>
           <h2 className="text-xl font-semibold tracking-tight text-foreground">{t('actionManagement.search.title')}</h2>
@@ -79,7 +80,7 @@ function ActionSearchPanel({
         </div>
       </div>
 
-      <div className="mt-5 space-y-4">
+      <div className="mt-5 space-y-4 overflow-y-auto">
         <label className="block space-y-2">
           <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('actionManagement.search.accountLabel')}</span>
           <select
@@ -110,17 +111,18 @@ function ActionSearchPanel({
 
         <label className="block space-y-2">
           <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('actionManagement.search.repoLabel')}</span>
-          <select
-            value={selectedRepoFullName ?? ''}
+          <SearchableSelect
+            options={repoOptions.map((repo) => ({
+              value: repo.fullName,
+              label: repo.fullName,
+            }))}
+            value={selectedRepoFullName}
+            onChange={onRepoChange}
+            placeholder={t('actionManagement.search.repoPlaceholder')}
+            searchPlaceholder={t('actionManagement.search.repoSearchPlaceholder')}
+            emptyMessage={t('actionManagement.search.noRepoResults')}
             disabled={selectedOwnerKey === null || repoOptions.length === 0}
-            className="flex h-10 w-full rounded-lg border border-border/70 bg-background/45 px-3 py-2 text-sm text-foreground shadow-sm transition-colors focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
-            onChange={(event) => onRepoChange(event.target.value || null)}
-          >
-            <option value="">{t('actionManagement.search.repoPlaceholder')}</option>
-            {repoOptions.map((repo) => (
-              <option key={repo.id} value={repo.fullName}>{repo.fullName}</option>
-            ))}
-          </select>
+          />
         </label>
 
         <div className="flex flex-wrap gap-2">

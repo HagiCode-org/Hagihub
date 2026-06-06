@@ -207,6 +207,8 @@ actionManagement:
     repoLabel: Repository
     ownerPlaceholder: Choose an owner
     repoPlaceholder: Choose a repository
+    repoSearchPlaceholder: Search repositories...
+    noRepoResults: No repositories found
     personalOwner: Personal repositories
     inputLabel: Filter loaded workflows
     placeholder: Filter by workflow name or path...
@@ -224,6 +226,13 @@ actionManagement:
     dispatchUnavailable: View only
     add: Add
     added: Added
+  table:
+    status: Status
+    workflow: Workflow
+    path: Path
+    latestRun: Latest run
+    updated: Updated
+    actions: Actions
   managed:
     badge: Managed workflows
     title: Pinned workflow board

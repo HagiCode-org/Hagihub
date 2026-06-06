@@ -207,6 +207,8 @@ actionManagement:
     repoLabel: 仓库
     ownerPlaceholder: 选择归属方
     repoPlaceholder: 选择仓库
+    repoSearchPlaceholder: 搜索仓库...
+    noRepoResults: 未找到仓库
     personalOwner: 个人仓库
     inputLabel: 过滤已加载工作流
     placeholder: 按工作流名称或路径过滤...
@@ -224,6 +226,13 @@ actionManagement:
     dispatchUnavailable: 仅查看
     add: 添加
     added: 已添加
+  table:
+    status: 状态
+    workflow: 工作流
+    path: 路径
+    latestRun: 最近运行
+    updated: 更新时间
+    actions: 操作
   managed:
     badge: 托管工作流
     title: 固定工作流看板
