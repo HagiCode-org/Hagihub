@@ -1,9 +1,13 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, Notification, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  commitFile,
+  createPullRequest,
+  createRef,
   dispatchGitHubWorkflow,
   fetchActionsSummaries,
+  fetchFileContent,
   fetchOrgs,
   fetchRepoDetails,
   fetchRepos,
@@ -18,7 +22,12 @@ import { bootstrapStorage } from './storage/index.js';
 import { managedActionsStore } from './storage/stores.js';
 import type {
   AppInfo,
+  CommitFilePayload,
+  CommitFileResult,
+  CreatePullRequestPayload,
+  CreateRefPayload,
   ExternalOpenResult,
+  FileContentResult,
   GitHubActionsResult,
   GitHubManagedWorkflowReference,
   GitHubWorkflowDispatchRequest,
@@ -27,9 +36,12 @@ import type {
   ManagedActionsResult,
   OrgsResult,
   PlatformId,
+  PullRequestResult,
   RefreshManagedActionsResult,
   RepoDetailsResult,
   ReposResult,
+  SendNotificationParams,
+  SendNotificationResult,
   SearchGitHubWorkflowsResult,
   UpdateRepoPayload,
   UpdateRepoResult,
@@ -43,6 +55,7 @@ const DEV_RENDERER_URL = `http://${DEV_RENDERER_HOST}:${DEV_RENDERER_PORT}`;
 
 let mainWindow: BrowserWindow | null = null;
 let gitHubAuthManager: GitHubAuthManager | null = null;
+let notificationSequence = 0;
 
 function resolvePlatformId(platform: NodeJS.Platform, arch: string): PlatformId {
   if (platform === 'darwin') {
@@ -97,6 +110,104 @@ function emitDeviceFlowUpdate(payload: unknown): void {
   mainWindow?.webContents.send(githubDeviceFlowEventChannel, payload);
 }
 
+function emitRendererEvent(channel: string, ...args: unknown[]): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  mainWindow.webContents.send(channel, ...args);
+}
+
+function focusMainWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function createNotificationId(): string {
+  notificationSequence += 1;
+  return `notification-${Date.now()}-${notificationSequence}`;
+}
+
+async function handleNotificationClick(
+  notificationId: string,
+  clickAction: SendNotificationParams['clickAction'],
+): Promise<void> {
+  const action = clickAction ?? { type: 'focus-window' as const };
+
+  try {
+    if (action.type === 'open-url') {
+      await shell.openExternal(action.url);
+      return;
+    }
+
+    focusMainWindow();
+
+    if (action.section) {
+      emitRendererEvent('hagihub:navigate-to-section', action.section);
+    }
+  } finally {
+    emitRendererEvent('hagihub:notification-clicked', notificationId);
+  }
+}
+
+async function sendNotificationHandler(params: SendNotificationParams): Promise<SendNotificationResult> {
+  if (!Notification.isSupported()) {
+    return {
+      success: false,
+      error: 'Desktop notifications are not supported in the current environment.',
+    };
+  }
+
+  try {
+    const notificationId = createNotificationId();
+    const notification = new Notification({
+      title: params.title,
+      body: params.body,
+      icon: params.icon,
+      silent: params.silent,
+    });
+    let shownEventSent = false;
+
+    const emitShown = () => {
+      if (shownEventSent) {
+        return;
+      }
+
+      shownEventSent = true;
+      emitRendererEvent('hagihub:notification-shown', notificationId);
+    };
+
+    notification.on('show', emitShown);
+    notification.on('click', () => {
+      void handleNotificationClick(notificationId, params.clickAction);
+    });
+
+    notification.show();
+    setTimeout(emitShown, 0);
+
+    if (typeof params.duration === 'number' && params.duration > 0) {
+      setTimeout(() => {
+        notification.close();
+      }, params.duration);
+    }
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 function requireGitHubAuthManager(): GitHubAuthManager {
   if (!gitHubAuthManager) {
     throw new Error('GitHub auth manager is unavailable.');
@@ -120,6 +231,7 @@ function normalizeManagedWorkflows(
     const normalized: GitHubManagedWorkflowReference = {
       ...workflow,
       accountId,
+      monitored: workflow.monitored ?? false,
     };
 
     deduped.set(`${normalized.repoFullName}#${normalized.workflowId}`, normalized);
@@ -164,6 +276,9 @@ function registerIpcHandlers(): void {
       };
     }
   });
+  ipcMain.handle('hagihub:send-notification', async (_event, params: SendNotificationParams): Promise<SendNotificationResult> => {
+    return await sendNotificationHandler(params);
+  });
   ipcMain.handle('hagihub:start-device-flow', async () => {
     return await requireGitHubAuthManager().startDeviceFlow();
   });
@@ -203,6 +318,34 @@ function registerIpcHandlers(): void {
     async (_event, accountId: string, owner: string, repo: string): Promise<RepoDetailsResult> => {
       const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
       return { details: await fetchRepoDetails(token, owner, repo) };
+    },
+  );
+  ipcMain.handle(
+    'hagihub:fetch-file-content',
+    async (_event, accountId: string, owner: string, repo: string, path: string): Promise<FileContentResult> => {
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
+      return await fetchFileContent(token, owner, repo, path);
+    },
+  );
+  ipcMain.handle(
+    'hagihub:commit-file',
+    async (_event, accountId: string, owner: string, repo: string, path: string, payload: CommitFilePayload): Promise<CommitFileResult> => {
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
+      return await commitFile(token, owner, repo, path, payload);
+    },
+  );
+  ipcMain.handle(
+    'hagihub:create-ref',
+    async (_event, accountId: string, owner: string, repo: string, payload: CreateRefPayload): Promise<void> => {
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
+      await createRef(token, owner, repo, payload.ref, payload.sha);
+    },
+  );
+  ipcMain.handle(
+    'hagihub:create-pull-request',
+    async (_event, accountId: string, owner: string, repo: string, payload: CreatePullRequestPayload): Promise<PullRequestResult> => {
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
+      return await createPullRequest(token, owner, repo, payload.title, payload.head, payload.base);
     },
   );
   ipcMain.handle(

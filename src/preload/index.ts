@@ -1,20 +1,28 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
   AppInfo,
+  CommitFilePayload,
+  CommitFileResult,
+  CreatePullRequestPayload,
+  CreateRefPayload,
   DeviceFlowPollResult,
   DeviceFlowStartResult,
   ExternalOpenResult,
   GitHubActionsResult,
   GitHubAccountsResult,
   GitHubManagedWorkflowReference,
+  FileContentResult,
   ListGitHubRepoWorkflowsResult,
   GitHubWorkflowDispatchRequest,
   GitHubWorkflowDispatchResponse,
   OrgsResult,
   ManagedActionsResult,
+  PullRequestResult,
   RefreshManagedActionsResult,
   RepoDetailsResult,
   ReposResult,
+  SendNotificationParams,
+  SendNotificationResult,
   SearchGitHubWorkflowsResult,
   UpdateRepoPayload,
   UpdateRepoResult,
@@ -26,6 +34,12 @@ const deviceFlowEventChannel = 'hagihub:device-flow-update';
 ipcRenderer.on(deviceFlowEventChannel, (_event, payload: DeviceFlowPollResult) => {
   window.dispatchEvent(new CustomEvent<DeviceFlowPollResult>(deviceFlowEventChannel, {
     detail: payload,
+  }));
+});
+
+ipcRenderer.on('hagihub:navigate-to-section', (_event, section: string) => {
+  window.dispatchEvent(new CustomEvent<string>('hagihub:navigate-to-section', {
+    detail: section,
   }));
 });
 
@@ -41,6 +55,10 @@ const hagihubApi = {
   fetchGitHubOrgs: (accountId: string) => ipcRenderer.invoke('hagihub:fetch-github-orgs', accountId) as Promise<OrgsResult>,
   fetchGitHubActions: (accountId: string, repoFullNames: string[]) => ipcRenderer.invoke('hagihub:fetch-github-actions', accountId, repoFullNames) as Promise<GitHubActionsResult>,
   fetchRepoDetails: (accountId: string, owner: string, repo: string) => ipcRenderer.invoke('hagihub:fetch-repo-details', accountId, owner, repo) as Promise<RepoDetailsResult>,
+  fetchFileContent: (accountId: string, owner: string, repo: string, path: string) => ipcRenderer.invoke('hagihub:fetch-file-content', accountId, owner, repo, path) as Promise<FileContentResult>,
+  commitFile: (accountId: string, owner: string, repo: string, path: string, payload: CommitFilePayload) => ipcRenderer.invoke('hagihub:commit-file', accountId, owner, repo, path, payload) as Promise<CommitFileResult>,
+  createRef: (accountId: string, owner: string, repo: string, payload: CreateRefPayload) => ipcRenderer.invoke('hagihub:create-ref', accountId, owner, repo, payload) as Promise<void>,
+  createPullRequest: (accountId: string, owner: string, repo: string, payload: CreatePullRequestPayload) => ipcRenderer.invoke('hagihub:create-pull-request', accountId, owner, repo, payload) as Promise<PullRequestResult>,
   updateRepo: (accountId: string, owner: string, repo: string, updates: UpdateRepoPayload) => ipcRenderer.invoke('hagihub:update-repo', accountId, owner, repo, updates) as Promise<UpdateRepoResult>,
   updateRepoTopics: (accountId: string, owner: string, repo: string, names: string[]) => ipcRenderer.invoke('hagihub:update-repo-topics', accountId, owner, repo, names) as Promise<UpdateRepoTopicsResult>,
   listGitHubRepoWorkflows: (accountId: string, repoFullName: string) => ipcRenderer.invoke('hagihub:list-github-repo-workflows', accountId, repoFullName) as Promise<ListGitHubRepoWorkflowsResult>,
@@ -49,6 +67,20 @@ const hagihubApi = {
   saveManagedActions: (accountId: string, workflows: GitHubManagedWorkflowReference[]) => ipcRenderer.invoke('hagihub:save-managed-actions', accountId, workflows) as Promise<ManagedActionsResult>,
   refreshManagedActionRuns: (accountId: string, workflows: GitHubManagedWorkflowReference[]) => ipcRenderer.invoke('hagihub:refresh-managed-action-runs', accountId, workflows) as Promise<RefreshManagedActionsResult>,
   dispatchGitHubWorkflow: (accountId: string, request: GitHubWorkflowDispatchRequest) => ipcRenderer.invoke('hagihub:dispatch-github-workflow', accountId, request) as Promise<GitHubWorkflowDispatchResponse>,
+  sendNotification: (params: SendNotificationParams) => ipcRenderer.invoke('hagihub:send-notification', params) as Promise<SendNotificationResult>,
+  onNavigateToSection: (callback: (section: string) => void) => {
+    const listener = (_event: unknown, section: string) => {
+      window.dispatchEvent(new CustomEvent<string>('hagihub:navigate-to-section', {
+        detail: section,
+      }));
+      callback(section);
+    };
+
+    ipcRenderer.on('hagihub:navigate-to-section', listener);
+    return () => {
+      ipcRenderer.removeListener('hagihub:navigate-to-section', listener);
+    };
+  },
 };
 
 contextBridge.exposeInMainWorld('hagihub', hagihubApi);
