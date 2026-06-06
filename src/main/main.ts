@@ -17,6 +17,7 @@ import {
   updateRepo,
   updateRepoTopics,
 } from './github-api.js';
+import { createGithubApiCache } from './github-api-cache.js';
 import { GitHubAuthManager, githubDeviceFlowEventChannel } from './github-auth.js';
 import { bootstrapStorage } from './storage/index.js';
 import { managedActionsStore } from './storage/stores.js';
@@ -56,6 +57,7 @@ const DEV_RENDERER_URL = `http://${DEV_RENDERER_HOST}:${DEV_RENDERER_PORT}`;
 let mainWindow: BrowserWindow | null = null;
 let gitHubAuthManager: GitHubAuthManager | null = null;
 let notificationSequence = 0;
+const githubCache = createGithubApiCache();
 
 function resolvePlatformId(platform: NodeJS.Platform, arch: string): PlatformId {
   if (platform === 'darwin') {
@@ -216,6 +218,18 @@ function requireGitHubAuthManager(): GitHubAuthManager {
   return gitHubAuthManager;
 }
 
+async function getOrLoadGithubCache<T>(key: string, load: () => Promise<T>): Promise<T> {
+  const cached = githubCache.get<T>(key);
+
+  if (cached) {
+    return cached;
+  }
+
+  const result = await load();
+  githubCache.set(key, result);
+  return result;
+}
+
 async function readManagedActions(accountId: string): Promise<GitHubManagedWorkflowReference[]> {
   const { data } = await managedActionsStore.read();
   return data.accounts.find((entry) => entry.accountId === accountId)?.workflows ?? [];
@@ -292,19 +306,27 @@ function registerIpcHandlers(): void {
     return await requireGitHubAuthManager().getAccounts();
   });
   ipcMain.handle('hagihub:switch-github-account', async (_event, accountId: string) => {
+    githubCache.invalidateAll();
     return await requireGitHubAuthManager().switchAccount(accountId);
   });
   ipcMain.handle('hagihub:fetch-github-repos', async (_event, accountId: string): Promise<ReposResult> => {
-    const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
-    return {
-      repos: await fetchRepos(token),
-    };
+    return await getOrLoadGithubCache('github-repos:' + accountId, async () => {
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
+      return {
+        repos: await fetchRepos(token),
+      };
+    });
   });
   ipcMain.handle('hagihub:fetch-github-orgs', async (_event, accountId: string): Promise<OrgsResult> => {
-    const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
-    return {
-      orgs: await fetchOrgs(token),
-    };
+    return await getOrLoadGithubCache('github-orgs:' + accountId, async () => {
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
+      return {
+        orgs: await fetchOrgs(token),
+      };
+    });
+  });
+  ipcMain.handle('hagihub:invalidate-github-cache', async (): Promise<void> => {
+    githubCache.invalidateAll();
   });
   ipcMain.handle(
     'hagihub:fetch-github-actions',
@@ -365,8 +387,10 @@ function registerIpcHandlers(): void {
   ipcMain.handle(
     'hagihub:list-github-repo-workflows',
     async (_event, accountId: string, repoFullName: string): Promise<ListGitHubRepoWorkflowsResult> => {
-      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
-      return await listGitHubRepoWorkflows(token, accountId, repoFullName);
+      return await getOrLoadGithubCache('github-workflows:' + accountId + ':' + repoFullName, async () => {
+        const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
+        return await listGitHubRepoWorkflows(token, accountId, repoFullName);
+      });
     },
   );
   ipcMain.handle(
