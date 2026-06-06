@@ -24,7 +24,7 @@ import { switchAccount } from '@/store/slices/githubAccountsSlice';
 import { clearRepos, fetchRepos } from '@/store/slices/githubReposSlice';
 import type { GitHubRepo, GitHubWorkflowSummary } from '../../../shared/api';
 import ActionSearchPanel from './components/ActionSearchPanel';
-import ManagedActionCard from './components/ManagedActionCard';
+import ManagedActionRow from './components/ManagedActionRow';
 import WorkflowDispatchDialog from './components/WorkflowDispatchDialog';
 
 interface ActionManagementPageProps {
@@ -239,8 +239,8 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
   }
 
   return (
-    <div className="space-y-4">
-      <section className="editor-panel p-5 lg:p-6">
+    <div className="flex h-[calc(100vh-2rem)] flex-col gap-4 overflow-hidden">
+      <section className="editor-panel shrink-0 p-5 lg:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -273,7 +273,7 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
         <ActionSearchPanel
           accounts={accounts.map((account) => ({ id: account.id, login: account.login }))}
           activeAccountId={activeAccountId}
@@ -325,8 +325,8 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
           }}
         />
 
-        <section className="editor-panel p-5 lg:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <section className="editor-panel flex min-h-0 flex-col p-5 lg:p-6">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
             <div className="space-y-2">
               <Badge>{t('actionManagement.managed.badge')}</Badge>
               <h3 className="text-xl font-semibold tracking-tight text-foreground">{t('actionManagement.managed.title')}</h3>
@@ -336,52 +336,66 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
           </div>
 
           {persistError ? (
-            <div className="mt-5 rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
+            <div className="mt-5 shrink-0 rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
               {persistError}
             </div>
           ) : null}
 
           {refreshError ? (
-            <div className="mt-5 rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
+            <div className="mt-5 shrink-0 rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
               {refreshError}
             </div>
           ) : null}
 
           {managedReferences.length === 0 ? (
-            <div className="mt-5 rounded-[1.5rem] border border-dashed border-border/70 bg-background/25 px-6 py-10 text-center">
+            <div className="mt-5 shrink-0 rounded-[1.5rem] border border-dashed border-border/70 bg-background/25 px-6 py-10 text-center">
               <Workflow className="mx-auto size-8 text-primary" />
               <p className="mt-4 text-base font-medium text-foreground">{t('actionManagement.managed.emptyTitle')}</p>
               <p className="mt-2 text-sm leading-7 text-muted-foreground">{t('actionManagement.managed.emptyDescription')}</p>
             </div>
           ) : managedWorkflows.length === 0 && refreshStatus === 'loading' ? (
-            <div className="mt-5 flex items-center gap-3 rounded-2xl border border-border/70 bg-background/35 px-4 py-5 text-sm text-muted-foreground">
+            <div className="mt-5 shrink-0 flex items-center gap-3 rounded-2xl border border-border/70 bg-background/35 px-4 py-5 text-sm text-muted-foreground">
               <LoaderCircle className="size-4 animate-spin text-primary" />
               {t('actionManagement.managed.refreshing')}
             </div>
           ) : (
-            <div className="mt-5 space-y-4" style={{ contentVisibility: 'auto' }}>
-              {managedWorkflows.map((workflow) => {
-                const workflowKey = `${workflow.repoFullName}#${workflow.workflowId}`;
+            <div className="mt-5 min-h-0 flex-1 overflow-auto">
+              <table className="w-full border-collapse">
+                <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
+                  <tr className="border-b border-border/70 text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                    <th className="px-4 py-3 font-medium">{t('actionManagement.table.status')}</th>
+                    <th className="px-4 py-3 font-medium">{t('actionManagement.table.workflow')}</th>
+                    <th className="hidden px-4 py-3 font-medium lg:table-cell">{t('actionManagement.table.path')}</th>
+                    <th className="hidden px-4 py-3 font-medium xl:table-cell">{t('actionManagement.table.latestRun')}</th>
+                    <th className="hidden px-4 py-3 font-medium xl:table-cell">{t('actionManagement.table.updated')}</th>
+                    <th className="px-4 py-3 font-medium">{t('actionManagement.table.actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {managedWorkflows.map((workflow) => {
+                    const workflowKey = `${workflow.repoFullName}#${workflow.workflowId}`;
 
-                return (
-                  <ManagedActionCard
-                    key={workflowKey}
-                    workflow={workflow}
-                    removing={persistStatus === 'loading'}
-                    onDispatch={(item) => dispatch(openDispatchDialog(item))}
-                    onOpenExternal={(url) => {
-                      void window.hagihub.openExternal(url);
-                    }}
-                    onRemove={(item) => {
-                      void dispatch(removeManagedWorkflow({
-                        accountId: activeAccountId,
-                        repoFullName: item.repoFullName,
-                        workflowId: item.workflowId,
-                      }));
-                    }}
-                  />
-                );
-              })}
+                    return (
+                      <ManagedActionRow
+                        key={workflowKey}
+                        workflow={workflow}
+                        removing={persistStatus === 'loading'}
+                        onDispatch={(item) => dispatch(openDispatchDialog(item))}
+                        onOpenExternal={(url) => {
+                          void window.hagihub.openExternal(url);
+                        }}
+                        onRemove={(item) => {
+                          void dispatch(removeManagedWorkflow({
+                            accountId: activeAccountId,
+                            repoFullName: item.repoFullName,
+                            workflowId: item.workflowId,
+                          }));
+                        }}
+                      />
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </section>
