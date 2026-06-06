@@ -83,7 +83,7 @@ src/
   shared/         # 主进程/渲染进程共享类型
     api.ts
 scripts/          # 构建、i18n 与 smoke test 脚本
-resources/        # 图标、MSIX 模板、PSF 配置
+resources/        # 图标与 MSIX 模板
 .github/workflows/ # CI/CD
 ```
 

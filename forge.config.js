@@ -5,7 +5,6 @@ import {
   msixExecutableName,
   resolveMsixSigningConfig,
 } from './scripts/msix-config.js';
-import { injectPsfIntoPackagedOutputs } from './scripts/psf-support.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -81,9 +80,6 @@ export default {
 
       const { prepareMsixArtifacts } = await import('./scripts/prepare-msix.js');
       await prepareMsixArtifacts({ platform, arch });
-    },
-    async postPackage(_forgeConfig, packageResult) {
-      await injectPsfIntoPackagedOutputs(__dirname, packageResult);
     },
   },
   packagerConfig: {
