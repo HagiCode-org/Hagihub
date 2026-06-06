@@ -37,6 +37,18 @@ ipcRenderer.on(deviceFlowEventChannel, (_event, payload: DeviceFlowPollResult) =
   }));
 });
 
+ipcRenderer.on('hagihub:notification-shown', (_event, notificationId: string) => {
+  window.dispatchEvent(new CustomEvent<string>('hagihub:notification-shown', {
+    detail: notificationId,
+  }));
+});
+
+ipcRenderer.on('hagihub:notification-clicked', (_event, notificationId: string) => {
+  window.dispatchEvent(new CustomEvent<string>('hagihub:notification-clicked', {
+    detail: notificationId,
+  }));
+});
+
 ipcRenderer.on('hagihub:navigate-to-section', (_event, section: string) => {
   window.dispatchEvent(new CustomEvent<string>('hagihub:navigate-to-section', {
     detail: section,

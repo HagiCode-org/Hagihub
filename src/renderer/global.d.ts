@@ -59,6 +59,8 @@ interface HagihubApi {
 declare global {
   interface WindowEventMap {
     'hagihub:device-flow-update': CustomEvent<DeviceFlowPollResult>;
+    'hagihub:notification-shown': CustomEvent<string>;
+    'hagihub:notification-clicked': CustomEvent<string>;
     'hagihub:navigate-to-section': CustomEvent<string>;
   }
 
