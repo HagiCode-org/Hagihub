@@ -86,6 +86,7 @@
   "dependencies": {
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-tabs": "^1.1.14",
     "@reduxjs/toolkit": "^2.11.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -93,12 +94,11 @@
     "lucide-react": "^0.561.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-redux": "^9.2.0",
     "react-i18next": "^16.3.5",
+    "react-redux": "^9.2.0",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
-    "@hagicode/hagi18n": "^0.1.1",
     "@electron-addons/electron-forge-maker-nsis": "^7.0.2",
     "@electron-forge/cli": "^7.11.2",
     "@electron-forge/maker-deb": "^7.11.2",
@@ -106,12 +106,13 @@
     "@electron-forge/maker-msix": "^7.11.2",
     "@electron-forge/maker-rpm": "^7.11.2",
     "@electron-forge/maker-zip": "^7.11.2",
+    "@hagicode/hagi18n": "^0.1.1",
     "@rabbitholesyndrome/electron-forge-maker-portable": "^0.2.0",
     "@reforged/maker-appimage": "^5.2.0",
+    "@tailwindcss/vite": "^4.1.18",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
-    "@tailwindcss/vite": "^4.1.18",
     "@vitejs/plugin-react": "^6.0.1",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
@@ -119,9 +120,9 @@
     "execa": "^9.6.1",
     "shadcn": "^3.6.1",
     "tailwindcss": "^4.1.18",
+    "tw-animate-css": "^1.4.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.10",
-    "wait-on": "^9.0.3",
-    "tw-animate-css": "^1.4.0"
+    "wait-on": "^9.0.3"
   }
 }
