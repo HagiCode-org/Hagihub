@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { FileText, LoaderCircle, PencilLine } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { MarkdownPreview } from '@/components/ui/markdown-preview';
 import { cn } from '@/lib/utils';
 import CommitStrategyDialog, { type CommitStrategyDecision } from './CommitStrategyDialog';
 
@@ -183,16 +184,39 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
             ) : null}
 
             {isEditing ? (
-              <textarea
-                className="min-h-[26rem] w-full rounded-[1.5rem] border border-border/70 bg-background/45 px-4 py-4 font-mono text-sm leading-6 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-[3px] focus:ring-primary/20"
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                placeholder={t('repoCard.readme.editorPlaceholder')}
-              />
+              <div className="grid gap-4 xl:grid-cols-2">
+                <section className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      {t('repoCard.readme.editorTitle')}
+                    </h4>
+                    <span className="font-mono text-[11px] text-muted-foreground">
+                      {t('repoCard.readme.editorStats', { count: draft.length })}
+                    </span>
+                  </div>
+                  <textarea
+                    className="min-h-[30rem] w-full rounded-[1.5rem] border border-border/70 bg-background/45 px-4 py-4 font-mono text-sm leading-6 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-[3px] focus:ring-primary/20"
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    placeholder={t('repoCard.readme.editorPlaceholder')}
+                  />
+                </section>
+
+                <section className="space-y-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    {t('repoCard.readme.previewTitle')}
+                  </h4>
+                  <MarkdownPreview
+                    content={draft}
+                    emptyText={t('repoCard.readme.previewEmpty')}
+                  />
+                </section>
+              </div>
             ) : exists ? (
-              <pre className="max-h-[56vh] min-h-[26rem] overflow-auto rounded-[1.5rem] border border-border/70 bg-background/35 px-4 py-4 font-mono text-sm leading-6 whitespace-pre-wrap text-foreground">
-                {content}
-              </pre>
+              <MarkdownPreview
+                content={content}
+                emptyText={t('repoCard.readme.previewEmpty')}
+              />
             ) : (
               <div className="rounded-[1.75rem] border border-dashed border-border/70 bg-background/20 px-6 py-12 text-center">
                 <PencilLine className="mx-auto size-8 text-primary/80" />
