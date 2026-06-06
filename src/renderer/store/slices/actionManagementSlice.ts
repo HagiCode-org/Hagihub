@@ -6,16 +6,16 @@ import type {
   GitHubManagedWorkflowReference,
   GitHubWorkflowDispatchResponse,
   GitHubWorkflowSummary,
+  ListGitHubRepoWorkflowsResult,
   ManagedActionsResult,
   RefreshManagedActionsResult,
-  SearchGitHubWorkflowsResult,
 } from '../../../shared/api';
 
 type FetchStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
 
-interface SearchWorkflowsArgs {
+interface LoadRepoWorkflowsArgs {
   accountId: string;
-  query: string;
+  repoFullName: string;
 }
 
 interface PersistManagedWorkflowArgs {
@@ -53,15 +53,16 @@ export interface ActionManagementState {
   activeAccountId: string | null;
   loadStatus: FetchStatus;
   persistStatus: FetchStatus;
-  searchStatus: FetchStatus;
+  workflowListStatus: FetchStatus;
   refreshStatus: FetchStatus;
   loadError: string | null;
   persistError: string | null;
-  searchError: string | null;
+  workflowListError: string | null;
   refreshError: string | null;
+  selectedOwnerKey: string | null;
+  selectedRepoFullName: string | null;
   searchQuery: string;
-  searchScannedRepoCount: number;
-  searchResults: GitHubWorkflowSummary[];
+  availableWorkflows: GitHubWorkflowSummary[];
   managedReferences: GitHubManagedWorkflowReference[];
   managedWorkflows: GitHubManagedWorkflow[];
   failedRefreshCount: number;
@@ -72,15 +73,16 @@ const initialState: ActionManagementState = {
   activeAccountId: null,
   loadStatus: 'idle',
   persistStatus: 'idle',
-  searchStatus: 'idle',
+  workflowListStatus: 'idle',
   refreshStatus: 'idle',
   loadError: null,
   persistError: null,
-  searchError: null,
+  workflowListError: null,
   refreshError: null,
+  selectedOwnerKey: null,
+  selectedRepoFullName: null,
   searchQuery: '',
-  searchScannedRepoCount: 0,
-  searchResults: [],
+  availableWorkflows: [],
   managedReferences: [],
   managedWorkflows: [],
   failedRefreshCount: 0,
@@ -144,18 +146,18 @@ export const loadManagedWorkflows = createAsyncThunk<
   },
 );
 
-export const searchManagedWorkflows = createAsyncThunk<
-  { accountId: string; result: SearchGitHubWorkflowsResult },
-  SearchWorkflowsArgs,
+export const loadRepoWorkflows = createAsyncThunk<
+  { accountId: string; repoFullName: string; result: ListGitHubRepoWorkflowsResult },
+  LoadRepoWorkflowsArgs,
   { rejectValue: string }
 >(
-  'actionManagement/searchManagedWorkflows',
-  async ({ accountId, query }, { rejectWithValue }) => {
+  'actionManagement/loadRepoWorkflows',
+  async ({ accountId, repoFullName }, { rejectWithValue }) => {
     try {
-      const result = await window.hagihub.searchGitHubWorkflows(accountId, query);
-      return { accountId, result };
+      const result = await window.hagihub.listGitHubRepoWorkflows(accountId, repoFullName);
+      return { accountId, repoFullName, result };
     } catch (error) {
-      return rejectWithValue(toMessage(error, 'errors.searchWorkflowsFailed'));
+      return rejectWithValue(toMessage(error, 'errors.loadRepoWorkflowsFailed'));
     }
   },
 );
@@ -269,14 +271,29 @@ const actionManagementSlice = createSlice({
     resetActionManagement() {
       return initialState;
     },
+    setSelectedOwnerKey(state, action: PayloadAction<string | null>) {
+      state.selectedOwnerKey = action.payload;
+      state.selectedRepoFullName = null;
+      state.searchQuery = '';
+      state.workflowListStatus = 'idle';
+      state.workflowListError = null;
+      state.availableWorkflows = [];
+    },
+    setSelectedRepoFullName(state, action: PayloadAction<string | null>) {
+      state.selectedRepoFullName = action.payload;
+      state.searchQuery = '';
+      state.workflowListStatus = 'idle';
+      state.workflowListError = null;
+      state.availableWorkflows = [];
+    },
     setSearchQuery(state, action: PayloadAction<string>) {
       state.searchQuery = action.payload;
     },
-    clearSearchResults(state) {
-      state.searchStatus = 'idle';
-      state.searchError = null;
-      state.searchScannedRepoCount = 0;
-      state.searchResults = [];
+    clearWorkflowList(state) {
+      state.searchQuery = '';
+      state.workflowListStatus = 'idle';
+      state.workflowListError = null;
+      state.availableWorkflows = [];
     },
     openDispatchDialog(state, action: PayloadAction<GitHubManagedWorkflow>) {
       state.dispatchDialog.open = true;
@@ -305,7 +322,13 @@ const actionManagementSlice = createSlice({
         state.loadStatus = 'loading';
         state.loadError = null;
         state.persistError = null;
+        state.workflowListError = null;
         state.refreshError = null;
+        state.selectedOwnerKey = null;
+        state.selectedRepoFullName = null;
+        state.searchQuery = '';
+        state.availableWorkflows = [];
+        state.workflowListStatus = 'idle';
         state.failedRefreshCount = 0;
         state.managedReferences = [];
         state.managedWorkflows = [];
@@ -321,23 +344,24 @@ const actionManagementSlice = createSlice({
         state.loadStatus = 'failed';
         state.loadError = action.payload ?? i18n.t('errors.loadManagedActionsFailed', { ns: 'github' });
       })
-      .addCase(searchManagedWorkflows.pending, (state, action) => {
+      .addCase(loadRepoWorkflows.pending, (state, action) => {
         state.activeAccountId = action.meta.arg.accountId;
-        state.searchStatus = 'loading';
-        state.searchError = null;
+        state.selectedRepoFullName = action.meta.arg.repoFullName;
+        state.workflowListStatus = 'loading';
+        state.workflowListError = null;
+        state.availableWorkflows = [];
       })
-      .addCase(searchManagedWorkflows.fulfilled, (state, action) => {
+      .addCase(loadRepoWorkflows.fulfilled, (state, action) => {
         state.activeAccountId = action.payload.accountId;
-        state.searchStatus = 'succeeded';
-        state.searchResults = action.payload.result.workflows;
-        state.searchScannedRepoCount = action.payload.result.scannedRepoCount;
-        state.searchError = null;
+        state.selectedRepoFullName = action.payload.repoFullName;
+        state.workflowListStatus = 'succeeded';
+        state.workflowListError = null;
+        state.availableWorkflows = action.payload.result.workflows;
       })
-      .addCase(searchManagedWorkflows.rejected, (state, action) => {
-        state.searchStatus = 'failed';
-        state.searchError = action.payload ?? i18n.t('errors.searchWorkflowsFailed', { ns: 'github' });
-        state.searchResults = [];
-        state.searchScannedRepoCount = 0;
+      .addCase(loadRepoWorkflows.rejected, (state, action) => {
+        state.workflowListStatus = 'failed';
+        state.workflowListError = action.payload ?? i18n.t('errors.loadRepoWorkflowsFailed', { ns: 'github' });
+        state.availableWorkflows = [];
       })
       .addCase(addManagedWorkflow.pending, (state) => {
         state.persistStatus = 'loading';
@@ -406,12 +430,14 @@ const actionManagementSlice = createSlice({
 });
 
 export const {
-  clearSearchResults,
+  clearWorkflowList,
   closeDispatchDialog,
   openDispatchDialog,
   resetActionManagement,
   setDispatchInput,
   setSearchQuery,
+  setSelectedOwnerKey,
+  setSelectedRepoFullName,
 } = actionManagementSlice.actions;
 
 export default actionManagementSlice.reducer;
