@@ -29,12 +29,12 @@
     <Capability Name="internetClient" />
   </Capabilities>
   <Applications>
+    <!-- Packaged classic app running inside an AppContainer. -->
     <Application
       Id="App"
       Executable="app\{{APP_EXECUTABLE}}"
       uap10:RuntimeBehavior="packagedClassicApp"
-      uap10:TrustLevel="mediumIL"
-      EntryPoint="Windows.FullTrustApplication">
+      uap10:TrustLevel="appContainer">
       <uap:VisualElements
         DisplayName="{{APP_DISPLAY_NAME}}"
         Description="{{PACKAGE_DESCRIPTION}}"
