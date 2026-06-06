@@ -105,3 +105,43 @@ shell:
     runtime: 运行时
     ready: 已就绪
     none: 无
+settingsPage:
+  badge: 设置工作区
+  title: 设置
+  description: 现在一级设置入口会直接渲染真实设置页，不再回退到旧的应用壳占位内容。通知诊断先在这里落地。
+  workspaceTitle: 工作区说明
+  workspaceDescription: 这里已经切成桌面端配置与诊断的正式入口。
+  workspaceHint1: 可以直接用通知卡片验证主进程桥接、桌面通知权限，以及点击通知后窗口聚焦是否正常。
+  workspaceHint2: 后续新增更多设置分区时，也可以继续落在这里，不必再走旧的占位页。
+  notification:
+    badge: 通知中心
+    title: 通知设置
+    description: 在这里验证原生桌面通知链路，并确认 Hagihub 通过 Electron 发出的当前预览负载。
+    testSectionTitle: 发送测试通知
+    testSectionDescription: 立即触发一条原生桌面通知，并在点击通知时保持 Hagihub 回到设置页。
+    testButton: 发送测试通知
+    sending: 发送中...
+    testSuccess: 测试通知已发送
+    testSuccessDescription: 如果当前桌面环境允许通知，你应该已经能看到系统原生通知横幅。
+    testError: 测试通知发送失败
+    testErrorDescription: '通知请求失败：{{error}}'
+    sendFailedFallback: 通知请求失败。
+    eventShown: 最近一次显示通知
+    eventShownValue: '已收到显示事件：{{id}}'
+    eventClicked: 最近一次点击通知
+    eventClickedValue: '已收到点击事件：{{id}}'
+    eventPending: 还没有记录到通知事件。
+    previewTitle: 通知预览负载
+    previewDescription: 下面这些字段就是当前页面点击“发送测试通知”时实际发往 Electron 的内容。
+    preview:
+      title: Hagihub 通知测试
+      body: 桌面通知链路已经接通。点击这条通知后，Hagihub 会保持在设置分区。
+    values:
+      focusWindow: focus-window -> settings
+    fields:
+      title: 标题
+      body: 正文
+      level: 级别
+      clickAction: 点击动作
+      duration: 持续时间
+      silent: 静默

@@ -105,3 +105,43 @@ shell:
     runtime: Runtime
     ready: Ready
     none: None
+settingsPage:
+  badge: Settings workspace
+  title: Settings
+  description: The first-level settings entry now renders the live settings surface instead of the old shell placeholder. Notification diagnostics are available here first.
+  workspaceTitle: Workspace notes
+  workspaceDescription: This area is now the source of truth for desktop-side configuration and diagnostics.
+  workspaceHint1: Use the notification card to verify the main-process bridge, desktop permission state, and click-to-focus behavior.
+  workspaceHint2: More settings sections can land here later without routing users back through the old shell placeholder.
+  notification:
+    badge: Notification center
+    title: Notification settings
+    description: Validate the native desktop notification pipeline and confirm the current preview payload that Hagihub sends through Electron.
+    testSectionTitle: Send a test notification
+    testSectionDescription: Trigger one native desktop notification immediately and keep this page focused when you click it.
+    testButton: Send test notification
+    sending: Sending...
+    testSuccess: Test notification sent
+    testSuccessDescription: If the current desktop environment allows notifications, you should already see the native banner.
+    testError: Test notification failed
+    testErrorDescription: 'Notification request failed: {{error}}'
+    sendFailedFallback: Notification request failed.
+    eventShown: Last shown notification
+    eventShownValue: 'Shown event received: {{id}}'
+    eventClicked: Last clicked notification
+    eventClickedValue: 'Clicked event received: {{id}}'
+    eventPending: No notification event has been recorded yet.
+    previewTitle: Notification preview payload
+    previewDescription: These are the fields currently sent when you trigger the test notification from this page.
+    preview:
+      title: Hagihub notification test
+      body: Desktop notifications are online. Clicking this banner keeps Hagihub on the Settings section.
+    values:
+      focusWindow: focus-window -> settings
+    fields:
+      title: Title
+      body: Body
+      level: Level
+      clickAction: Click action
+      duration: Duration
+      silent: Silent

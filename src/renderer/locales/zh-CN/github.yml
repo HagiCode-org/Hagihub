@@ -189,7 +189,11 @@ repoCard:
     description: 以纯文本方式查看或编辑仓库的 README.md 文件。
     loading: 正在加载 README.md
     loadFailed: 加载 README.md 失败。
+    editorTitle: 编辑区
+    editorStats: '{{count}} 个字符'
     editorPlaceholder: 在这里编写仓库 README 内容。
+    previewTitle: 预览区
+    previewEmpty: 这里会随着编辑实时显示 Markdown 预览。
     emptyTitle: 还没有 README.md
     emptyDescription: 可以直接从空白内容开始，也可以点击创建来起草 README。
     edit: 编辑 README
@@ -208,7 +212,7 @@ repoCard:
     emptyTitle: 还没有 LICENSE 文件
     emptyDescription: 可以先选择一个常见许可证模板，或从空白内容开始。
     presetTitle: 许可证模板
-    presetDescription: 先载入常见开源许可证模板，再根据仓库情况微调内容。
+    presetDescription: 先载入常见开源许可证模板，再决定是新建许可证还是覆盖当前许可证内容。
     presetPlaceholder: 选择许可证模板
     presetSearchPlaceholder: 搜索许可证模板...
     presetEmpty: 没有匹配的许可证模板。
@@ -288,6 +292,8 @@ actionManagement:
     availableHint: 双击条目，或使用中间箭头把工作流加入右侧。
     selected: '已选择（{{count}}）'
     selectedHint: 保存后，右侧列表会成为新的托管工作流集合。
+    repoSearchPlaceholder: 按仓库名、归属或描述搜索...
+    noRepoSearchResults: 当前筛选条件下没有匹配的仓库。
     searchPlaceholder: 按工作流名称、路径或仓库名搜索...
     emptyAvailable: 所有工作流都已经加入右侧。
     emptySelected: 还没有选择任何工作流。

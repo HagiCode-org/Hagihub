@@ -189,7 +189,11 @@ repoCard:
     description: View or edit the repository README.md file as plain text.
     loading: Loading README.md
     loadFailed: Failed to load README.md.
+    editorTitle: Editor
+    editorStats: '{{count}} chars'
     editorPlaceholder: Start writing the repository README here.
+    previewTitle: Preview
+    previewEmpty: Markdown preview will appear here as you write.
     emptyTitle: No README.md yet
     emptyDescription: Start with an empty README or choose the create action to draft one inside Hagihub.
     edit: Edit README
@@ -208,7 +212,7 @@ repoCard:
     emptyTitle: No LICENSE file yet
     emptyDescription: Choose a preset or start with a blank license file.
     presetTitle: License presets
-    presetDescription: Load a common open-source license template and then adjust it before saving.
+    presetDescription: Load a common open-source license template to create a new file or replace the current one before saving.
     presetPlaceholder: Select a license preset
     presetSearchPlaceholder: Search license presets...
     presetEmpty: No license presets match the current search.
@@ -288,6 +292,8 @@ actionManagement:
     availableHint: Double-click or use the arrow controls to add workflows.
     selected: 'Selected ({{count}})'
     selectedHint: This list becomes the next managed workflow set when you save.
+    repoSearchPlaceholder: Search repositories by name, owner, or description...
+    noRepoSearchResults: No repositories match the current filter.
     searchPlaceholder: Search workflows by name, path, or repository...
     emptyAvailable: All workflows are already added.
     emptySelected: No workflows selected.
