@@ -275,9 +275,13 @@ actionManagement:
     phaseRepos: ① 选择仓库
     phaseTransfer: ② 转移选择
     phaseConfirm: ③ 确认保存
-    repoSelectionHint: 先选择一个或多个仓库，再把工作流加载到转移框中。
+    repoSelectionHint: 先选择归属方，再从当前归属方的仓库列表里勾选一个或多个仓库。
+    ownerLabel: 仓库归属
+    ownerOptionLabel: '{{label}}（{{count}} 个仓库）'
+    ownerSelectionHint: 这里一次只展示当前归属方的仓库，便于在大量仓库中筛选和选择。
     reposSelected: 已选择 {{count}} 个仓库
     ownerSelectionSummary: 已选 {{selected}} / {{total}}
+    ownerRepoCount: 当前归属方共有 {{count}} 个仓库
     selectAll: 全选
     deselectAll: 取消全选
     loadingRepos: 正在加载仓库列表

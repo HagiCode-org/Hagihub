@@ -275,9 +275,13 @@ actionManagement:
     phaseRepos: ① Select Repos
     phaseTransfer: ② Transfer
     phaseConfirm: ③ Confirm
-    repoSelectionHint: Choose one or more repositories before loading workflows into the transfer box.
+    repoSelectionHint: Select an owner first, then choose one or more repositories from that owner's list.
+    ownerLabel: Repository owner
+    ownerOptionLabel: '{{label}} ({{count}} repos)'
+    ownerSelectionHint: Only repositories for the selected owner are shown here, which keeps large inventories manageable.
     reposSelected: '{{count}} repos selected'
     ownerSelectionSummary: '{{selected}} of {{total}} selected'
+    ownerRepoCount: '{{count}} repositories under this owner'
     selectAll: Select all
     deselectAll: Deselect all
     loadingRepos: Loading repository inventory

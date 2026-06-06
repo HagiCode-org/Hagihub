@@ -100,6 +100,18 @@ const transferLoadProgressUpdated = createAction<TransferLoadProgressPayload>(
   'actionManagement/transferLoadProgressUpdated',
 );
 
+function createTransferLoadProgressPayload(
+  candidateWorkflows: GitHubWorkflowSummary[],
+  loadErrors: Record<string, string>,
+  loadProgress: TransferLoadProgress,
+): TransferLoadProgressPayload {
+  return {
+    candidateWorkflows: dedupeWorkflowSummaries([...candidateWorkflows]),
+    loadErrors: { ...loadErrors },
+    loadProgress,
+  };
+}
+
 function createInitialTransferModalState(): TransferModalState {
   return {
     open: false,
@@ -267,14 +279,14 @@ export const loadMultiRepoWorkflows = createAsyncThunk<
     const candidateWorkflows: GitHubWorkflowSummary[] = [];
     const loadErrors: Record<string, string> = {};
 
-    dispatch(transferLoadProgressUpdated({
+    dispatch(transferLoadProgressUpdated(createTransferLoadProgressPayload(
       candidateWorkflows,
       loadErrors,
-      loadProgress: {
+      {
         current: 0,
         total,
       },
-    }));
+    )));
 
     for (let index = 0; index < selectedRepoFullNames.length; index += 1) {
       const repoFullName = selectedRepoFullNames[index];
@@ -295,20 +307,20 @@ export const loadMultiRepoWorkflows = createAsyncThunk<
         });
       }
 
-      dispatch(transferLoadProgressUpdated({
-        candidateWorkflows: dedupeWorkflowSummaries(candidateWorkflows),
-        loadErrors: { ...loadErrors },
-        loadProgress: {
+      dispatch(transferLoadProgressUpdated(createTransferLoadProgressPayload(
+        candidateWorkflows,
+        loadErrors,
+        {
           current: index + 1,
           total,
         },
-      }));
+      )));
     }
 
     return {
       accountId,
-      candidateWorkflows: dedupeWorkflowSummaries(candidateWorkflows),
-      loadErrors,
+      candidateWorkflows: dedupeWorkflowSummaries([...candidateWorkflows]),
+      loadErrors: { ...loadErrors },
     };
   },
 );

@@ -1,5 +1,5 @@
-import { useDeferredValue, useState } from 'react';
-import { ChevronDown, ChevronRight, FolderGit2, LoaderCircle, Search } from 'lucide-react';
+import { useDeferredValue, useEffect, useState } from 'react';
+import { ChevronDown, FolderGit2, LoaderCircle, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,24 @@ interface RepoMultiSelectProps {
   reposStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
 }
 
+function resolveOwnerKeyForRepo(
+  repoFullName: string,
+  personalRepos: GitHubRepo[],
+  groupedRepos: GitHubRepoGroup[],
+): string | null {
+  if (personalRepos.some((repo) => repo.fullName === repoFullName)) {
+    return 'personal';
+  }
+
+  for (const group of groupedRepos) {
+    if (group.repos.some((repo) => repo.fullName === repoFullName)) {
+      return group.org.login;
+    }
+  }
+
+  return null;
+}
+
 function RepoMultiSelect({
   ownerOptions,
   personalRepos,
@@ -31,11 +49,8 @@ function RepoMultiSelect({
   reposStatus,
 }: RepoMultiSelectProps) {
   const { t } = useTranslation('github');
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState('');
-  const deferredQuery = useDeferredValue(searchQuery.trim().toLowerCase());
-  const selectedRepoSet = new Set(selectedRepoFullNames);
-  const allRepoGroups = [
+  const repoGroups = [
     ...(personalRepos.length > 0
       ? [{
         key: 'personal',
@@ -49,35 +64,48 @@ function RepoMultiSelect({
       repos: group.repos,
     })),
   ];
-  const repoGroups = allRepoGroups.map((group) => ({
-    ...group,
-    repos: group.repos.filter((repo) => {
-      if (!deferredQuery) {
-        return true;
-      }
+  const initialOwnerKey = selectedRepoFullNames
+    .map((repoFullName) => resolveOwnerKeyForRepo(repoFullName, personalRepos, groupedRepos))
+    .find((ownerKey): ownerKey is string => ownerKey !== null)
+    ?? ownerOptions[0]?.key
+    ?? repoGroups[0]?.key
+    ?? '';
+  const [selectedOwnerKey, setSelectedOwnerKey] = useState(initialOwnerKey);
+  const deferredQuery = useDeferredValue(searchQuery.trim().toLowerCase());
+  const selectedRepoSet = new Set(selectedRepoFullNames);
+  const activeGroup = repoGroups.find((group) => group.key === selectedOwnerKey) ?? repoGroups[0] ?? null;
+  const visibleRepos = activeGroup?.repos.filter((repo) => {
+    if (!deferredQuery) {
+      return true;
+    }
 
-      const haystack = [repo.fullName, repo.name, repo.description ?? '']
-        .join(' ')
-        .toLowerCase();
+    const haystack = [repo.fullName, repo.name, repo.description ?? '']
+      .join(' ')
+      .toLowerCase();
 
-      return haystack.includes(deferredQuery);
-    }),
-  })).filter((group) => group.repos.length > 0);
+    return haystack.includes(deferredQuery);
+  }) ?? [];
+  const activeOwnerOption = ownerOptions.find((owner) => owner.key === activeGroup?.key) ?? null;
+  const activeSelectedCount = activeGroup?.repos.filter((repo) => selectedRepoSet.has(repo.fullName)).length ?? 0;
+  const allActiveReposSelected = activeGroup !== null
+    && activeGroup.repos.length > 0
+    && activeSelectedCount === activeGroup.repos.length;
 
-  const toggleSection = (key: string) => {
-    setCollapsedSections((current) => ({
-      ...current,
-      [key]: !(current[key] ?? false),
-    }));
-  };
+  useEffect(() => {
+    if (!repoGroups.some((group) => group.key === selectedOwnerKey)) {
+      setSelectedOwnerKey(initialOwnerKey);
+    }
+  }, [initialOwnerKey, repoGroups, selectedOwnerKey]);
 
-  const toggleGroupSelection = (repos: GitHubRepo[]) => {
-    const allSelected = repos.every((repo) => selectedRepoSet.has(repo.fullName));
+  const toggleActiveOwnerSelection = () => {
+    if (!activeGroup) {
+      return;
+    }
 
-    for (const repo of repos) {
+    for (const repo of activeGroup.repos) {
       const isSelected = selectedRepoSet.has(repo.fullName);
 
-      if (allSelected || !isSelected) {
+      if (allActiveReposSelected ? isSelected : !isSelected) {
         onToggleRepo(repo.fullName);
       }
     }
@@ -92,7 +120,7 @@ function RepoMultiSelect({
     );
   }
 
-  if (allRepoGroups.length === 0) {
+  if (repoGroups.length === 0) {
     return (
       <div className='panel-muted px-4 py-5 text-sm leading-6 text-muted-foreground'>
         {t('actionManagement.transfer.noReposAvailable')}
@@ -110,6 +138,41 @@ function RepoMultiSelect({
         <div className='status-chip'>{t('actionManagement.transfer.reposSelected', { count: selectedRepoFullNames.length })}</div>
       </div>
 
+      <div className='grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end'>
+        <label className='block space-y-2'>
+          <span className='text-sm font-medium text-foreground'>{t('actionManagement.transfer.ownerLabel')}</span>
+          <div className='relative'>
+            <select
+              value={activeGroup?.key ?? ''}
+              onChange={(event) => setSelectedOwnerKey(event.target.value)}
+              className='h-11 w-full appearance-none rounded-xl border border-border/70 bg-background/70 px-4 pr-10 text-sm text-foreground shadow-sm outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+            >
+              {ownerOptions.map((owner) => (
+                <option key={owner.key} value={owner.key}>
+                  {t('actionManagement.transfer.ownerOptionLabel', {
+                    label: owner.label,
+                    count: owner.repoCount,
+                  })}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className='pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground' />
+          </div>
+          <p className='text-xs leading-5 text-muted-foreground'>
+            {t('actionManagement.transfer.ownerSelectionHint')}
+          </p>
+        </label>
+
+        {activeGroup ? (
+          <div className='status-chip'>
+            {t('actionManagement.transfer.ownerSelectionSummary', {
+              selected: activeSelectedCount,
+              total: activeGroup.repos.length,
+            })}
+          </div>
+        ) : null}
+      </div>
+
       <label className='block'>
         <span className='sr-only'>{t('actionManagement.transfer.repoSearchPlaceholder')}</span>
         <div className='relative'>
@@ -123,86 +186,67 @@ function RepoMultiSelect({
         </div>
       </label>
 
-      {repoGroups.length === 0 ? (
-        <div className='panel-muted px-4 py-5 text-sm leading-6 text-muted-foreground'>
-          {deferredQuery
-            ? t('actionManagement.transfer.noRepoSearchResults')
-            : t('actionManagement.transfer.noReposAvailable')}
-        </div>
-      ) : null}
+      {activeGroup ? (
+        <section className='list-row overflow-hidden'>
+          <div className='flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-4 py-4'>
+            <div className='min-w-0'>
+              <div className='flex flex-wrap items-center gap-2'>
+                <p className='text-sm font-semibold text-foreground'>{activeGroup.label}</p>
+                <span className='status-chip'>{activeOwnerOption?.repoCount ?? activeGroup.repos.length}</span>
+              </div>
+              <p className='mt-1 text-xs text-muted-foreground'>
+                {t('actionManagement.transfer.ownerRepoCount', {
+                  count: activeOwnerOption?.repoCount ?? activeGroup.repos.length,
+                })}
+              </p>
+            </div>
 
-      {repoGroups.length > 0 ? (
-        <div className='max-h-[26rem] space-y-3 overflow-y-auto pr-1'>
-          {repoGroups.map((group) => {
-            const isCollapsed = collapsedSections[group.key] ?? false;
-            const selectedCount = group.repos.filter((repo) => selectedRepoSet.has(repo.fullName)).length;
-            const ownerMeta = ownerOptions.find((owner) => owner.key === group.key);
-            const allSelected = group.repos.length > 0 && selectedCount === group.repos.length;
+            <Button variant='ghost' size='sm' onClick={toggleActiveOwnerSelection}>
+              {allActiveReposSelected
+                ? t('actionManagement.transfer.deselectAll')
+                : t('actionManagement.transfer.selectAll')}
+            </Button>
+          </div>
 
-            return (
-              <section key={group.key} className='list-row overflow-hidden px-4 py-4'>
-                <div className='flex flex-wrap items-center justify-between gap-3'>
-                  <button
-                    type='button'
-                    className='flex min-w-0 items-center gap-3 text-left'
-                    onClick={() => toggleSection(group.key)}
-                  >
-                    {isCollapsed ? <ChevronRight className='size-4 text-muted-foreground' /> : <ChevronDown className='size-4 text-muted-foreground' />}
-                    <div className='min-w-0'>
-                      <div className='flex flex-wrap items-center gap-2'>
-                        <p className='text-sm font-semibold text-foreground'>{group.label}</p>
-                        <span className='status-chip'>{ownerMeta?.repoCount ?? group.repos.length}</span>
+          <div className='h-[26rem] overflow-y-auto px-4 py-4'>
+            {visibleRepos.length === 0 ? (
+              <div className='panel-muted px-4 py-5 text-sm leading-6 text-muted-foreground'>
+                {deferredQuery
+                  ? t('actionManagement.transfer.noRepoSearchResults')
+                  : t('actionManagement.transfer.noReposAvailable')}
+              </div>
+            ) : (
+              <div className='space-y-2'>
+                {visibleRepos.map((repo) => {
+                  const isSelected = selectedRepoSet.has(repo.fullName);
+
+                  return (
+                    <label
+                      key={repo.id}
+                      className='flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-background/25 px-3 py-3 transition-colors hover:bg-accent/12'
+                    >
+                      <input
+                        type='checkbox'
+                        checked={isSelected}
+                        className='mt-1 size-4 rounded border border-border/80 bg-background'
+                        onChange={() => onToggleRepo(repo.fullName)}
+                      />
+                      <div className='min-w-0 flex-1 space-y-1'>
+                        <div className='flex items-center gap-2 text-sm font-medium text-foreground'>
+                          <FolderGit2 className='size-4 shrink-0 text-primary' />
+                          <span className='font-mono'>{repo.fullName}</span>
+                        </div>
+                        {repo.description ? (
+                          <p className='text-sm leading-6 text-muted-foreground'>{repo.description}</p>
+                        ) : null}
                       </div>
-                      <p className='mt-1 text-xs text-muted-foreground'>
-                        {t('actionManagement.transfer.ownerSelectionSummary', {
-                          selected: selectedCount,
-                          total: group.repos.length,
-                        })}
-                      </p>
-                    </div>
-                  </button>
-
-                  <Button variant='ghost' size='sm' onClick={() => toggleGroupSelection(group.repos)}>
-                    {allSelected
-                      ? t('actionManagement.transfer.deselectAll')
-                      : t('actionManagement.transfer.selectAll')}
-                  </Button>
-                </div>
-
-                {!isCollapsed ? (
-                  <div className='mt-4 space-y-2'>
-                    {group.repos.map((repo) => {
-                      const isSelected = selectedRepoSet.has(repo.fullName);
-
-                      return (
-                        <label
-                          key={repo.id}
-                          className='flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-background/25 px-3 py-3 transition-colors hover:bg-accent/12'
-                        >
-                          <input
-                            type='checkbox'
-                            checked={isSelected}
-                            className='mt-1 size-4 rounded border border-border/80 bg-background'
-                            onChange={() => onToggleRepo(repo.fullName)}
-                          />
-                          <div className='min-w-0 flex-1 space-y-1'>
-                            <div className='flex items-center gap-2 text-sm font-medium text-foreground'>
-                              <FolderGit2 className='size-4 shrink-0 text-primary' />
-                              <span className='font-mono'>{repo.fullName}</span>
-                            </div>
-                            {repo.description ? (
-                              <p className='text-sm leading-6 text-muted-foreground'>{repo.description}</p>
-                            ) : null}
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </section>
-            );
-          })}
-        </div>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
       ) : null}
     </div>
   );
