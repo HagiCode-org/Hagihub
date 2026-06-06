@@ -96,6 +96,8 @@ npm run dev
 
 启动开发模式：Vite dev server（renderer） + tsc watch（main） + vite build watch（preload） + Electron。
 
+`src/renderer/locales/generated-locales/*.json` 由 `hagi18n` 基于 YAML 语言源自动生成，不作为源码提交；需要时执行 `npm run prepare:i18n` 即可重新生成。
+
 ## 构建
 
 ```bash
