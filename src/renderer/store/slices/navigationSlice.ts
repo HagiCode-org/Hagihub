@@ -4,10 +4,12 @@ export type NavigationSection = 'overview' | 'repos' | 'actions' | 'accounts' | 
 
 interface NavigationState {
   activeSection: NavigationSection;
+  sidebarCollapsed: boolean;
 }
 
 const initialState: NavigationState = {
   activeSection: 'overview',
+  sidebarCollapsed: false,
 };
 
 const navigationSlice = createSlice({
@@ -17,9 +19,12 @@ const navigationSlice = createSlice({
     setActiveSection(state, action: PayloadAction<NavigationSection>) {
       state.activeSection = action.payload;
     },
+    toggleSidebarCollapsed(state) {
+      state.sidebarCollapsed = !state.sidebarCollapsed;
+    },
   },
 });
 
-export const { setActiveSection } = navigationSlice.actions;
+export const { setActiveSection, toggleSidebarCollapsed } = navigationSlice.actions;
 
 export default navigationSlice.reducer;

@@ -8,6 +8,8 @@ import {
   FolderGit2,
   Layers3,
   LoaderCircle,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   RefreshCw,
   Settings2,
@@ -32,7 +34,7 @@ import {
   switchAccount,
 } from '@/store/slices/githubAccountsSlice';
 import { clearRepos, fetchRepos } from '@/store/slices/githubReposSlice';
-import { setActiveSection, type NavigationSection } from '@/store/slices/navigationSlice';
+import { setActiveSection, toggleSidebarCollapsed, type NavigationSection } from '@/store/slices/navigationSlice';
 
 const repoUrl = 'https://github.com/HagiCode-org/Hagihub';
 
@@ -73,6 +75,7 @@ function HubShell() {
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const { appInfo, loadStatus } = useAppSelector((state) => state.hub);
   const activeSection = useAppSelector((state) => state.navigation.activeSection);
+  const sidebarCollapsed = useAppSelector((state) => state.navigation.sidebarCollapsed);
   const {
     accounts,
     activeAccountId,
@@ -466,44 +469,30 @@ function HubShell() {
         </header>
 
         <div className="relative z-10 flex min-h-0 flex-1">
-          <aside className="hidden border-r border-border/70 bg-[var(--surface-activity)]/94 md:flex md:w-[4.5rem] md:flex-col md:items-center md:justify-between md:px-2 md:py-3">
-            <div className="flex w-full flex-col gap-2">
-              {sections.map((section) => {
-                const Icon = section.icon;
-                const isActive = section.id === activeSection;
-
-                return (
-                  <button
-                    key={section.id}
-                    type="button"
-                    className={cn(
-                      'flex h-12 w-full items-center justify-center rounded-xl border transition-colors',
-                      isActive
-                        ? 'border-primary/30 bg-primary/12 text-primary'
-                        : 'border-transparent bg-transparent text-muted-foreground hover:border-border/70 hover:bg-accent/45 hover:text-accent-foreground',
-                    )}
-                    aria-label={section.label}
-                    onClick={() => {
-                      startTransition(() => {
-                        dispatch(setActiveSection(section.id));
-                      });
-                    }}
-                  >
-                    <Icon className="size-4" />
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="rounded-xl border border-border/70 bg-background/45 px-2 py-3 text-center">
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{loadStatus === 'failed' ? 'OFF' : 'ON'}</p>
-            </div>
-          </aside>
-
-          <aside className="hidden min-h-0 w-56 shrink-0 overflow-y-auto border-r border-border/70 bg-[var(--surface-sidebar)]/90 p-3 xl:flex xl:flex-col xl:gap-4">
+          <aside
+            className={cn(
+              'hidden min-h-0 shrink-0 overflow-y-auto border-r border-border/70 bg-[var(--surface-sidebar)]/90 transition-[width] duration-200 ease-out md:flex md:flex-col md:gap-4',
+              sidebarCollapsed ? 'w-[4.5rem] px-2 py-3' : 'w-56 p-3',
+            )}
+          >
             <section className="editor-panel p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{t('shell.navigationLabel', { ns: 'common' })}</p>
-              <nav className="mt-4 space-y-2">
+              <div className="flex items-center justify-between">
+                {!sidebarCollapsed && (
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{t('shell.navigationLabel', { ns: 'common' })}</p>
+                )}
+                <button
+                  type="button"
+                  className={cn(
+                    'rounded-lg border border-border/70 p-1.5 text-muted-foreground transition-colors hover:bg-accent/45 hover:text-accent-foreground',
+                    sidebarCollapsed ? 'mx-auto' : 'ml-auto',
+                  )}
+                  aria-label={sidebarCollapsed ? t('shell.expandSidebar', { ns: 'common' }) : t('shell.collapseSidebar', { ns: 'common' })}
+                  onClick={() => dispatch(toggleSidebarCollapsed())}
+                >
+                  {sidebarCollapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+                </button>
+              </div>
+              <nav className={cn('space-y-2', sidebarCollapsed ? 'mt-3' : 'mt-4')}>
                 {sections.map((section) => {
                   const Icon = section.icon;
                   const isActive = section.id === activeSection;
@@ -513,32 +502,49 @@ function HubShell() {
                       key={section.id}
                       type="button"
                       className={cn(
-                        'flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left transition-colors',
+                        'flex w-full items-center rounded-xl border transition-colors',
+                        sidebarCollapsed
+                          ? 'h-12 justify-center'
+                          : 'items-start gap-3 px-3 py-3 text-left',
                         isActive
                           ? 'border-primary/30 bg-primary/10 text-foreground'
                           : 'border-transparent text-muted-foreground hover:border-border/70 hover:bg-accent/45 hover:text-accent-foreground',
                       )}
+                      aria-label={section.label}
                       onClick={() => {
                         startTransition(() => {
                           dispatch(setActiveSection(section.id));
                         });
                       }}
                     >
-                      <span className={cn('rounded-lg border p-2', isActive ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border/70 bg-background/45')}>
+                      {sidebarCollapsed ? (
                         <Icon className="size-4" />
-                      </span>
-                      <span className="space-y-1">
-                        <span className="block text-sm font-medium">{section.label}</span>
-                      </span>
+                      ) : (
+                        <>
+                          <span className={cn('rounded-lg border p-2', isActive ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border/70 bg-background/45')}>
+                            <Icon className="size-4" />
+                          </span>
+                          <span className="space-y-1">
+                            <span className="block text-sm font-medium">{section.label}</span>
+                          </span>
+                        </>
+                      )}
                     </button>
                   );
                 })}
               </nav>
             </section>
+
+            <div className={cn(
+              'rounded-xl border border-border/70 bg-background/45 text-center',
+              sidebarCollapsed ? 'mx-1 px-2 py-3' : 'px-2 py-3',
+            )}>
+              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{loadStatus === 'failed' ? 'OFF' : 'ON'}</p>
+            </div>
           </aside>
 
           <main className="flex min-w-0 flex-1 flex-col">
-            <div className="border-b border-border/70 bg-[var(--surface-toolbar)]/88 px-3 py-2 xl:hidden">
+            <div className="border-b border-border/70 bg-[var(--surface-toolbar)]/88 px-3 py-2 md:hidden">
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {sections.map((section) => {
                   const isActive = section.id === activeSection;

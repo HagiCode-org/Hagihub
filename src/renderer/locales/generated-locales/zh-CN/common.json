@@ -35,6 +35,8 @@
     "description": "面向后续 Hagihub 开发的桌面端基础壳，已经接入 UI 基础组件、状态管理和 Electron 数据桥接。",
     "chromeBadge": "本地桌面壳",
     "navigationLabel": "工作区",
+    "expandSidebar": "展开侧边栏",
+    "collapseSidebar": "收起侧边栏",
     "navigationDescription": "在仓库、工作流、账号和设置之间切换。",
     "activeSectionLabel": "当前通道",
     "runtimeSnapshot": "运行时快照",
