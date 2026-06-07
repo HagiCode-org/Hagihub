@@ -6,6 +6,20 @@ import { Button } from '@/components/ui/button';
 import { MarkdownPreview } from '@/components/ui/markdown-preview';
 import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import { cn } from '@/lib/utils';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { selectRepoWorkspaceReadmeActiveVariant, selectRepoWorkspaceReadmeState } from '@/store/selectors';
+import {
+  addReadmeLanguage,
+  beginReadmeEditing,
+  buildRepoWorkspaceKey,
+  cancelReadmeEditing,
+  clearReadmeSubmitError,
+  copyReadmeVariantDraft,
+  fetchRepoReadmeWorkspace,
+  setActiveReadmePath,
+  submitRepoReadmeWorkspace,
+  updateReadmeDraft,
+} from '@/store/slices/repoWorkspaceSlice';
 import CommitStrategyDialog, { type CommitStrategyDecision } from './CommitStrategyDialog';
 
 interface RepoReadmeTabProps {
@@ -181,50 +195,35 @@ function resolveSaveError(
 
 function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabProps) {
   const { t } = useTranslation('github');
-  const [loadState, setLoadState] = useState<LoadState>('idle');
-  const [error, setError] = useState<string | null>(null);
-  const [workspace, setWorkspace] = useState<ReadmeWorkspaceVariantState[]>([]);
-  const [activePath, setActivePath] = useState(PRIMARY_README_PATH);
-  const [isEditing, setIsEditing] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [browserOpenError, setBrowserOpenError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const workspaceKey = buildRepoWorkspaceKey(accountId, owner, repo);
+  const readmeState = useAppSelector((state) => selectRepoWorkspaceReadmeState(state, workspaceKey));
+  const activeVariant = useAppSelector((state) => selectRepoWorkspaceReadmeActiveVariant(state, workspaceKey));
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading'>('idle');
-  const [dialogError, setDialogError] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
   const [selectedCopySource, setSelectedCopySource] = useState<string | null>(null);
   const [showAddLanguagePicker, setShowAddLanguagePicker] = useState(false);
 
-  const loadReadmeWorkspace = async () => {
+  useEffect(() => {
     if (!accountId) {
       return;
     }
 
-    setLoadState('loading');
-    setError(null);
-    setBrowserOpenError(null);
+    void dispatch(fetchRepoReadmeWorkspace({ workspaceKey, accountId, owner, repo }));
+  }, [accountId, dispatch, owner, repo, workspaceKey]);
 
-    try {
-      const result = await window.hagihub.fetchReadmeWorkspace(accountId, owner, repo);
-      const nextWorkspace = createWorkspaceVariants(result.variants);
-      setWorkspace(nextWorkspace);
-      setActivePath((current) => nextWorkspace.some((variant) => variant.path === current) ? current : PRIMARY_README_PATH);
-      setLoadState('loaded');
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : t('repoCard.readme.loadFailed'));
-      setLoadState('error');
-    }
-  };
-
-  useEffect(() => {
-    void loadReadmeWorkspace();
-  }, [accountId, owner, repo]);
-
-  const activeVariant = workspace.find((variant) => variant.path === activePath) ?? workspace[0] ?? null;
+  const loadStatus = readmeState?.loadStatus ?? (accountId ? 'loading' : 'idle');
+  const error = readmeState?.error ?? null;
+  const workspace = readmeState?.workspace ?? [];
+  const isEditing = readmeState?.isEditing ?? false;
+  const saveMessage = readmeState?.saveMessage ?? null;
+  const browserOpenError = readmeState?.browserOpenError ?? null;
+  const submitStatus = readmeState?.submitStatus ?? 'idle';
+  const submitError = readmeState?.submitError ?? null;
   const modifiedCount = workspace.filter((variant) => variant.dirty).length;
   const addLanguageOptions = LANGUAGE_OPTIONS.filter((option) => !workspace.some((variant) => variant.locale === option.value));
   const copySourceOptions = workspace
-    .filter((variant) => variant.path !== activePath)
+    .filter((variant) => variant.path !== activeVariant?.path)
     .map((variant) => ({
       value: variant.path,
       label: variant.path,
@@ -232,17 +231,11 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
     }));
 
   const startEditing = () => {
-    setIsEditing(true);
-    setSaveMessage(null);
-    setBrowserOpenError(null);
+    dispatch(beginReadmeEditing({ workspaceKey, owner, repo }));
   };
 
   const cancelEditing = () => {
-    setWorkspace((current) => resetWorkspaceDrafts(current));
-    setIsEditing(false);
-    setDialogError(null);
-    setSaveMessage(null);
-    setBrowserOpenError(null);
+    dispatch(cancelReadmeEditing({ workspaceKey, owner, repo }));
     setSelectedCopySource(null);
     setSelectedLanguage(null);
     setShowAddLanguagePicker(false);
@@ -256,29 +249,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
       return;
     }
 
-    const path = createLocalizedReadmePath(locale);
-    if (workspace.some((variant) => variant.path === path)) {
-      setActivePath(path);
-      return;
-    }
-
-    const nextVariant: ReadmeWorkspaceVariantState = {
-      path,
-      locale,
-      role: 'localized',
-      exists: false,
-      content: '',
-      originalContent: '',
-      draft: '',
-      sha: '',
-      dirty: true,
-    };
-
-    setWorkspace((current) => sortReadmeVariants([...current, nextVariant]));
-    setActivePath(path);
-    setIsEditing(true);
-    setSaveMessage(null);
-    setBrowserOpenError(null);
+    dispatch(addReadmeLanguage({ workspaceKey, owner, repo, locale }));
   };
 
   const handleCopyFromVariant = (sourcePath: string | null) => {
@@ -293,10 +264,13 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
       return;
     }
 
-    setWorkspace((current) => updateVariantDraft(current, activeVariant.path, sourceVariant.draft, sourceVariant.path));
-    setIsEditing(true);
-    setSaveMessage(null);
-    setBrowserOpenError(null);
+    dispatch(copyReadmeVariantDraft({
+      workspaceKey,
+      owner,
+      repo,
+      targetPath: activeVariant.path,
+      sourcePath: sourceVariant.path,
+    }));
   };
 
   const confirmSave = async (decision: CommitStrategyDecision) => {
@@ -304,85 +278,43 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
       return;
     }
 
-    setSubmitStatus('loading');
-    setDialogError(null);
-    setBrowserOpenError(null);
     try {
-
-      const result = await window.hagihub.submitReadmeWorkspace(accountId, owner, repo, {
+      await dispatch(submitRepoReadmeWorkspace({
+        workspaceKey,
+        accountId,
+        owner,
+        repo,
         defaultBranch,
         strategy: decision.strategy,
-        branchName: decision.branchName?.trim(),
-        commitMessage: buildReadmeCommitMessage(workspace),
-        pullRequestTitle: buildReadmePullRequestTitle(workspace),
-        variants: workspace.map((variant) => ({
-          path: variant.path,
-          locale: variant.locale,
-          role: variant.role,
-          exists: variant.exists,
-          sha: variant.sha,
-          content: variant.draft,
-          originalContent: variant.originalContent,
-        })),
-      });
-
-      const writtenCount = result.files.filter((file) => file.status === 'written').length;
-
-      if (!result.success) {
-        if (result.strategy === 'direct' && writtenCount > 0) {
-          setWorkspace((current) => applyReadmeSubmissionResult(current, result));
-        }
-
-        setDialogError(resolveSaveError(
-          result,
-          t('repoCard.readme.saveFailed'),
-          (filename) => t('repoCard.readme.conflictFile', { filename }),
-          (filename, reason) => t('repoCard.readme.saveFailedFile', { filename, error: reason }),
-          (count) => t('repoCard.readme.partialSaveHint', { count }),
-        ));
-        return;
-      }
-
-      if (result.strategy === 'pull_request' && result.pullRequest) {
-        await loadReadmeWorkspace();
-        setIsEditing(false);
-        setDialogOpen(false);
-        setSaveMessage(t('repoCard.readme.prSuccessSummary', {
-          number: result.pullRequest.number,
-          count: writtenCount,
-        }));
-
-        const openResult = await window.hagihub.openExternal(result.pullRequest.htmlUrl);
-        if (!openResult.success) {
-          setBrowserOpenError(openResult.error ?? t('errors.openPullRequestFailed'));
-        }
-
-        return;
-      }
-
-      setWorkspace((current) => applyReadmeSubmissionResult(current, result));
-      setIsEditing(false);
+        branchName: decision.branchName,
+      })).unwrap();
       setDialogOpen(false);
-      setSaveMessage(t('repoCard.readme.saveSuccessSummary', { count: writtenCount }));
-    } catch (saveError) {
-      setDialogError(saveError instanceof Error ? saveError.message : t('repoCard.readme.saveFailed'));
-    } finally {
-      setSubmitStatus('idle');
-    }
+    } catch {}
   };
 
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-hidden px-6 py-5">
-        {loadState === 'loading' ? (
+        {loadStatus === 'loading' ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <LoaderCircle className="size-6 animate-spin text-primary" />
             <p className="mt-3 text-sm">{t('repoCard.readme.loading')}</p>
           </div>
-        ) : loadState === 'error' ? (
+        ) : loadStatus === 'failed' ? (
           <div className="rounded-[1.5rem] border border-destructive/30 bg-destructive/8 px-5 py-5">
             <p className="text-sm text-destructive">{error}</p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => void loadReadmeWorkspace()}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => {
+                if (!accountId) {
+                  return;
+                }
+
+                void dispatch(fetchRepoReadmeWorkspace({ workspaceKey, accountId, owner, repo }));
+              }}
+            >
               {t('repoList.retry')}
             </Button>
           </div>
@@ -420,7 +352,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
                         <Button
                           size="sm"
                           onClick={() => {
-                            setDialogError(null);
+                            dispatch(clearReadmeSubmitError({ workspaceKey, owner, repo }));
                             setDialogOpen(true);
                           }}
                           disabled={submitStatus === 'loading' || !accountId || modifiedCount === 0}
@@ -429,7 +361,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
                         </Button>
                       </>
                     ) : (
-                      <Button variant="outline" size="sm" onClick={startEditing} disabled={loadState !== 'loaded' || !accountId}>
+                      <Button variant="outline" size="sm" onClick={startEditing} disabled={loadStatus !== 'succeeded' || !accountId}>
                         <PencilLine className="size-3.5" />
                         {t('repoCard.readme.editWorkspace')}
                       </Button>
@@ -505,7 +437,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
                       <button
                         key={variant.path}
                         type="button"
-                        onClick={() => setActivePath(variant.path)}
+                        onClick={() => dispatch(setActiveReadmePath({ workspaceKey, owner, repo, path: variant.path }))}
                         className={cn(
                           'w-full rounded-[1.25rem] border px-3 py-3 text-left transition-colors',
                           activeVariant?.path === variant.path
@@ -570,7 +502,13 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
                         <textarea
                           className="min-h-[20rem] w-full flex-1 rounded-[1.5rem] border border-border/70 bg-background/45 px-4 py-4 font-mono text-sm leading-6 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-[3px] focus:ring-primary/20 lg:resize-none"
                           value={activeVariant.draft}
-                          onChange={(event) => setWorkspace((current) => updateVariantDraft(current, activeVariant.path, event.target.value))}
+                          onChange={(event) => dispatch(updateReadmeDraft({
+                            workspaceKey,
+                            owner,
+                            repo,
+                            path: activeVariant.path,
+                            draft: event.target.value,
+                          }))}
                           placeholder={t('repoCard.readme.editorPlaceholder')}
                         />
                       </section>
@@ -617,9 +555,9 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
         scopeNote={t('repoCard.readme.batchScope', { count: modifiedCount })}
         defaultBranch={defaultBranch}
         submitStatus={submitStatus}
-        error={dialogError}
+        error={submitError}
         onClose={() => {
-          setDialogError(null);
+          dispatch(clearReadmeSubmitError({ workspaceKey, owner, repo }));
           setDialogOpen(false);
         }}
         onConfirm={(decision) => {

@@ -102,6 +102,7 @@ function CreateRepositoryDialog({
   onViewExistingRepo,
 }: CreateRepositoryDialogProps) {
   const { t } = useTranslation('github');
+  const activeAccountLogin = activeAccount?.login ?? '';
   const nameInputRef = useRef<HTMLInputElement>(null);
   const ownerKeyRef = useRef<string | null>(null);
   const previousNameRef = useRef('');
@@ -160,16 +161,12 @@ function CreateRepositoryDialog({
     };
   }, [onClose, open, submitStatus]);
 
-  if (!open || !activeAccount || typeof document === 'undefined') {
-    return null;
-  }
-
-  const owner = decodeOwnerValue(ownerValue) ?? { type: 'personal' as const, login: activeAccount.login };
+  const owner = decodeOwnerValue(ownerValue) ?? { type: 'personal' as const, login: activeAccountLogin };
   const ownerKey = `${owner.type}:${owner.login}`;
   const ownerOptions: SearchableSelectOption[] = [
     {
-      value: encodeOwnerValue({ type: 'personal', login: activeAccount.login }),
-      label: `@${activeAccount.login}`,
+      value: encodeOwnerValue({ type: 'personal', login: activeAccountLogin }),
+      label: `@${activeAccountLogin}`,
       description: t('createDialog.ownerTypes.personal'),
     },
     ...orgs
@@ -383,6 +380,10 @@ function CreateRepositoryDialog({
       setName(resolvedName);
     }
   }, [name, open, owner.login, owner.type, selectedPatternId]);
+
+  if (!open || !activeAccount || typeof document === 'undefined') {
+    return null;
+  }
 
   return createPortal(
     <div

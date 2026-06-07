@@ -1,18 +1,23 @@
-import { useState } from 'react';
 import { ArrowUpRight, Calendar, Code2, Eye, GitFork, Globe, Info, LoaderCircle, Scale, Star, Tag } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { GitHubRepoDetails, UpdateRepoPayload } from '../../../../shared/api';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { selectRepoWorkspaceDetailsState } from '@/store/selectors';
+import {
+  beginRepoDetailsEditing,
+  cancelRepoDetailsEditing,
+  saveRepoWorkspaceDetails,
+  setRepoDetailsDraftField,
+} from '@/store/slices/repoWorkspaceSlice';
 
 interface RepoInfoTabProps {
+  workspaceKey: string;
   accountId: string | null;
   owner: string;
   repo: string;
   locale: string;
-  details: GitHubRepoDetails;
-  onDetailsChange: (details: GitHubRepoDetails) => void;
 }
 
 function formatDate(isoString: string | null, locale: string): string {
@@ -35,26 +40,27 @@ function formatNumber(value: number): string {
   return String(value);
 }
 
-function RepoInfoTab({ accountId, owner, repo, locale, details, onDetailsChange }: RepoInfoTabProps) {
+function RepoInfoTab({ workspaceKey, accountId, owner, repo, locale }: RepoInfoTabProps) {
   const { t } = useTranslation('github');
-  const [isEditing, setIsEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [editDescription, setEditDescription] = useState('');
-  const [editHomepage, setEditHomepage] = useState('');
-  const [editTopics, setEditTopics] = useState('');
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const detailsState = useAppSelector((state) => selectRepoWorkspaceDetailsState(state, workspaceKey));
+  const details = detailsState?.data ?? null;
+  const editor = detailsState?.editor;
+
+  if (!details || !editor) {
+    return null;
+  }
+
+  const isEditing = editor.isEditing;
+  const saving = editor.saveStatus === 'loading';
+  const saveMessage = editor.saveMessage;
 
   const startEditing = () => {
-    setEditDescription(details.description ?? '');
-    setEditHomepage(details.homepage ?? '');
-    setEditTopics(details.topics.join(', '));
-    setIsEditing(true);
-    setSaveMessage(null);
+    dispatch(beginRepoDetailsEditing({ workspaceKey, owner, repo }));
   };
 
   const cancelEditing = () => {
-    setIsEditing(false);
-    setSaveMessage(null);
+    dispatch(cancelRepoDetailsEditing({ workspaceKey, owner, repo }));
   };
 
   const saveChanges = async () => {
@@ -62,44 +68,7 @@ function RepoInfoTab({ accountId, owner, repo, locale, details, onDetailsChange 
       return;
     }
 
-    setSaving(true);
-    setSaveMessage(null);
-
-    const updates: UpdateRepoPayload = {};
-    const trimmedDesc = editDescription.trim();
-    const trimmedHomepage = editHomepage.trim();
-    const parsedTopics = editTopics.split(',').map((topic) => topic.trim()).filter(Boolean);
-    const topicsChanged = JSON.stringify(parsedTopics) !== JSON.stringify(details.topics);
-
-    if (trimmedDesc !== (details.description ?? '')) {
-      updates.description = trimmedDesc;
-    }
-
-    if (trimmedHomepage !== (details.homepage ?? '')) {
-      updates.homepage = trimmedHomepage;
-    }
-
-    try {
-      let nextDetails = details;
-
-      if (Object.keys(updates).length > 0) {
-        const result = await window.hagihub.updateRepo(accountId, owner, repo, updates);
-        nextDetails = result.details;
-      }
-
-      if (topicsChanged) {
-        const topicsResult = await window.hagihub.updateRepoTopics(accountId, owner, repo, parsedTopics);
-        nextDetails = { ...nextDetails, topics: topicsResult.names };
-      }
-
-      onDetailsChange(nextDetails);
-      setIsEditing(false);
-      setSaveMessage(t('repoCard.info.saveSuccess'));
-    } catch (error) {
-      setSaveMessage(error instanceof Error ? error.message : t('repoCard.info.saveFailed'));
-    } finally {
-      setSaving(false);
-    }
+    void dispatch(saveRepoWorkspaceDetails({ workspaceKey, accountId, owner, repo }));
   };
 
   return (
@@ -159,8 +128,14 @@ function RepoInfoTab({ accountId, owner, repo, locale, details, onDetailsChange 
                   <textarea
                     className="mt-1 w-full rounded-lg border border-border/70 bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none"
                     rows={3}
-                    value={editDescription}
-                    onChange={(event) => setEditDescription(event.target.value)}
+                    value={editor.description}
+                    onChange={(event) => dispatch(setRepoDetailsDraftField({
+                      workspaceKey,
+                      owner,
+                      repo,
+                      field: 'description',
+                      value: event.target.value,
+                    }))}
                     placeholder={t('repoCard.info.descriptionPlaceholder')}
                   />
                 </div>
@@ -170,8 +145,14 @@ function RepoInfoTab({ accountId, owner, repo, locale, details, onDetailsChange 
                   </label>
                   <input
                     className="mt-1 w-full rounded-lg border border-border/70 bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none"
-                    value={editHomepage}
-                    onChange={(event) => setEditHomepage(event.target.value)}
+                    value={editor.homepage}
+                    onChange={(event) => dispatch(setRepoDetailsDraftField({
+                      workspaceKey,
+                      owner,
+                      repo,
+                      field: 'homepage',
+                      value: event.target.value,
+                    }))}
                     placeholder={t('repoCard.info.homepagePlaceholder')}
                   />
                 </div>
@@ -181,8 +162,14 @@ function RepoInfoTab({ accountId, owner, repo, locale, details, onDetailsChange 
                   </label>
                   <input
                     className="mt-1 w-full rounded-lg border border-border/70 bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none"
-                    value={editTopics}
-                    onChange={(event) => setEditTopics(event.target.value)}
+                    value={editor.topics}
+                    onChange={(event) => dispatch(setRepoDetailsDraftField({
+                      workspaceKey,
+                      owner,
+                      repo,
+                      field: 'topics',
+                      value: event.target.value,
+                    }))}
                     placeholder={t('repoCard.info.topicsPlaceholder')}
                   />
                 </div>

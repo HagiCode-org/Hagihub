@@ -25,6 +25,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAppDispatch, useAppSelector } from '@/store';
+import { selectActiveGitHubAccount } from '@/store/selectors';
+import { appStarted } from '@/store/listeners';
 import { fetchAppInfo } from '@/store/slices/hubSlice';
 import {
   clearAccountsNotice,
@@ -32,7 +34,7 @@ import {
   resetDeviceFlowState,
   switchAccount,
 } from '@/store/slices/githubAccountsSlice';
-import { clearRepos, fetchRepos } from '@/store/slices/githubReposSlice';
+import { fetchRepos } from '@/store/slices/githubReposSlice';
 import { setActiveSection, toggleSidebarCollapsed, type NavigationSection } from '@/store/slices/navigationSlice';
 
 const repoUrl = 'https://github.com/HagiCode-org/Hagihub';
@@ -75,6 +77,7 @@ function HubShell() {
   const { appInfo, loadStatus } = useAppSelector((state) => state.hub);
   const activeSection = useAppSelector((state) => state.navigation.activeSection);
   const sidebarCollapsed = useAppSelector((state) => state.navigation.sidebarCollapsed);
+  const activeAccount = useAppSelector(selectActiveGitHubAccount);
   const {
     accounts,
     activeAccountId,
@@ -85,22 +88,13 @@ function HubShell() {
   const {
     orgs,
     repos,
-    fetchStatus: reposFetchStatus,
   } = useAppSelector((state) => state.githubRepos);
 
   useEffect(() => {
     document.getElementById('loading-container')?.remove();
 
-    if (loadStatus === 'idle') {
-      void dispatch(fetchAppInfo());
-    }
-  }, [dispatch, loadStatus]);
-
-  useEffect(() => {
-    if (accountsFetchStatus === 'idle') {
-      void dispatch(fetchAccounts());
-    }
-  }, [accountsFetchStatus, dispatch]);
+    dispatch(appStarted());
+  }, [dispatch]);
 
   useEffect(() => {
     const handleNavigateToSection = (event: WindowEventMap['hagihub:navigate-to-section']) => {
@@ -121,19 +115,6 @@ function HubShell() {
   const isActionsSection = activeSection === 'actions';
   const isAccountsSection = activeSection === 'accounts';
 
-  useEffect(() => {
-    if (!isReposSection) {
-      return;
-    }
-
-    if (!activeAccountId) {
-      dispatch(clearRepos());
-      return;
-    }
-
-    void dispatch(fetchRepos({ accountId: activeAccountId }));
-  }, [activeAccountId, dispatch, isReposSection]);
-
   const sections = sectionDefinitions.map((section) => ({
     ...section,
     label: t(`navigation.sections.${section.id}.label`, { ns: 'common' }),
@@ -143,7 +124,6 @@ function HubShell() {
   const foundationModules = ensureStringArray(t('shell.foundationModules', { ns: 'common', returnObjects: true }));
   const roadmapItems = ensureRoadmapItems(t(`shell.roadmap.${activeSection}`, { ns: 'common', returnObjects: true }));
   const loadingLabel = t('shell.loading', { ns: 'common' });
-  const activeAccount = accounts.find((account) => account.id === activeAccountId) ?? null;
 
   const openAddAccountDialog = () => {
     dispatch(resetDeviceFlowState());

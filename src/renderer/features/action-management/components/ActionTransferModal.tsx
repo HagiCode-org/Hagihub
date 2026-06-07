@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAppDispatch, useAppSelector } from '@/store';
+import { selectActionTransferModalView, selectGitHubRepoCollections } from '@/store/selectors';
 import {
   batchSaveManagedWorkflows,
   clearTransferLoadErrors,
@@ -13,18 +14,12 @@ import {
   setTransferPhase,
   toggleRepoSelection,
 } from '@/store/slices/actionManagementSlice';
-import type { GitHubRepo } from '../../../../shared/api';
-import type { GitHubRepoGroup } from '@/store/slices/githubReposSlice';
 import RepoMultiSelect, { type RepoOwnerOption } from './RepoMultiSelect';
 import WorkflowTransferBox from './WorkflowTransferBox';
 
 interface ActionTransferModalProps {
   open: boolean;
   accountId: string;
-  personalRepos: GitHubRepo[];
-  groupedRepos: GitHubRepoGroup[];
-  reposStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
-  reposError: string | null;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -32,18 +27,15 @@ interface ActionTransferModalProps {
 function ActionTransferModal({
   open,
   accountId,
-  personalRepos,
-  groupedRepos,
-  reposStatus,
-  reposError,
   onClose,
   onSaved,
 }: ActionTransferModalProps) {
   const { t } = useTranslation('github');
   const dispatch = useAppDispatch();
+  const { groupedRepos, personalRepos } = useAppSelector(selectGitHubRepoCollections);
+  const { fetchStatus: reposStatus, error: reposError } = useAppSelector((state) => state.githubRepos);
   const {
     candidateWorkflows,
-    loadErrors,
     loadProgress,
     phase,
     saveError,
@@ -51,6 +43,7 @@ function ActionTransferModal({
     selectedRepoFullNames,
     stagedSelection,
   } = useAppSelector((state) => state.actionManagement.transferModal);
+  const transferModalView = useAppSelector(selectActionTransferModalView);
 
   const ownerOptions: RepoOwnerOption[] = [
     ...(personalRepos.length > 0
@@ -66,15 +59,13 @@ function ActionTransferModal({
       repoCount: group.repos.length,
     })),
   ];
-  const isLoadingWorkflows = loadProgress.total > 0 && loadProgress.current < loadProgress.total;
-  const canLoadWorkflows = selectedRepoFullNames.length > 0 && reposStatus === 'succeeded' && !isLoadingWorkflows;
-  const canClose = saveStatus !== 'loading';
+  const canLoadWorkflows = transferModalView.selectedRepoCount > 0 && reposStatus === 'succeeded' && !transferModalView.isLoadingWorkflows;
+  const canClose = transferModalView.canClose;
   const phases = [
     t('actionManagement.transfer.phaseRepos'),
     t('actionManagement.transfer.phaseTransfer'),
     t('actionManagement.transfer.phaseConfirm'),
   ] as const;
-  const loadErrorEntries = Object.entries(loadErrors);
 
   const requestClose = useEffectEvent(() => {
     if (!canClose) {
@@ -194,7 +185,7 @@ function ActionTransferModal({
                 </div>
               ) : null}
 
-              {isLoadingWorkflows ? (
+              {transferModalView.isLoadingWorkflows ? (
                 <div className="panel-muted flex items-center gap-3 px-4 py-4 text-sm text-muted-foreground">
                   <LoaderCircle className="size-4 animate-spin text-primary" />
                   {t('actionManagement.transfer.loadingProgress', {
@@ -204,14 +195,14 @@ function ActionTransferModal({
                 </div>
               ) : null}
 
-              {loadErrorEntries.length > 0 ? (
+              {transferModalView.loadErrorEntries.length > 0 ? (
                 <div className="space-y-3 rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-4 text-sm text-destructive">
                   <div className="flex items-center gap-2 font-medium">
                     <AlertCircle className="size-4" />
                     {t('actionManagement.transfer.loadErrorsTitle')}
                   </div>
                   <div className="space-y-2">
-                    {loadErrorEntries.map(([repoFullName, message]) => (
+                    {transferModalView.loadErrorEntries.map(([repoFullName, message]) => (
                       <p key={repoFullName}>
                         {repoFullName === '__global__' ? (
                           message
@@ -232,7 +223,7 @@ function ActionTransferModal({
                   {t('actionManagement.transfer.cancel')}
                 </Button>
                 <Button onClick={() => void handleLoadWorkflows()} disabled={!canLoadWorkflows}>
-                  {isLoadingWorkflows ? <LoaderCircle className="animate-spin" /> : null}
+                  {transferModalView.isLoadingWorkflows ? <LoaderCircle className="animate-spin" /> : null}
                   {t('actionManagement.transfer.loadWorkflows')}
                 </Button>
               </div>

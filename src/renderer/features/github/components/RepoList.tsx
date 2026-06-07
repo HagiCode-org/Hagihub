@@ -1,10 +1,11 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LoaderCircle, Plus, RefreshCw, Search, TriangleAlert, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useAppDispatch, useAppSelector } from '@/store';
+import { selectActiveGitHubAccount, selectFilteredGitHubRepos } from '@/store/selectors';
 import type { GitHubRepo } from '../../../../shared/api';
 import {
   createRepo,
@@ -33,9 +34,6 @@ function RepoList({ activeAccountId }: RepoListProps) {
   const [repoInfoTarget, setRepoInfoTarget] = useState<GitHubRepo | null>(null);
   const {
     orgs,
-    groupedRepos,
-    personalRepos,
-    activeOrgFilter,
     searchQuery,
     visibilityFilter,
     fetchStatus,
@@ -46,60 +44,8 @@ function RepoList({ activeAccountId }: RepoListProps) {
     lastCreatedRepoFullName,
     lastCreateRefreshError,
   } = useAppSelector((state) => state.githubRepos);
-  const activeAccount = useAppSelector((state) => {
-    const { accounts, activeAccountId: selectedAccountId } = state.githubAccounts;
-    return accounts.find((account) => account.id === selectedAccountId) ?? null;
-  });
-  const deferredGroups = useDeferredValue(groupedRepos);
-  const deferredPersonalRepos = useDeferredValue(personalRepos);
-
-  const filteredGroups = useMemo(() => {
-    let groups = activeOrgFilter === 'all'
-      ? deferredGroups
-      : activeOrgFilter === 'personal'
-        ? []
-        : deferredGroups.filter((group) => group.org.login === activeOrgFilter);
-
-    let personal = activeOrgFilter === 'all'
-      ? deferredPersonalRepos
-      : activeOrgFilter === 'personal'
-        ? deferredPersonalRepos
-        : [];
-
-    if (visibilityFilter !== 'all') {
-      const isPrivate = visibilityFilter === 'private';
-      groups = groups
-        .map((group) => ({
-          ...group,
-          repos: group.repos.filter((repo) => repo.isPrivate === isPrivate),
-        }))
-        .filter((group) => group.repos.length > 0);
-      personal = personal.filter((repo) => repo.isPrivate === isPrivate);
-    }
-
-    if (searchQuery.trim().length > 0) {
-      const query = searchQuery.toLowerCase().trim();
-      groups = groups
-        .map((group) => ({
-          ...group,
-          repos: group.repos.filter(
-            (repo) =>
-              repo.name.toLowerCase().includes(query)
-              || repo.fullName.toLowerCase().includes(query)
-              || (repo.description?.toLowerCase().includes(query) ?? false),
-          ),
-        }))
-        .filter((group) => group.repos.length > 0);
-      personal = personal.filter(
-        (repo) =>
-          repo.name.toLowerCase().includes(query)
-          || repo.fullName.toLowerCase().includes(query)
-          || (repo.description?.toLowerCase().includes(query) ?? false),
-      );
-    }
-
-    return { groups, personal };
-  }, [activeOrgFilter, deferredGroups, deferredPersonalRepos, searchQuery, visibilityFilter]);
+  const activeAccount = useAppSelector(selectActiveGitHubAccount);
+  const filteredRepos = useAppSelector(selectFilteredGitHubRepos);
 
   const refresh = async () => {
     await dispatch(fetchRepos({ accountId: activeAccountId, forceRefresh: true }));
@@ -133,9 +79,6 @@ function RepoList({ activeAccountId }: RepoListProps) {
     setIsCreateDialogOpen(false);
     setRepoInfoTarget(repo);
   };
-
-  const filteredRepoCount = filteredGroups.groups.reduce((count, group) => count + group.repos.length, 0) + filteredGroups.personal.length;
-  const showFilteredEmpty = repos.length > 0 && filteredRepoCount === 0;
 
   const createButton = (
     <Button onClick={openCreateDialog} size="sm" disabled={!activeAccount || createStatus === 'loading'}>
@@ -291,17 +234,17 @@ function RepoList({ activeAccountId }: RepoListProps) {
         </section>
 
         <div className="min-h-0 overflow-y-auto pr-1">
-          {showFilteredEmpty ? (
+          {filteredRepos.showFilteredEmpty ? (
             <section className="editor-panel px-6 py-10 text-center text-sm leading-7 text-muted-foreground">
               <p className="text-base font-medium text-foreground">{t('repoList.filteredEmptyTitle')}</p>
               <p className="mt-3 max-w-2xl mx-auto">{t('repoList.filteredEmptyDescription')}</p>
             </section>
           ) : (
             <div className="space-y-4 pb-1">
-              {filteredGroups.groups.map((group) => (
+              {filteredRepos.groupedRepos.map((group) => (
                 <RepoGroup key={group.org.id} org={group.org} repos={group.repos} />
               ))}
-              {filteredGroups.personal.length > 0 ? <RepoGroup org={null} repos={filteredGroups.personal} /> : null}
+              {filteredRepos.personalRepos.length > 0 ? <RepoGroup org={null} repos={filteredRepos.personalRepos} /> : null}
             </div>
           )}
         </div>

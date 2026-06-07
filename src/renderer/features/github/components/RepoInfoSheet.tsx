@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Info, LoaderCircle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAppSelector } from '@/store';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { selectRepoWorkspaceDetailsState } from '@/store/selectors';
+import { buildRepoWorkspaceKey, fetchRepoWorkspaceDetails } from '@/store/slices/repoWorkspaceSlice';
 import RepoInfoTab from './RepoInfoTab';
 import RepoLicenseTab from './RepoLicenseTab';
 import RepoReadmeTab from './RepoReadmeTab';
-import type { GitHubRepoDetails } from '../../../../shared/api';
 
 interface RepoInfoSheetProps {
   owner: string;
@@ -16,37 +17,26 @@ interface RepoInfoSheetProps {
   onClose: () => void;
 }
 
-type LoadState = 'idle' | 'loading' | 'loaded' | 'error';
-
 function RepoInfoSheet({ owner, repo, onClose }: RepoInfoSheetProps) {
   const { t, i18n } = useTranslation('github');
+  const dispatch = useAppDispatch();
   const activeAccountId = useAppSelector((state) => state.githubAccounts.activeAccountId);
-  const [details, setDetails] = useState<GitHubRepoDetails | null>(null);
-  const [loadState, setLoadState] = useState<LoadState>('idle');
-  const [error, setError] = useState<string | null>(null);
+  const workspaceKey = buildRepoWorkspaceKey(activeAccountId, owner, repo);
+  const detailsState = useAppSelector((state) => selectRepoWorkspaceDetailsState(state, workspaceKey));
   const locale = i18n.resolvedLanguage ?? i18n.language;
 
-  const loadDetails = useCallback(async () => {
+  useEffect(() => {
     if (!activeAccountId) {
       return;
     }
 
-    setLoadState('loading');
-    setError(null);
-
-    try {
-      const result = await window.hagihub.fetchRepoDetails(activeAccountId, owner, repo);
-      setDetails(result.details);
-      setLoadState('loaded');
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : String(loadError));
-      setLoadState('error');
-    }
-  }, [activeAccountId, owner, repo]);
-
-  useEffect(() => {
-    void loadDetails();
-  }, [loadDetails]);
+    void dispatch(fetchRepoWorkspaceDetails({
+      workspaceKey,
+      accountId: activeAccountId,
+      owner,
+      repo,
+    }));
+  }, [activeAccountId, dispatch, owner, repo, workspaceKey]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -66,6 +56,10 @@ function RepoInfoSheet({ owner, repo, onClose }: RepoInfoSheetProps) {
       onClose();
     }
   };
+
+  const loadStatus = detailsState?.loadStatus ?? (activeAccountId ? 'loading' : 'idle');
+  const details = detailsState?.data ?? null;
+  const error = detailsState?.error ?? null;
 
   if (typeof document === 'undefined') {
     return null;
@@ -93,15 +87,31 @@ function RepoInfoSheet({ owner, repo, onClose }: RepoInfoSheetProps) {
           </Button>
         </div>
 
-        {loadState === 'loading' ? (
+        {loadStatus === 'loading' ? (
           <div className="flex flex-1 flex-col items-center justify-center px-6 text-muted-foreground">
             <LoaderCircle className="size-6 animate-spin text-primary" />
             <p className="mt-3 text-sm">{t('repoList.loading')}</p>
           </div>
-        ) : loadState === 'error' ? (
+        ) : loadStatus === 'failed' ? (
           <div className="flex flex-1 flex-col items-center justify-center px-6">
             <p className="text-sm text-destructive">{error}</p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => void loadDetails()}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => {
+                if (!activeAccountId) {
+                  return;
+                }
+
+                void dispatch(fetchRepoWorkspaceDetails({
+                  workspaceKey,
+                  accountId: activeAccountId,
+                  owner,
+                  repo,
+                }));
+              }}
+            >
               {t('repoList.retry')}
             </Button>
           </div>
@@ -123,12 +133,11 @@ function RepoInfoSheet({ owner, repo, onClose }: RepoInfoSheetProps) {
 
             <TabsContent value="info" forceMount className="mt-0 min-h-0 flex-1">
               <RepoInfoTab
+                workspaceKey={workspaceKey}
                 accountId={activeAccountId}
                 owner={owner}
                 repo={repo}
                 locale={locale}
-                details={details}
-                onDetailsChange={setDetails}
               />
             </TabsContent>
             <TabsContent value="readme" forceMount className="mt-0 min-h-0 flex-1">

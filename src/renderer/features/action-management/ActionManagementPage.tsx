@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
 import { LoaderCircle, Plus, RefreshCw, Settings2, Workflow } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAppDispatch, useAppSelector } from '@/store';
+import { selectActiveGitHubAccount, selectMonitoredManagedWorkflowCount } from '@/store/selectors';
 import {
   closeDispatchDialog,
   closeTransferModal,
@@ -13,12 +13,9 @@ import {
   openTransferModal,
   refreshManagedWorkflows,
   removeManagedWorkflow,
-  resetActionManagement,
   setDispatchInput,
   toggleMonitoring,
 } from '@/store/slices/actionManagementSlice';
-import { clearRepos, fetchRepos } from '@/store/slices/githubReposSlice';
-import { setActiveSection } from '@/store/slices/navigationSlice';
 import ManagedActionRow from './components/ManagedActionRow';
 import ActionTransferModal from './components/ActionTransferModal';
 import useActionMonitoring from './hooks/useActionMonitoring';
@@ -32,15 +29,9 @@ interface ActionManagementPageProps {
 function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagementPageProps) {
   const { t } = useTranslation('github');
   const dispatch = useAppDispatch();
-  const previousLoadStatusRef = useRef<'idle' | 'loading' | 'succeeded' | 'failed'>('idle');
-  const { accounts, activeAccountId } = useAppSelector((state) => state.githubAccounts);
-  const {
-    groupedRepos,
-    personalRepos,
-    activeAccountId: reposAccountId,
-    fetchStatus: reposStatus,
-    error: reposError,
-  } = useAppSelector((state) => state.githubRepos);
+  const activeAccountId = useAppSelector((state) => state.githubAccounts.activeAccountId);
+  const activeAccount = useAppSelector(selectActiveGitHubAccount);
+  const monitoredCount = useAppSelector(selectMonitoredManagedWorkflowCount);
   const {
     dispatchDialog,
     failedRefreshCount,
@@ -54,58 +45,8 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
     refreshStatus,
     transferModal,
   } = useAppSelector((state) => state.actionManagement);
-  const activeAccount = accounts.find((account) => account.id === activeAccountId) ?? null;
-  const monitoredCount = managedReferences.filter((workflow) => workflow.monitored === true).length;
 
   useActionMonitoring(activeAccountId);
-
-  useEffect(() => {
-    if (!activeAccountId) {
-      dispatch(resetActionManagement());
-      dispatch(clearRepos());
-      previousLoadStatusRef.current = 'idle';
-      return;
-    }
-
-    void dispatch(loadManagedWorkflows(activeAccountId));
-  }, [activeAccountId, dispatch]);
-
-  useEffect(() => {
-    if (!activeAccountId) {
-      return;
-    }
-
-    if (reposAccountId !== activeAccountId || reposStatus === 'idle') {
-      void dispatch(fetchRepos({ accountId: activeAccountId }));
-    }
-  }, [activeAccountId, dispatch, reposAccountId, reposStatus]);
-
-  useEffect(() => {
-    const previousLoadStatus = previousLoadStatusRef.current;
-    previousLoadStatusRef.current = loadStatus;
-
-    if (!activeAccountId || loadStatus !== 'succeeded' || previousLoadStatus === 'succeeded' || managedReferences.length === 0) {
-      return;
-    }
-
-    void dispatch(refreshManagedWorkflows({
-      accountId: activeAccountId,
-      workflows: managedReferences,
-    }));
-  }, [activeAccountId, dispatch, loadStatus, managedReferences]);
-
-  useEffect(() => {
-    const handleNavigateToSection = (event: WindowEventMap['hagihub:navigate-to-section']) => {
-      if (event.detail === 'actions') {
-        dispatch(setActiveSection('actions'));
-      }
-    };
-
-    window.addEventListener('hagihub:navigate-to-section', handleNavigateToSection);
-    return () => {
-      window.removeEventListener('hagihub:navigate-to-section', handleNavigateToSection);
-    };
-  }, [dispatch]);
 
   if (!activeAccountId || !activeAccount) {
     return (
@@ -285,10 +226,6 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
       <ActionTransferModal
         open={transferModal.open}
         accountId={activeAccountId}
-        personalRepos={personalRepos}
-        groupedRepos={groupedRepos}
-        reposStatus={reposStatus}
-        reposError={reposError}
         onClose={() => dispatch(closeTransferModal())}
         onSaved={() => {
           void dispatch(refreshManagedWorkflows({ accountId: activeAccountId }));

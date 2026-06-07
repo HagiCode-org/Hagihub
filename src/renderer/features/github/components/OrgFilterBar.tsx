@@ -2,37 +2,34 @@ import { Layers3, UserRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useAppDispatch, useAppSelector } from '@/store';
+import { selectActiveGitHubAccount, selectGitHubRepoOwnerCounts } from '@/store/selectors';
 import { setActiveOrgFilter, type OrgFilterValue } from '@/store/slices/githubReposSlice';
 
 function OrgFilterBar() {
   const { t } = useTranslation('github');
   const dispatch = useAppDispatch();
-  const { orgs, activeOrgFilter, personalRepos, groupedRepos, repos } = useAppSelector((state) => state.githubRepos);
-  const activeAccount = useAppSelector((state) => {
-    const { accounts, activeAccountId } = state.githubAccounts;
-    return accounts.find((account) => account.id === activeAccountId) ?? null;
-  });
-
-  const orgRepoCounts = new Map(groupedRepos.map((group) => [group.org.login, group.repos.length]));
+  const { orgs, activeOrgFilter } = useAppSelector((state) => state.githubRepos);
+  const activeAccount = useAppSelector(selectActiveGitHubAccount);
+  const { totalRepoCount, personalRepoCount, orgRepoCounts } = useAppSelector(selectGitHubRepoOwnerCounts);
 
   const filters: Array<{ value: OrgFilterValue; label: string; icon: React.ReactNode; count: number }> = [
     {
       value: 'all',
       label: t('orgFilter.all'),
       icon: <Layers3 className="size-3.5" />,
-      count: repos.length,
+      count: totalRepoCount,
     },
     {
       value: 'personal',
       label: activeAccount ? `@${activeAccount.login}` : t('orgFilter.personal'),
       icon: <UserRound className="size-3.5" />,
-      count: personalRepos.length,
+      count: personalRepoCount,
     },
     ...orgs.map((org) => ({
       value: org.login as OrgFilterValue,
       label: org.login,
       icon: <img src={org.avatarUrl} alt={org.login} className="size-3.5 rounded-sm object-cover" />,
-      count: orgRepoCounts.get(org.login) ?? 0,
+      count: orgRepoCounts[org.login] ?? 0,
     })),
   ];
 

@@ -4,6 +4,17 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import { cn } from '@/lib/utils';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { selectRepoWorkspaceLicenseState } from '@/store/selectors';
+import {
+  beginLicenseEditing,
+  buildRepoWorkspaceKey,
+  cancelLicenseEditing,
+  clearLicenseSubmitError,
+  fetchRepoLicense,
+  setLicenseDraft,
+  submitRepoLicense,
+} from '@/store/slices/repoWorkspaceSlice';
 import { getLicensePreset, LICENSE_PRESETS } from '../license-presets';
 import CommitStrategyDialog, { type CommitStrategyDecision } from './CommitStrategyDialog';
 
@@ -40,17 +51,10 @@ function resolveSaveError(error: unknown, fallback: string, conflict: string): s
 
 function RepoLicenseTab({ accountId, owner, repo, defaultBranch }: RepoLicenseTabProps) {
   const { t } = useTranslation('github');
-  const [loadState, setLoadState] = useState<LoadState>('idle');
-  const [error, setError] = useState<string | null>(null);
-  const [content, setContent] = useState('');
-  const [draft, setDraft] = useState('');
-  const [sha, setSha] = useState('');
-  const [exists, setExists] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const workspaceKey = buildRepoWorkspaceKey(accountId, owner, repo);
+  const licenseState = useAppSelector((state) => selectRepoWorkspaceLicenseState(state, workspaceKey));
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading'>('idle');
-  const [dialogError, setDialogError] = useState<string | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
 
   const presetOptions = useMemo<SearchableSelectOption[]>(() => (
@@ -61,46 +65,34 @@ function RepoLicenseTab({ accountId, owner, repo, defaultBranch }: RepoLicenseTa
     }))
   ), [t]);
 
-  const loadLicense = async () => {
+  useEffect(() => {
     if (!accountId) {
       return;
     }
 
-    setLoadState('loading');
-    setError(null);
+    void dispatch(fetchRepoLicense({ workspaceKey, accountId, owner, repo }));
+  }, [accountId, dispatch, owner, repo, workspaceKey]);
 
-    try {
-      const result = await window.hagihub.fetchFileContent(accountId, owner, repo, 'LICENSE');
-      setContent(result.content);
-      setDraft(result.content);
-      setSha(result.sha);
-      setExists(result.exists);
-      setLoadState('loaded');
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : t('repoCard.license.loadFailed'));
-      setLoadState('error');
-    }
-  };
-
-  useEffect(() => {
-    void loadLicense();
-  }, [accountId, owner, repo]);
+  const loadStatus = licenseState?.loadStatus ?? (accountId ? 'loading' : 'idle');
+  const error = licenseState?.error ?? null;
+  const content = licenseState?.content ?? '';
+  const draft = licenseState?.draft ?? '';
+  const exists = licenseState?.exists ?? false;
+  const isEditing = licenseState?.isEditing ?? false;
+  const saveMessage = licenseState?.saveMessage ?? null;
+  const submitStatus = licenseState?.submitStatus ?? 'idle';
+  const submitError = licenseState?.submitError ?? null;
 
   const applyTemplate = (template: string) => template
     .replace(/\{year\}/g, String(new Date().getFullYear()))
     .replace(/\{author\}/g, owner);
 
   const startEditing = () => {
-    setDraft(content);
-    setIsEditing(true);
-    setSaveMessage(null);
+    dispatch(beginLicenseEditing({ workspaceKey, owner, repo }));
   };
 
   const cancelEditing = () => {
-    setDraft(content);
-    setIsEditing(false);
-    setDialogError(null);
-    setSaveMessage(null);
+    dispatch(cancelLicenseEditing({ workspaceKey, owner, repo }));
   };
 
   const handlePresetChange = (presetId: string | null) => {
@@ -115,9 +107,7 @@ function RepoLicenseTab({ accountId, owner, repo, defaultBranch }: RepoLicenseTa
       return;
     }
 
-    setDraft(applyTemplate(preset.template));
-    setIsEditing(true);
-    setSaveMessage(null);
+    dispatch(setLicenseDraft({ workspaceKey, owner, repo, draft: applyTemplate(preset.template) }));
   };
 
   const confirmSave = async (decision: CommitStrategyDecision) => {
@@ -125,74 +115,43 @@ function RepoLicenseTab({ accountId, owner, repo, defaultBranch }: RepoLicenseTa
       return;
     }
 
-    setSubmitStatus('loading');
-    setDialogError(null);
-
-    const action = exists ? 'update' : 'create';
-
     try {
-      if (decision.strategy === 'pull_request') {
-        const branchName = decision.branchName?.trim() ?? '';
-
-        await window.hagihub.createRef(accountId, owner, repo, {
-          ref: branchName,
-          sha: defaultBranch,
-        });
-
-        const commitResult = await window.hagihub.commitFile(accountId, owner, repo, 'LICENSE', {
-          content: draft,
-          message: buildCommitMessage(action, 'LICENSE'),
-          branch: branchName,
-          sha,
-        });
-
-        const pullRequest = await window.hagihub.createPullRequest(accountId, owner, repo, {
-          title: buildPullRequestTitle(action, 'LICENSE'),
-          head: branchName,
-          base: defaultBranch,
-        });
-
-        setContent(draft);
-        setSha(commitResult.newSha);
-        setExists(true);
-        setIsEditing(false);
-        setDialogOpen(false);
-        setSaveMessage(t('repoCard.license.prSuccess', { number: pullRequest.number }));
-      } else {
-        const commitResult = await window.hagihub.commitFile(accountId, owner, repo, 'LICENSE', {
-          content: draft,
-          message: buildCommitMessage(action, 'LICENSE'),
-          branch: defaultBranch,
-          sha,
-        });
-
-        setContent(draft);
-        setSha(commitResult.newSha);
-        setExists(true);
-        setIsEditing(false);
-        setDialogOpen(false);
-        setSaveMessage(t('repoCard.license.saveSuccess'));
-      }
-    } catch (saveError) {
-      setDialogError(resolveSaveError(saveError, t('repoCard.license.saveFailed'), t('repoCard.license.conflict')));
-      return;
-    } finally {
-      setSubmitStatus('idle');
-    }
+      await dispatch(submitRepoLicense({
+        workspaceKey,
+        accountId,
+        owner,
+        repo,
+        defaultBranch,
+        strategy: decision.strategy,
+        branchName: decision.branchName,
+      })).unwrap();
+      setDialogOpen(false);
+    } catch {}
   };
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-y-auto px-6 py-5">
-        {loadState === 'loading' ? (
+        {loadStatus === 'loading' ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <LoaderCircle className="size-6 animate-spin text-primary" />
             <p className="mt-3 text-sm">{t('repoCard.license.loading')}</p>
           </div>
-        ) : loadState === 'error' ? (
+        ) : loadStatus === 'failed' ? (
           <div className="rounded-[1.5rem] border border-destructive/30 bg-destructive/8 px-5 py-5">
             <p className="text-sm text-destructive">{error}</p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => void loadLicense()}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => {
+                if (!accountId) {
+                  return;
+                }
+
+                void dispatch(fetchRepoLicense({ workspaceKey, accountId, owner, repo }));
+              }}
+            >
               {t('repoList.retry')}
             </Button>
           </div>
@@ -207,7 +166,7 @@ function RepoLicenseTab({ accountId, owner, repo, defaultBranch }: RepoLicenseTa
                   <Button
                     size="sm"
                     onClick={() => {
-                      setDialogError(null);
+                      dispatch(clearLicenseSubmitError({ workspaceKey, owner, repo }));
                       setDialogOpen(true);
                     }}
                     disabled={submitStatus === 'loading' || !accountId}
@@ -216,7 +175,7 @@ function RepoLicenseTab({ accountId, owner, repo, defaultBranch }: RepoLicenseTa
                   </Button>
                 </>
               ) : (
-                <Button variant="outline" size="sm" onClick={startEditing} disabled={loadState !== 'loaded' || !accountId}>
+                <Button variant="outline" size="sm" onClick={startEditing} disabled={loadStatus !== 'succeeded' || !accountId}>
                   <PencilLine className="size-3.5" />
                   {exists ? t('repoCard.license.edit') : t('repoCard.license.create')}
                 </Button>
@@ -262,7 +221,7 @@ function RepoLicenseTab({ accountId, owner, repo, defaultBranch }: RepoLicenseTa
               <textarea
                 className="min-h-[26rem] w-full rounded-[1.5rem] border border-border/70 bg-background/45 px-4 py-4 font-mono text-sm leading-6 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-[3px] focus:ring-primary/20"
                 value={draft}
-                onChange={(event) => setDraft(event.target.value)}
+                onChange={(event) => dispatch(setLicenseDraft({ workspaceKey, owner, repo, draft: event.target.value }))}
                 placeholder={t('repoCard.license.editorPlaceholder')}
               />
             ) : exists ? (
@@ -285,9 +244,9 @@ function RepoLicenseTab({ accountId, owner, repo, defaultBranch }: RepoLicenseTa
         filename="LICENSE"
         defaultBranch={defaultBranch}
         submitStatus={submitStatus}
-        error={dialogError}
+        error={submitError}
         onClose={() => {
-          setDialogError(null);
+          dispatch(clearLicenseSubmitError({ workspaceKey, owner, repo }));
           setDialogOpen(false);
         }}
         onConfirm={(decision) => {
