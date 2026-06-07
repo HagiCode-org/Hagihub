@@ -280,10 +280,10 @@ repoCard:
     cancel: Cancel
     saveSuccess: README.md saved.
     saveFailed: Failed to save README.md.
-    prSuccess: Pull request #{{number}} created for README.md.
+    prSuccess: 'Pull request #{{number}} created for README.md.'
     conflict: README.md was modified elsewhere. Refresh and try again.
     saveSuccessSummary: Saved {{count}} README variants.
-    prSuccessSummary: Pull request #{{number}} created for {{count}} README variants.
+    prSuccessSummary: 'Pull request #{{number}} created for {{count}} README variants.'
     conflictFile: '{{filename}} was modified elsewhere. Refresh and try again.'
     saveFailedFile: 'Failed to save {{filename}}: {{error}}'
     partialSaveHint: '{{count}} README variants were already written before the workflow stopped.'
@@ -322,7 +322,7 @@ repoCard:
     cancel: Cancel
     saveSuccess: LICENSE saved.
     saveFailed: Failed to save LICENSE.
-    prSuccess: Pull request #{{number}} created for LICENSE.
+    prSuccess: 'Pull request #{{number}} created for LICENSE.'
     conflict: LICENSE was modified elsewhere. Refresh and try again.
     presets:
       mit: MIT License
@@ -409,6 +409,9 @@ actionManagement:
     moveSelectedBack: Remove selected workflows from Selected
     moveAllBack: Remove all workflows from Selected
     confirmDescription: Review the {{count}} workflows below, then save to replace the managed workflow set.
+  recommendation:
+    watch: Watch
+    include: Include
   table:
     status: Status
     workflow: Workflow

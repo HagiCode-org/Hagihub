@@ -280,10 +280,10 @@ repoCard:
     cancel: 取消
     saveSuccess: README.md 已保存。
     saveFailed: 保存 README.md 失败。
-    prSuccess: 已为 README.md 创建拉取请求 #{{number}}。
+    prSuccess: '已为 README.md 创建拉取请求 #{{number}}。'
     conflict: README.md 已被其他人修改，请刷新后再试。
     saveSuccessSummary: 已保存 {{count}} 个 README 版本。
-    prSuccessSummary: 已为 {{count}} 个 README 版本创建拉取请求 #{{number}}。
+    prSuccessSummary: '已为 {{count}} 个 README 版本创建拉取请求 #{{number}}。'
     conflictFile: '{{filename}} 已被其他人修改，请刷新后重试。'
     saveFailedFile: '保存 {{filename}} 失败：{{error}}'
     partialSaveHint: 工作流停止前已有 {{count}} 个 README 版本写入成功。
@@ -322,7 +322,7 @@ repoCard:
     cancel: 取消
     saveSuccess: LICENSE 已保存。
     saveFailed: 保存 LICENSE 失败。
-    prSuccess: 已为 LICENSE 创建拉取请求 #{{number}}。
+    prSuccess: '已为 LICENSE 创建拉取请求 #{{number}}。'
     conflict: LICENSE 已被其他人修改，请刷新后再试。
     presets:
       mit: MIT 许可证
@@ -409,6 +409,9 @@ actionManagement:
     moveSelectedBack: 将选中的工作流移出已选择列表
     moveAllBack: 将全部工作流移出已选择列表
     confirmDescription: 请确认下面这 {{count}} 个工作流，保存后会直接替换当前托管集合。
+  recommendation:
+    watch: 关注
+    include: 纳入
   table:
     status: 状态
     workflow: 工作流
