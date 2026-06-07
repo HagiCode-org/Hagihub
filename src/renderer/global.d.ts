@@ -9,6 +9,7 @@ import type {
   DeviceFlowPollResult,
   DeviceFlowStartResult,
   ExternalOpenResult,
+  FetchActionRecommendationsResult,
   GitHubActionsResult,
   GitHubAccountsResult,
   GitHubManagedWorkflowReference,
@@ -47,6 +48,7 @@ interface HagihubApi {
   createGitHubRepo: (accountId: string, payload: CreateGitHubRepoPayload) => Promise<CreateGitHubRepoResult>;
   fetchGitHubActions: (accountId: string, repoFullNames: string[]) => Promise<GitHubActionsResult>;
   fetchRepoDetails: (accountId: string, owner: string, repo: string) => Promise<RepoDetailsResult>;
+  fetchActionRecommendations: (accountId: string, owner: string, repo: string) => Promise<FetchActionRecommendationsResult>;
   fetchFileContent: (accountId: string, owner: string, repo: string, path: string) => Promise<FileContentResult>;
   fetchReadmeWorkspace: (accountId: string, owner: string, repo: string) => Promise<ReadmeWorkspaceResult>;
   submitReadmeWorkspace: (accountId: string, owner: string, repo: string, payload: SubmitReadmeWorkspacePayload) => Promise<ReadmeBatchSubmissionResult>;

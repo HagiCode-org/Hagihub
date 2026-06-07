@@ -7,6 +7,7 @@ import {
   createPullRequest,
   createRef,
   dispatchGitHubWorkflow,
+  parseActionRecommendations,
   fetchActionsSummaries,
   fetchFileContent,
   fetchOrgs,
@@ -33,6 +34,7 @@ import type {
   CreatePullRequestPayload,
   CreateRefPayload,
   ExternalOpenResult,
+  FetchActionRecommendationsResult,
   FileContentResult,
   GitHubActionsResult,
   GitHubManagedWorkflowReference,
@@ -355,6 +357,30 @@ function registerIpcHandlers(): void {
     async (_event, accountId: string, owner: string, repo: string): Promise<RepoDetailsResult> => {
       const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
       return { details: await fetchRepoDetails(token, owner, repo) };
+    },
+  );
+  ipcMain.handle(
+    'hagihub:fetch-action-recommendations',
+    async (_event, accountId: string, owner: string, repo: string): Promise<FetchActionRecommendationsResult> => {
+      const repoFullName = `${owner}/${repo}`;
+
+      return await getOrLoadGithubCache(`github-action-recommendations:${accountId}:${repoFullName}`, async () => {
+        const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
+        const yamlFile = await fetchFileContent(token, owner, repo, '.hagihub/settings.yaml');
+
+        if (yamlFile.exists) {
+          return {
+            repoFullName,
+            recommendations: parseActionRecommendations(yamlFile.content),
+          };
+        }
+
+        const ymlFile = await fetchFileContent(token, owner, repo, '.hagihub/settings.yml');
+        return {
+          repoFullName,
+          recommendations: ymlFile.exists ? parseActionRecommendations(ymlFile.content) : [],
+        };
+      });
     },
   );
   ipcMain.handle(
