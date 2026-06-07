@@ -25,6 +25,7 @@ export const {
   resetActionManagement,
   setDispatchInput,
   setTransferPhase,
+  setTransferAvailableWorkflowBatchSelection,
   setTransferRepoBatchSelection,
   setTransferRepoSearchQuery,
   setTransferSelectedOwnerKey,

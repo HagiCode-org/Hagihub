@@ -1,11 +1,11 @@
 import { useEffect, useEffectEvent } from 'react';
-import { AlertCircle, LoaderCircle, X } from 'lucide-react';
+import { AlertCircle, Eye, LoaderCircle, Star, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GLOBAL_TRANSFER_LOAD_ERROR_KEY } from '@/features/action-management/model';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { selectActionTransferModalView } from '@/store/selectors';
+import { selectActionTransferModalView, selectActionTransferWorkflowSelectionView } from '@/store/selectors';
 import {
   batchSaveManagedWorkflows,
   closeTransferModal,
@@ -30,6 +30,7 @@ function ActionTransferModal() {
     stagedSelection,
   } = useAppSelector((state) => state.actionManagement.transferModal);
   const transferModalView = useAppSelector(selectActionTransferModalView);
+  const { recommendationLookup } = useAppSelector(selectActionTransferWorkflowSelectionView);
 
   const canLoadWorkflows = transferModalView.selectedRepoCount > 0 && reposStatus === 'succeeded' && !transferModalView.isLoadingWorkflows;
   const canClose = transferModalView.canClose;
@@ -96,6 +97,32 @@ function ActionTransferModal() {
     } catch {
       // The slice stores the failure state and keeps the modal open.
     }
+  };
+
+  const renderRecommendationBadges = (recommendations: Array<{ type: 'watch' | 'include'; reason?: string }>) => {
+    if (recommendations.length === 0) {
+      return <span className="text-xs text-muted-foreground">-</span>;
+    }
+
+    return (
+      <div className="flex flex-wrap gap-2">
+        {recommendations.map((recommendation, index) => (
+          <Badge
+            key={`${recommendation.type}-${recommendation.reason ?? 'plain'}-${index}`}
+            variant={recommendation.type === 'watch' ? 'secondary' : 'outline'}
+            title={recommendation.reason}
+            className="gap-1"
+          >
+            {recommendation.type === 'watch'
+              ? <Eye className="size-3.5" />
+              : <Star className="size-3.5" />}
+            {recommendation.type === 'watch'
+              ? t('actionManagement.recommendation.watch')
+              : t('actionManagement.recommendation.include')}
+          </Badge>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -237,26 +264,25 @@ function ActionTransferModal() {
                       <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
                         <tr className="border-b border-border/70 text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
                           <th className="px-3 py-3 font-medium">{t('actionManagement.table.workflow')}</th>
+                          <th className="px-3 py-3 font-medium">{t('actionManagement.table.recommendation')}</th>
                           <th className="px-3 py-3 font-medium">{t('repoList.columns.repository')}</th>
                           <th className="hidden px-3 py-3 font-medium xl:table-cell">{t('actionManagement.table.path')}</th>
-                          <th className="px-3 py-3 font-medium">{t('actionManagement.table.status')}</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {stagedSelection.map((workflow) => (
-                          <tr key={`${workflow.repoFullName}#${workflow.workflowId}`} className="border-b border-border/60">
-                            <td className="px-3 py-3 align-top text-sm font-medium text-foreground">{workflow.workflowName}</td>
-                            <td className="px-3 py-3 align-top font-mono text-xs text-muted-foreground">{workflow.repoFullName}</td>
-                            <td className="hidden px-3 py-3 align-top font-mono text-xs text-muted-foreground/90 xl:table-cell">{workflow.workflowPath}</td>
-                            <td className="px-3 py-3 align-top">
-                              <Badge variant={workflow.supportsDispatch ? 'default' : 'outline'}>
-                                {workflow.supportsDispatch
-                                  ? t('actionManagement.card.dispatchReady')
-                                  : t('actionManagement.card.dispatchUnavailable')}
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))}
+                        {stagedSelection.map((workflow) => {
+                          const key = `${workflow.repoFullName}#${workflow.workflowId}`;
+                          const recommendations = recommendationLookup[key] ?? [];
+
+                          return (
+                            <tr key={key} className="border-b border-border/60">
+                              <td className="px-3 py-3 align-top text-sm font-medium text-foreground">{workflow.workflowName}</td>
+                              <td className="px-3 py-3 align-top">{renderRecommendationBadges(recommendations)}</td>
+                              <td className="px-3 py-3 align-top font-mono text-xs text-muted-foreground">{workflow.repoFullName}</td>
+                              <td className="hidden px-3 py-3 align-top font-mono text-xs text-muted-foreground/90 xl:table-cell">{workflow.workflowPath}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   )}

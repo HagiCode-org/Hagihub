@@ -404,6 +404,8 @@ actionManagement:
     emptyAvailable: All workflows are already added.
     emptySelected: No workflows selected.
     noSearchResults: No workflows match the current filter.
+    selectRecommendedWatch: 'Select Watch ({{count}})'
+    selectRecommendedInclude: 'Select Include ({{count}})'
     moveSelectedToChosen: Move selected workflows to Selected
     moveAllToChosen: Move all visible workflows to Selected
     moveSelectedBack: Remove selected workflows from Selected
@@ -415,6 +417,7 @@ actionManagement:
   table:
     status: Status
     workflow: Workflow
+    recommendation: Recommendation
     path: Path
     latestRun: Latest run
     updated: Updated

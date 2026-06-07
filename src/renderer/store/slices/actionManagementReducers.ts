@@ -122,6 +122,25 @@ export const actionManagementReducers = {
 
     state.transferModal.selectedAvailableWorkflowKeys = [...selectedKeys];
   },
+  setTransferAvailableWorkflowBatchSelection(
+    state: ActionManagementState,
+    action: PayloadAction<{ workflowKeys: string[]; select: boolean }>,
+  ) {
+    const { workflowKeys, select } = action.payload;
+    const selectedKeys = new Set(state.transferModal.selectedAvailableWorkflowKeys);
+
+    if (select) {
+      for (const key of workflowKeys) {
+        selectedKeys.add(key);
+      }
+    } else {
+      for (const key of workflowKeys) {
+        selectedKeys.delete(key);
+      }
+    }
+
+    state.transferModal.selectedAvailableWorkflowKeys = [...selectedKeys];
+  },
   toggleTransferStagedWorkflowKey(state: ActionManagementState, action: PayloadAction<string>) {
     const key = action.payload;
     const selectedKeys = new Set(state.transferModal.selectedStagedWorkflowKeys);

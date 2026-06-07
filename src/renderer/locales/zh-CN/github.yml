@@ -404,6 +404,8 @@ actionManagement:
     emptyAvailable: 所有工作流都已经加入右侧。
     emptySelected: 还没有选择任何工作流。
     noSearchResults: 当前筛选条件下没有匹配的工作流。
+    selectRecommendedWatch: '选中关注项（{{count}}）'
+    selectRecommendedInclude: '选中纳入项（{{count}}）'
     moveSelectedToChosen: 将选中的工作流移入已选择列表
     moveAllToChosen: 将当前可见工作流全部移入已选择列表
     moveSelectedBack: 将选中的工作流移出已选择列表
@@ -415,6 +417,7 @@ actionManagement:
   table:
     status: 状态
     workflow: 工作流
+    recommendation: 推荐
     path: 路径
     latestRun: 最近运行
     updated: 更新时间

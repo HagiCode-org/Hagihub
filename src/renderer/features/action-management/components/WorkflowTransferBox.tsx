@@ -9,11 +9,41 @@ import { selectActionTransferWorkflowSelectionView } from '@/store/selectors';
 import {
   moveToStaged,
   removeFromStaged,
+  setTransferAvailableWorkflowBatchSelection,
   setTransferWorkflowSearchQuery,
   toggleTransferAvailableWorkflowKey,
   toggleTransferStagedWorkflowKey,
 } from '@/store/slices/actionManagementSlice';
 import type { GitHubManagedWorkflowReference, GitHubWorkflowSummary } from '../../../../shared/api';
+
+function renderRecommendationBadges(
+  recommendations: Array<{ type: 'watch' | 'include'; reason?: string }>,
+  t: (key: string, options?: Record<string, unknown>) => string,
+) {
+  if (recommendations.length === 0) {
+    return <span className='text-xs text-muted-foreground'>-</span>;
+  }
+
+  return (
+    <div className='flex flex-wrap gap-2'>
+      {recommendations.map((recommendation, index) => (
+        <Badge
+          key={`${recommendation.type}-${recommendation.reason ?? 'plain'}-${index}`}
+          variant={recommendation.type === 'watch' ? 'secondary' : 'outline'}
+          title={recommendation.reason}
+          className='gap-1'
+        >
+          {recommendation.type === 'watch'
+            ? <Eye className='size-3.5' />
+            : <Star className='size-3.5' />}
+          {recommendation.type === 'watch'
+            ? t('actionManagement.recommendation.watch')
+            : t('actionManagement.recommendation.include')}
+        </Badge>
+      ))}
+    </div>
+  );
+}
 
 function WorkflowTransferBox() {
   const { t } = useTranslation('github');
@@ -28,6 +58,12 @@ function WorkflowTransferBox() {
     visibleAvailableWorkflows,
     workflowSearchQuery,
   } = useAppSelector(selectActionTransferWorkflowSelectionView);
+  const availableWatchRecommendationKeys = visibleAvailableWorkflows
+    .filter((workflow) => (recommendationLookup[workflowKey(workflow)] ?? []).some((recommendation) => recommendation.type === 'watch'))
+    .map((workflow) => workflowKey(workflow));
+  const availableIncludeRecommendationKeys = visibleAvailableWorkflows
+    .filter((workflow) => (recommendationLookup[workflowKey(workflow)] ?? []).some((recommendation) => recommendation.type === 'include'))
+    .map((workflow) => workflowKey(workflow));
 
   const renderWorkflowTable = <T extends GitHubManagedWorkflowReference | GitHubWorkflowSummary>(options: {
     emptyState: string;
@@ -55,9 +91,9 @@ function WorkflowTransferBox() {
               <span className='sr-only'>{t('actionManagement.transfer.selected')}</span>
             </th>
             <th className='px-3 py-3 font-medium'>{t('actionManagement.table.workflow')}</th>
+            <th className='px-3 py-3 font-medium'>{t('actionManagement.table.recommendation')}</th>
             <th className='px-3 py-3 font-medium'>{t('repoList.columns.repository')}</th>
             <th className='hidden px-3 py-3 font-medium xl:table-cell'>{t('actionManagement.table.path')}</th>
-            <th className='px-3 py-3 font-medium'>{t('actionManagement.table.status')}</th>
           </tr>
         </thead>
         <tbody>
@@ -82,38 +118,15 @@ function WorkflowTransferBox() {
                 </td>
                 <td className='px-3 py-3 align-top'>
                   <p className='text-sm font-medium text-foreground'>{workflow.workflowName}</p>
-                  {recommendations.length > 0 ? (
-                    <div className='mt-2 flex flex-wrap gap-2'>
-                      {recommendations.map((recommendation, index) => (
-                        <Badge
-                          key={`${recommendation.type}-${recommendation.reason ?? 'plain'}-${index}`}
-                          variant={recommendation.type === 'watch' ? 'secondary' : 'outline'}
-                          title={recommendation.reason}
-                          className='gap-1'
-                        >
-                          {recommendation.type === 'watch'
-                            ? <Eye className='size-3.5' />
-                            : <Star className='size-3.5' />}
-                          {recommendation.type === 'watch'
-                            ? t('actionManagement.recommendation.watch')
-                            : t('actionManagement.recommendation.include')}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : null}
+                </td>
+                <td className='px-3 py-3 align-top'>
+                  {renderRecommendationBadges(recommendations, t)}
                 </td>
                 <td className='px-3 py-3 align-top font-mono text-xs text-muted-foreground'>
                   {workflow.repoFullName}
                 </td>
                 <td className='hidden px-3 py-3 align-top font-mono text-xs text-muted-foreground/90 xl:table-cell'>
                   {workflow.workflowPath}
-                </td>
-                <td className='px-3 py-3 align-top'>
-                  <Badge variant={workflow.supportsDispatch ? 'default' : 'outline'}>
-                    {workflow.supportsDispatch
-                      ? t('actionManagement.card.dispatchReady')
-                      : t('actionManagement.card.dispatchUnavailable')}
-                  </Badge>
                 </td>
               </tr>
             );
@@ -148,6 +161,33 @@ function WorkflowTransferBox() {
             />
           </div>
         </label>
+
+        <div className='mt-3 flex flex-wrap gap-2'>
+          <Button
+            type='button'
+            variant='outline'
+            size='sm'
+            disabled={availableWatchRecommendationKeys.length === 0}
+            onClick={() => dispatch(setTransferAvailableWorkflowBatchSelection({
+              workflowKeys: availableWatchRecommendationKeys,
+              select: true,
+            }))}
+          >
+            {t('actionManagement.transfer.selectRecommendedWatch', { count: availableWatchRecommendationKeys.length })}
+          </Button>
+          <Button
+            type='button'
+            variant='outline'
+            size='sm'
+            disabled={availableIncludeRecommendationKeys.length === 0}
+            onClick={() => dispatch(setTransferAvailableWorkflowBatchSelection({
+              workflowKeys: availableIncludeRecommendationKeys,
+              select: true,
+            }))}
+          >
+            {t('actionManagement.transfer.selectRecommendedInclude', { count: availableIncludeRecommendationKeys.length })}
+          </Button>
+        </div>
 
         <div className='mt-4 min-h-0 flex-1 overflow-auto'>
           {renderWorkflowTable({
