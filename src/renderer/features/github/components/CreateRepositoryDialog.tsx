@@ -1,21 +1,47 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Globe2, LoaderCircle, Lock, X } from 'lucide-react';
+import { ArrowUpRight, Globe2, LoaderCircle, Lock, TriangleAlert, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
+import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import type { CreateGitHubRepoPayload, GitHubAccountSummary, GitHubOrg } from '../../../../shared/api';
+import { isDuplicateRepo } from '@/store/slices/githubReposSlice';
+import type {
+  CreateGitHubRepoFailure,
+  CreateGitHubRepoPayload,
+  GitHubAccountSummary,
+  GitHubOrg,
+  GitHubRepo,
+} from '../../../../shared/api';
+import {
+  SPECIAL_REPO_PATTERNS,
+  buildGitHubRepoUrl,
+  canUseSpecialRepoPattern,
+  findDuplicateRepo,
+  resolveSpecialRepoName,
+  type SpecialRepoPatternId,
+} from '../../../../shared/github-special-repos';
+import SpecialRepoChips from './SpecialRepoChips';
 
 interface CreateRepositoryDialogProps {
   open: boolean;
   activeAccount: GitHubAccountSummary | null;
   orgs: GitHubOrg[];
+  repos: GitHubRepo[];
   submitStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
-  error: string | null;
+  submissionError: CreateGitHubRepoFailure | null;
   onClose: () => void;
+  onDismissError: () => void;
   onSubmit: (payload: CreateGitHubRepoPayload) => void;
+  onViewExistingRepo: (repo: GitHubRepo) => void;
+}
+
+interface PendingDuplicateSelection {
+  patternId: SpecialRepoPatternId;
+  resolvedName: string;
+  repo: GitHubRepo;
 }
 
 const gitignoreOptions: SearchableSelectOption[] = [
@@ -67,12 +93,19 @@ function CreateRepositoryDialog({
   open,
   activeAccount,
   orgs,
+  repos,
   submitStatus,
-  error,
+  submissionError,
   onClose,
+  onDismissError,
   onSubmit,
+  onViewExistingRepo,
 }: CreateRepositoryDialogProps) {
   const { t } = useTranslation('github');
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const ownerKeyRef = useRef<string | null>(null);
+  const previousNameRef = useRef('');
+  const isProgrammaticNameChangeRef = useRef(false);
   const [ownerValue, setOwnerValue] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -81,6 +114,11 @@ function CreateRepositoryDialog({
   const [gitignoreTemplate, setGitignoreTemplate] = useState<string | null>(null);
   const [licenseTemplate, setLicenseTemplate] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [selectedPatternId, setSelectedPatternId] = useState<SpecialRepoPatternId | null>(null);
+  const [duplicateRepo, setDuplicateRepo] = useState<GitHubRepo | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
+  const [allowDuplicateSubmit, setAllowDuplicateSubmit] = useState(false);
+  const [pendingDuplicateSelection, setPendingDuplicateSelection] = useState<PendingDuplicateSelection | null>(null);
 
   useEffect(() => {
     if (!open || !activeAccount) {
@@ -95,6 +133,14 @@ function CreateRepositoryDialog({
     setGitignoreTemplate(null);
     setLicenseTemplate(null);
     setValidationError(null);
+    setSelectedPatternId(null);
+    setDuplicateRepo(null);
+    setDuplicateWarning(false);
+    setAllowDuplicateSubmit(false);
+    setPendingDuplicateSelection(null);
+    ownerKeyRef.current = null;
+    previousNameRef.current = '';
+    isProgrammaticNameChangeRef.current = false;
   }, [activeAccount, open]);
 
   useEffect(() => {
@@ -118,7 +164,8 @@ function CreateRepositoryDialog({
     return null;
   }
 
-  const isSubmitting = submitStatus === 'loading';
+  const owner = decodeOwnerValue(ownerValue) ?? { type: 'personal' as const, login: activeAccount.login };
+  const ownerKey = `${owner.type}:${owner.login}`;
   const ownerOptions: SearchableSelectOption[] = [
     {
       value: encodeOwnerValue({ type: 'personal', login: activeAccount.login }),
@@ -134,15 +181,133 @@ function CreateRepositoryDialog({
         description: t('createDialog.ownerTypes.organization'),
       })),
   ];
-  const dialogError = validationError ?? error;
+  const isSubmitting = submitStatus === 'loading';
+  const apiDuplicateRepo = submissionError?.errorCode === 'duplicate'
+    ? findDuplicateRepo(repos, owner.login, name.trim())
+    : null;
+  const duplicateRepoForDisplay = duplicateRepo ?? apiDuplicateRepo;
+  const duplicateRepoName = duplicateRepoForDisplay?.name ?? name.trim();
+  const duplicateRepoUrl = duplicateRepoForDisplay?.htmlUrl
+    ?? submissionError?.existingRepoUrl
+    ?? (duplicateRepoName.length > 0 ? buildGitHubRepoUrl(owner.login, duplicateRepoName) : undefined);
+  const dialogError = validationError ?? (submissionError?.errorCode === 'duplicate' ? null : submissionError?.errorMessage ?? null);
+  const showDuplicateWarning = duplicateWarning || submissionError?.errorCode === 'duplicate';
+
+  const clearLocalDuplicateState = () => {
+    setDuplicateRepo(null);
+    setDuplicateWarning(false);
+    setPendingDuplicateSelection(null);
+  };
+
+  const focusNameInput = () => {
+    requestAnimationFrame(() => {
+      nameInputRef.current?.focus();
+      nameInputRef.current?.select();
+    });
+  };
+
+  const applyResolvedName = (patternId: SpecialRepoPatternId, resolvedName: string, nextAllowDuplicateSubmit = false) => {
+    isProgrammaticNameChangeRef.current = true;
+    setSelectedPatternId(patternId);
+    setName(resolvedName);
+    setValidationError(null);
+    setAllowDuplicateSubmit(nextAllowDuplicateSubmit);
+    clearLocalDuplicateState();
+    onDismissError();
+    focusNameInput();
+  };
+
+  const handleSpecialRepoSelect = (patternId: SpecialRepoPatternId, resolvedName: string) => {
+    const existingRepo = findDuplicateRepo(repos, owner.login, resolvedName);
+
+    if (existingRepo) {
+      setDuplicateRepo(existingRepo);
+      setDuplicateWarning(true);
+      setAllowDuplicateSubmit(false);
+      setPendingDuplicateSelection({ patternId, resolvedName, repo: existingRepo });
+      setValidationError(null);
+      onDismissError();
+      return;
+    }
+
+    applyResolvedName(patternId, resolvedName);
+  };
+
+  const handleManualNameChange = (value: string) => {
+    setName(value);
+    setValidationError(null);
+    setAllowDuplicateSubmit(false);
+
+    if (isProgrammaticNameChangeRef.current) {
+      isProgrammaticNameChangeRef.current = false;
+      return;
+    }
+
+    if (selectedPatternId) {
+      setSelectedPatternId(null);
+    }
+  };
+
+  const dismissDuplicateWarning = () => {
+    clearLocalDuplicateState();
+    setAllowDuplicateSubmit(false);
+    onDismissError();
+  };
+
+  const handleCreateAnyway = () => {
+    const pendingSelection = pendingDuplicateSelection;
+
+    if (pendingSelection) {
+      applyResolvedName(pendingSelection.patternId, pendingSelection.resolvedName, true);
+      return;
+    }
+
+    clearLocalDuplicateState();
+    setAllowDuplicateSubmit(true);
+  };
+
+  const handleViewExistingRepository = async () => {
+    const existingRepo = duplicateRepoForDisplay;
+    const existingRepoLink = duplicateRepoUrl;
+
+    clearLocalDuplicateState();
+    onDismissError();
+    onClose();
+
+    if (existingRepo) {
+      onViewExistingRepo(existingRepo);
+      return;
+    }
+
+    if (existingRepoLink) {
+      await window.hagihub.openExternal(existingRepoLink);
+    }
+  };
 
   const submit = () => {
-    const owner = decodeOwnerValue(ownerValue) ?? { type: 'personal' as const, login: activeAccount.login };
     const trimmedName = name.trim();
 
     if (trimmedName.length === 0) {
       setValidationError(t('createDialog.errors.nameRequired'));
       return;
+    }
+
+    if (!allowDuplicateSubmit && isDuplicateRepo(repos, owner.login, trimmedName)) {
+      const existingRepo = findDuplicateRepo(repos, owner.login, trimmedName);
+
+      if (existingRepo) {
+        setDuplicateRepo(existingRepo);
+        setDuplicateWarning(true);
+        setPendingDuplicateSelection(selectedPatternId
+          ? {
+              patternId: selectedPatternId,
+              resolvedName: trimmedName,
+              repo: existingRepo,
+            }
+          : null);
+        setValidationError(null);
+        return;
+      }
     }
 
     setValidationError(null);
@@ -156,6 +321,68 @@ function CreateRepositoryDialog({
       licenseTemplate,
     });
   };
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    if (ownerKeyRef.current === null) {
+      ownerKeyRef.current = ownerKey;
+      return;
+    }
+
+    if (ownerKeyRef.current !== ownerKey) {
+      ownerKeyRef.current = ownerKey;
+      setAllowDuplicateSubmit(false);
+      setValidationError(null);
+      clearLocalDuplicateState();
+      onDismissError();
+    }
+  }, [onDismissError, open, ownerKey]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    if (previousNameRef.current === name) {
+      return;
+    }
+
+    previousNameRef.current = name;
+
+    if (isProgrammaticNameChangeRef.current) {
+      isProgrammaticNameChangeRef.current = false;
+      clearLocalDuplicateState();
+      onDismissError();
+      return;
+    }
+
+    setAllowDuplicateSubmit(false);
+    clearLocalDuplicateState();
+    onDismissError();
+  }, [name, onDismissError, open]);
+
+  useEffect(() => {
+    if (!open || !selectedPatternId) {
+      return;
+    }
+
+    const pattern = SPECIAL_REPO_PATTERNS.find((candidate) => candidate.id === selectedPatternId);
+
+    if (!pattern || !canUseSpecialRepoPattern(pattern, owner.type)) {
+      setSelectedPatternId(null);
+      return;
+    }
+
+    const resolvedName = resolveSpecialRepoName(selectedPatternId, owner.login);
+
+    if (name !== resolvedName) {
+      isProgrammaticNameChangeRef.current = true;
+      setName(resolvedName);
+    }
+  }, [name, open, owner.login, owner.type, selectedPatternId]);
 
   return createPortal(
     <div
@@ -208,16 +435,86 @@ function CreateRepositoryDialog({
                     {t('createDialog.nameLabel')}
                   </label>
                   <Input
+                    ref={nameInputRef}
                     id="create-repo-name"
                     value={name}
-                    onChange={(event) => {
-                      setName(event.target.value);
-                      setValidationError(null);
-                    }}
+                    onChange={(event) => handleManualNameChange(event.target.value)}
                     placeholder={t('createDialog.namePlaceholder')}
                     disabled={isSubmitting}
                   />
                 </div>
+              </div>
+
+              <div className="mt-5">
+                <Separator />
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{t('createDialog.specialRepos.title')}</p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">{t('createDialog.specialRepos.description')}</p>
+                  </div>
+                  {selectedPatternId ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedPatternId(null);
+                        setAllowDuplicateSubmit(false);
+                        clearLocalDuplicateState();
+                        onDismissError();
+                      }}
+                      disabled={isSubmitting}
+                    >
+                      <X /> {t('createDialog.specialRepos.clearSelection')}
+                    </Button>
+                  ) : null}
+                </div>
+
+                <div className="mt-4">
+                  <SpecialRepoChips
+                    owner={owner}
+                    selectedPatternId={selectedPatternId}
+                    disabled={isSubmitting}
+                    onSelect={handleSpecialRepoSelect}
+                  />
+                </div>
+
+                {showDuplicateWarning ? (
+                  <div className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-950 dark:text-amber-100">
+                    <div className="flex items-start gap-3">
+                      <TriangleAlert className="mt-0.5 size-5 text-amber-600 dark:text-amber-300" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold">{t('createDialog.specialRepos.errors.duplicate', { name: duplicateRepoName })}</p>
+                        <p className="mt-2 leading-6 text-amber-900/85 dark:text-amber-100/85">
+                          {submissionError?.errorCode === 'duplicate' && submissionError.errorMessage.trim().length > 0
+                            ? submissionError.errorMessage
+                            : t('createDialog.specialRepos.errors.duplicateAction')}
+                        </p>
+                        {duplicateRepoUrl ? (
+                          <button
+                            type="button"
+                            className="mt-3 font-mono text-xs text-amber-900 underline underline-offset-4 hover:text-amber-950 dark:text-amber-100 dark:hover:text-white"
+                            onClick={() => void window.hagihub.openExternal(duplicateRepoUrl)}
+                          >
+                            {duplicateRepoUrl}
+                          </button>
+                        ) : null}
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Button variant="outline" size="sm" onClick={() => void handleViewExistingRepository()}>
+                            <ArrowUpRight /> {t('createDialog.specialRepos.errors.viewExisting')}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={dismissDuplicateWarning}>
+                            {t('createDialog.specialRepos.errors.closeWarning')}
+                          </Button>
+                          {duplicateWarning ? (
+                            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleCreateAnyway}>
+                              {t('createDialog.specialRepos.errors.createAnyway')}
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               <div className="mt-5 space-y-2">
