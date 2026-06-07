@@ -374,7 +374,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
             </Button>
           </div>
         ) : (
-          <div className="grid h-full min-h-0 gap-4 overflow-hidden xl:grid-cols-[20rem,minmax(0,1fr)]">
+          <div className="grid h-full min-h-0 gap-4 overflow-hidden grid-cols-[20rem,minmax(0,1fr)] max-[760px]:grid-cols-1">
             <aside className="flex min-h-0 flex-col gap-4 overflow-hidden rounded-[1.75rem] border border-border/70 bg-background/25 p-4">
               <div className="rounded-[1.5rem] border border-border/70 bg-background/35 p-4">
                 <div className="flex items-center gap-3">
