@@ -200,7 +200,7 @@ describe('createGitHubRepo', () => {
     assert.equal(result.success, true);
   });
 
-  it('maps validation failures into a stable renderer payload', async () => {
+  it('maps duplicate repository failures into a stable renderer payload', async () => {
     globalThis.fetch = async () => jsonResponse({
       message: 'Repository creation failed.',
       errors: [{ message: 'name already exists on this account' }],
@@ -215,8 +215,49 @@ describe('createGitHubRepo', () => {
 
     assert.deepEqual(result, {
       success: false,
-      errorCode: 'validation',
+      errorCode: 'duplicate',
       errorMessage: 'Repository creation failed. name already exists on this account',
+      existingRepoUrl: 'https://github.com/octocat/starter-repo',
+    });
+  });
+
+  it('preserves repository urls embedded in duplicate responses', async () => {
+    globalThis.fetch = async () => jsonResponse({
+      message: 'A repository already exists at https://github.com/octocat/starter-repo',
+    }, 422);
+
+    const result = await createGitHubRepo('token', {
+      owner: { type: 'personal', login: 'octocat' },
+      name: 'starter-repo',
+      visibility: 'public',
+      initializeWithReadme: false,
+    });
+
+    assert.deepEqual(result, {
+      success: false,
+      errorCode: 'duplicate',
+      errorMessage: 'A repository already exists at https://github.com/octocat/starter-repo',
+      existingRepoUrl: 'https://github.com/octocat/starter-repo',
+    });
+  });
+
+  it('maps non-duplicate 422 failures into validation errors', async () => {
+    globalThis.fetch = async () => jsonResponse({
+      message: 'Invalid request.',
+      errors: [{ message: 'custom properties are not supported' }],
+    }, 422);
+
+    const result = await createGitHubRepo('token', {
+      owner: { type: 'personal', login: 'octocat' },
+      name: 'starter-repo',
+      visibility: 'public',
+      initializeWithReadme: false,
+    });
+
+    assert.deepEqual(result, {
+      success: false,
+      errorCode: 'validation',
+      errorMessage: 'Invalid request. custom properties are not supported',
     });
   });
 
