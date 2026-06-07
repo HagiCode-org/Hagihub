@@ -192,6 +192,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
   const [selectedCopySource, setSelectedCopySource] = useState<string | null>(null);
+  const [showAddLanguagePicker, setShowAddLanguagePicker] = useState(false);
 
   const loadReadmeWorkspace = async () => {
     if (!accountId) {
@@ -240,10 +241,12 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
     setSaveMessage(null);
     setSelectedCopySource(null);
     setSelectedLanguage(null);
+    setShowAddLanguagePicker(false);
   };
 
   const handleAddLanguage = (locale: string | null) => {
     setSelectedLanguage(null);
+    setShowAddLanguagePicker(false);
 
     if (!locale) {
       return;
@@ -378,6 +381,20 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
                   <Button variant="outline" size="sm" onClick={cancelEditing} disabled={submitStatus === 'loading'}>
                     {t('repoCard.readme.cancel')}
                   </Button>
+                  <div className="w-full sm:w-64">
+                    <SearchableSelect
+                      options={copySourceOptions}
+                      value={selectedCopySource}
+                      onChange={(value) => {
+                        setSelectedCopySource(value);
+                        handleCopyFromVariant(value);
+                      }}
+                      placeholder={t('repoCard.readme.copyFromPlaceholder')}
+                      searchPlaceholder={t('repoCard.readme.copyFromSearchPlaceholder')}
+                      emptyMessage={t('repoCard.readme.copyFromEmpty')}
+                      disabled={!activeVariant || copySourceOptions.length === 0}
+                    />
+                  </div>
                   <Button
                     size="sm"
                     onClick={() => {
@@ -416,11 +433,41 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
             <div className="grid min-h-0 flex-1 gap-4 overflow-hidden xl:grid-cols-[18rem,minmax(0,1fr)]">
               <aside className="flex min-h-0 flex-col gap-4 overflow-hidden rounded-[1.75rem] border border-border/70 bg-background/25 p-4">
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    <Globe2 className="size-3.5" />
-                    {t('repoCard.readme.languagesTitle')}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      <Globe2 className="size-3.5" />
+                      {t('repoCard.readme.languagesTitle')}
+                    </div>
+                    {isEditing ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2.5"
+                        onClick={() => setShowAddLanguagePicker((current) => !current)}
+                        disabled={addLanguageOptions.length === 0}
+                      >
+                        <Plus className="size-3.5" />
+                        {t('repoCard.readme.addLanguageTitle')}
+                      </Button>
+                    ) : null}
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">{t('repoCard.readme.languagesDescription')}</p>
+                  {isEditing && showAddLanguagePicker ? (
+                    <div className="mt-3 rounded-[1.25rem] border border-border/70 bg-background/35 p-3">
+                      <SearchableSelect
+                        options={addLanguageOptions}
+                        value={selectedLanguage}
+                        onChange={(value) => {
+                          setSelectedLanguage(value);
+                          handleAddLanguage(value);
+                        }}
+                        placeholder={t('repoCard.readme.addLanguagePlaceholder')}
+                        searchPlaceholder={t('repoCard.readme.addLanguageSearchPlaceholder')}
+                        emptyMessage={t('repoCard.readme.addLanguageEmpty')}
+                        disabled={addLanguageOptions.length === 0}
+                      />
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
@@ -449,51 +496,6 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
                   ))}
                 </div>
 
-                {isEditing ? (
-                  <div className="space-y-3 border-t border-border/60 pt-4">
-                    <div>
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        <Plus className="size-3.5" />
-                        {t('repoCard.readme.addLanguageTitle')}
-                      </div>
-                      <div className="mt-3">
-                        <SearchableSelect
-                          options={addLanguageOptions}
-                          value={selectedLanguage}
-                          onChange={(value) => {
-                            setSelectedLanguage(value);
-                            handleAddLanguage(value);
-                          }}
-                          placeholder={t('repoCard.readme.addLanguagePlaceholder')}
-                          searchPlaceholder={t('repoCard.readme.addLanguageSearchPlaceholder')}
-                          emptyMessage={t('repoCard.readme.addLanguageEmpty')}
-                          disabled={addLanguageOptions.length === 0}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        <Copy className="size-3.5" />
-                        {t('repoCard.readme.copyFromTitle')}
-                      </div>
-                      <div className="mt-3">
-                        <SearchableSelect
-                          options={copySourceOptions}
-                          value={selectedCopySource}
-                          onChange={(value) => {
-                            setSelectedCopySource(value);
-                            handleCopyFromVariant(value);
-                          }}
-                          placeholder={t('repoCard.readme.copyFromPlaceholder')}
-                          searchPlaceholder={t('repoCard.readme.copyFromSearchPlaceholder')}
-                          emptyMessage={t('repoCard.readme.copyFromEmpty')}
-                          disabled={!activeVariant || copySourceOptions.length === 0}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
               </aside>
 
               {activeVariant ? (
