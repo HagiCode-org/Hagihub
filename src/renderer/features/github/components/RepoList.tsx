@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useAppDispatch, useAppSelector } from '@/store';
+import type { GitHubRepo } from '../../../../shared/api';
 import {
   createRepo,
   dismissCreateFeedback,
@@ -17,6 +18,7 @@ import {
 import CreateRepositoryDialog from './CreateRepositoryDialog';
 import OrgFilterBar from './OrgFilterBar';
 import RepoGroup from './RepoGroup';
+import RepoInfoSheet from './RepoInfoSheet';
 
 interface RepoListProps {
   activeAccountId: string;
@@ -28,6 +30,7 @@ function RepoList({ activeAccountId }: RepoListProps) {
   const { t } = useTranslation('github');
   const dispatch = useAppDispatch();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [repoInfoTarget, setRepoInfoTarget] = useState<GitHubRepo | null>(null);
   const {
     orgs,
     groupedRepos,
@@ -125,6 +128,12 @@ function RepoList({ activeAccountId }: RepoListProps) {
     setIsCreateDialogOpen(false);
   };
 
+  const openRepoInfo = (repo: GitHubRepo) => {
+    dispatch(resetCreateDialogState());
+    setIsCreateDialogOpen(false);
+    setRepoInfoTarget(repo);
+  };
+
   const filteredRepoCount = filteredGroups.groups.reduce((count, group) => count + group.repos.length, 0) + filteredGroups.personal.length;
   const showFilteredEmpty = repos.length > 0 && filteredRepoCount === 0;
 
@@ -135,6 +144,31 @@ function RepoList({ activeAccountId }: RepoListProps) {
     </Button>
   );
 
+  const createDialog = (
+    <CreateRepositoryDialog
+      open={isCreateDialogOpen}
+      activeAccount={activeAccount}
+      orgs={orgs}
+      repos={repos}
+      submitStatus={createStatus}
+      submissionError={createError}
+      onClose={closeCreateDialog}
+      onDismissError={() => dispatch(resetCreateDialogState())}
+      onSubmit={(payload) => {
+        void dispatch(createRepo({ accountId: activeAccountId, payload }));
+      }}
+      onViewExistingRepo={openRepoInfo}
+    />
+  );
+
+  const repoInfoSheet = repoInfoTarget ? (
+    <RepoInfoSheet
+      owner={repoInfoTarget.owner.login}
+      repo={repoInfoTarget.name}
+      onClose={() => setRepoInfoTarget(null)}
+    />
+  ) : null;
+
   if (fetchStatus === 'loading') {
     return (
       <>
@@ -143,17 +177,8 @@ function RepoList({ activeAccountId }: RepoListProps) {
           <p className="mt-4 text-base font-medium text-foreground">{t('repoList.loading')}</p>
         </section>
 
-        <CreateRepositoryDialog
-          open={isCreateDialogOpen}
-          activeAccount={activeAccount}
-          orgs={orgs}
-          submitStatus={createStatus}
-          error={createError}
-          onClose={closeCreateDialog}
-          onSubmit={(payload) => {
-            void dispatch(createRepo({ accountId: activeAccountId, payload }));
-          }}
-        />
+        {createDialog}
+        {repoInfoSheet}
       </>
     );
   }
@@ -176,17 +201,8 @@ function RepoList({ activeAccountId }: RepoListProps) {
           </div>
         </section>
 
-        <CreateRepositoryDialog
-          open={isCreateDialogOpen}
-          activeAccount={activeAccount}
-          orgs={orgs}
-          submitStatus={createStatus}
-          error={createError}
-          onClose={closeCreateDialog}
-          onSubmit={(payload) => {
-            void dispatch(createRepo({ accountId: activeAccountId, payload }));
-          }}
-        />
+        {createDialog}
+        {repoInfoSheet}
       </>
     );
   }
@@ -202,17 +218,8 @@ function RepoList({ activeAccountId }: RepoListProps) {
           </div>
         </section>
 
-        <CreateRepositoryDialog
-          open={isCreateDialogOpen}
-          activeAccount={activeAccount}
-          orgs={orgs}
-          submitStatus={createStatus}
-          error={createError}
-          onClose={closeCreateDialog}
-          onSubmit={(payload) => {
-            void dispatch(createRepo({ accountId: activeAccountId, payload }));
-          }}
-        />
+        {createDialog}
+        {repoInfoSheet}
       </>
     );
   }
@@ -300,17 +307,8 @@ function RepoList({ activeAccountId }: RepoListProps) {
         </div>
       </div>
 
-      <CreateRepositoryDialog
-        open={isCreateDialogOpen}
-        activeAccount={activeAccount}
-        orgs={orgs}
-        submitStatus={createStatus}
-        error={createError}
-        onClose={closeCreateDialog}
-        onSubmit={(payload) => {
-          void dispatch(createRepo({ accountId: activeAccountId, payload }));
-        }}
-      />
+      {createDialog}
+      {repoInfoSheet}
     </>
   );
 }
