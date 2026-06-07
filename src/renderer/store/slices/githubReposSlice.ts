@@ -1,11 +1,13 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import i18n from '@/locales';
 import type {
+  CreateGitHubRepoFailure,
   CreateGitHubRepoPayload,
   CreateGitHubRepoResult,
   GitHubOrg,
   GitHubRepo,
 } from '../../../shared/api';
+import { isDuplicateRepo as checkIsDuplicateRepo } from '../../../shared/github-special-repos';
 
 type FetchStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
 
@@ -37,6 +39,8 @@ interface CreateRepoSuccessPayload {
   refreshError: string | null;
 }
 
+type CreateRepoFailure = Extract<CreateGitHubRepoResult, { success: false }>;
+
 export type OrgFilterValue = 'all' | 'personal' | string;
 export type VisibilityFilter = 'all' | 'public' | 'private';
 
@@ -52,7 +56,7 @@ export interface GitHubReposState {
   fetchStatus: FetchStatus;
   error: string | null;
   createStatus: FetchStatus;
-  createError: string | null;
+  createError: CreateRepoFailure | null;
   lastCreatedRepoFullName: string | null;
   lastCreateRefreshError: string | null;
 }
@@ -148,33 +152,59 @@ async function loadReposPayload(accountId: string, forceRefresh = false): Promis
 }
 
 function localizeCreateRepoFailure(
-  result: Extract<CreateGitHubRepoResult, { success: false }>,
-): string {
+  result: CreateRepoFailure,
+): CreateRepoFailure {
+  if (result.errorCode === 'duplicate') {
+    return result;
+  }
+
   if (result.errorCode === 'validation') {
-    return result.errorMessage.trim().length > 0
-      ? result.errorMessage
-      : i18n.t('createDialog.errors.validation', { ns: 'github' });
+    return {
+      ...result,
+      errorMessage: result.errorMessage.trim().length > 0
+        ? result.errorMessage
+        : i18n.t('createDialog.errors.validation', { ns: 'github' }),
+    };
   }
 
   if (result.errorCode === 'permission_denied') {
-    return i18n.t('createDialog.errors.permissionDenied', { ns: 'github' });
+    return {
+      ...result,
+      errorMessage: i18n.t('createDialog.errors.permissionDenied', { ns: 'github' }),
+    };
   }
 
   if (result.errorCode === 'rate_limited') {
-    return i18n.t('createDialog.errors.rateLimited', { ns: 'github' });
+    return {
+      ...result,
+      errorMessage: i18n.t('createDialog.errors.rateLimited', { ns: 'github' }),
+    };
   }
 
   if (result.errorCode === 'network') {
-    return i18n.t('createDialog.errors.network', { ns: 'github' });
+    return {
+      ...result,
+      errorMessage: i18n.t('createDialog.errors.network', { ns: 'github' }),
+    };
   }
 
   if (result.errorCode === 'unauthorized') {
-    return i18n.t('createDialog.errors.unauthorized', { ns: 'github' });
+    return {
+      ...result,
+      errorMessage: i18n.t('createDialog.errors.unauthorized', { ns: 'github' }),
+    };
   }
 
-  return result.errorMessage.trim().length > 0
-    ? result.errorMessage
-    : i18n.t('createDialog.errors.unknown', { ns: 'github' });
+  return {
+    ...result,
+    errorMessage: result.errorMessage.trim().length > 0
+      ? result.errorMessage
+      : i18n.t('createDialog.errors.unknown', { ns: 'github' }),
+  };
+}
+
+export function isDuplicateRepo(repos: GitHubRepo[], ownerLogin: string, repoName: string): boolean {
+  return checkIsDuplicateRepo(repos, ownerLogin, repoName);
 }
 
 function repoMatchesSearch(repo: GitHubRepo, searchQuery: string): boolean {
@@ -245,7 +275,7 @@ export const fetchRepos = createAsyncThunk<FetchReposPayload, FetchReposArgs, { 
   },
 );
 
-export const createRepo = createAsyncThunk<CreateRepoSuccessPayload, CreateRepoArgs, { rejectValue: string }>(
+export const createRepo = createAsyncThunk<CreateRepoSuccessPayload, CreateRepoArgs, { rejectValue: CreateRepoFailure }>(
   'githubRepos/createRepo',
   async ({ accountId, payload }, { rejectWithValue }) => {
     const result = await window.hagihub.createGitHubRepo(accountId, payload);
@@ -351,7 +381,11 @@ const githubReposSlice = createSlice({
       })
       .addCase(createRepo.rejected, (state, action) => {
         state.createStatus = 'failed';
-        state.createError = action.payload ?? i18n.t('createDialog.errors.unknown', { ns: 'github' });
+        state.createError = action.payload ?? {
+          success: false,
+          errorCode: 'unknown',
+          errorMessage: i18n.t('createDialog.errors.unknown', { ns: 'github' }),
+        } satisfies CreateGitHubRepoFailure;
       });
   },
 });
