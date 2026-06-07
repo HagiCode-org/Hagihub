@@ -187,6 +187,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
   const [activePath, setActivePath] = useState(PRIMARY_README_PATH);
   const [isEditing, setIsEditing] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [browserOpenError, setBrowserOpenError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading'>('idle');
   const [dialogError, setDialogError] = useState<string | null>(null);
@@ -201,6 +202,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
 
     setLoadState('loading');
     setError(null);
+    setBrowserOpenError(null);
 
     try {
       const result = await window.hagihub.fetchReadmeWorkspace(accountId, owner, repo);
@@ -232,6 +234,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
   const startEditing = () => {
     setIsEditing(true);
     setSaveMessage(null);
+    setBrowserOpenError(null);
   };
 
   const cancelEditing = () => {
@@ -239,6 +242,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
     setIsEditing(false);
     setDialogError(null);
     setSaveMessage(null);
+    setBrowserOpenError(null);
     setSelectedCopySource(null);
     setSelectedLanguage(null);
     setShowAddLanguagePicker(false);
@@ -274,6 +278,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
     setActivePath(path);
     setIsEditing(true);
     setSaveMessage(null);
+    setBrowserOpenError(null);
   };
 
   const handleCopyFromVariant = (sourcePath: string | null) => {
@@ -291,6 +296,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
     setWorkspace((current) => updateVariantDraft(current, activeVariant.path, sourceVariant.draft, sourceVariant.path));
     setIsEditing(true);
     setSaveMessage(null);
+    setBrowserOpenError(null);
   };
 
   const confirmSave = async (decision: CommitStrategyDecision) => {
@@ -300,6 +306,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
 
     setSubmitStatus('loading');
     setDialogError(null);
+    setBrowserOpenError(null);
     try {
 
       const result = await window.hagihub.submitReadmeWorkspace(accountId, owner, repo, {
@@ -344,6 +351,12 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
           number: result.pullRequest.number,
           count: writtenCount,
         }));
+
+        const openResult = await window.hagihub.openExternal(result.pullRequest.htmlUrl);
+        if (!openResult.success) {
+          setBrowserOpenError(openResult.error ?? t('errors.openPullRequestFailed'));
+        }
+
         return;
       }
 
@@ -389,6 +402,11 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
                   </div>
                   {saveMessage ? (
                     <p className="mt-3 text-sm text-emerald-300">{saveMessage}</p>
+                  ) : null}
+                  {browserOpenError ? (
+                    <p className="mt-3 rounded-xl border border-destructive/30 bg-destructive/8 px-3 py-2 text-sm text-destructive">
+                      {browserOpenError}
+                    </p>
                   ) : null}
                 </div>
 
