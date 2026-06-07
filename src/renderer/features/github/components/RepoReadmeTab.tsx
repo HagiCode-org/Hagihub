@@ -374,143 +374,144 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
             </Button>
           </div>
         ) : (
-          <div className="grid h-full min-h-0 gap-4 overflow-hidden grid-cols-[20rem,minmax(0,1fr)] max-[760px]:grid-cols-1">
-            <aside className="flex min-h-0 flex-col gap-4 overflow-hidden rounded-[1.75rem] border border-border/70 bg-background/25 p-4">
-              <div className="rounded-[1.5rem] border border-border/70 bg-background/35 p-4">
-                <div className="flex items-center gap-3">
-                  <span className="rounded-xl bg-primary/12 p-2 text-primary">
-                    <Languages className="size-4" />
-                  </span>
-                  <div>
-                    <h3 className="text-base font-semibold text-foreground">{t('repoCard.readme.workspaceLabel')}</h3>
-                    <p className="text-sm text-muted-foreground">{t('repoCard.readme.workspaceDescription')}</p>
-                  </div>
-                </div>
-                {saveMessage ? (
-                  <p className="mt-3 text-sm text-emerald-300">{saveMessage}</p>
-                ) : null}
-              </div>
-
-              <div className="rounded-[1.5rem] border border-border/70 bg-background/35 p-4">
-                <div className="flex flex-wrap gap-2">
-                  {isEditing ? (
-                    <>
-                      <Button variant="outline" size="sm" onClick={cancelEditing} disabled={submitStatus === 'loading'}>
-                        {t('repoCard.readme.cancel')}
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setDialogError(null);
-                          setDialogOpen(true);
-                        }}
-                        disabled={submitStatus === 'loading' || !accountId || modifiedCount === 0}
-                      >
-                        {t('repoCard.readme.saveAll')}
-                      </Button>
-                    </>
-                  ) : (
-                    <Button variant="outline" size="sm" onClick={startEditing} disabled={loadState !== 'loaded' || !accountId}>
-                      <PencilLine className="size-3.5" />
-                      {t('repoCard.readme.editWorkspace')}
-                    </Button>
-                  )}
-                </div>
-
-                {isEditing ? (
-                  <div className="mt-4 space-y-4">
+          <div className="readme-workspace-frame">
+            <div className="readme-workspace">
+              <aside className="readme-workspace__sidebar flex min-h-0 flex-col gap-4 overflow-hidden rounded-[1.75rem] border border-border/70 bg-background/25 p-4">
+                <div className="rounded-[1.5rem] border border-border/70 bg-background/35 p-4">
+                  <div className="flex items-center gap-3">
+                    <span className="rounded-xl bg-primary/12 p-2 text-primary">
+                      <Languages className="size-4" />
+                    </span>
                     <div>
-                      <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        <Copy className="size-3.5" />
-                        {t('repoCard.readme.copyFromTitle')}
-                      </div>
-                      <SearchableSelect
-                        options={copySourceOptions}
-                        value={selectedCopySource}
-                        onChange={(value) => {
-                          setSelectedCopySource(value);
-                          handleCopyFromVariant(value);
-                        }}
-                        placeholder={t('repoCard.readme.copyFromPlaceholder')}
-                        searchPlaceholder={t('repoCard.readme.copyFromSearchPlaceholder')}
-                        emptyMessage={t('repoCard.readme.copyFromEmpty')}
-                        disabled={!activeVariant || copySourceOptions.length === 0}
-                      />
+                      <h3 className="text-base font-semibold text-foreground">{t('repoCard.readme.workspaceLabel')}</h3>
+                      <p className="text-sm text-muted-foreground">{t('repoCard.readme.workspaceDescription')}</p>
                     </div>
+                  </div>
+                  {saveMessage ? (
+                    <p className="mt-3 text-sm text-emerald-300">{saveMessage}</p>
+                  ) : null}
+                </div>
 
-                    <div>
-                      <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        <span className="flex items-center gap-2">
-                          <Plus className="size-3.5" />
-                          {t('repoCard.readme.addLanguageTitle')}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 px-2.5"
-                          onClick={() => setShowAddLanguagePicker((current) => !current)}
-                          disabled={addLanguageOptions.length === 0}
-                        >
-                          <Plus className="size-3.5" />
-                          {t('repoCard.readme.addLanguageTitle')}
+                <div className="rounded-[1.5rem] border border-border/70 bg-background/35 p-4">
+                  <div className="flex flex-wrap gap-2">
+                    {isEditing ? (
+                      <>
+                        <Button variant="outline" size="sm" onClick={cancelEditing} disabled={submitStatus === 'loading'}>
+                          {t('repoCard.readme.cancel')}
                         </Button>
-                      </div>
-                      {showAddLanguagePicker ? (
-                        <SearchableSelect
-                          options={addLanguageOptions}
-                          value={selectedLanguage}
-                          onChange={(value) => {
-                            setSelectedLanguage(value);
-                            handleAddLanguage(value);
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setDialogError(null);
+                            setDialogOpen(true);
                           }}
-                          placeholder={t('repoCard.readme.addLanguagePlaceholder')}
-                          searchPlaceholder={t('repoCard.readme.addLanguageSearchPlaceholder')}
-                          emptyMessage={t('repoCard.readme.addLanguageEmpty')}
-                          disabled={addLanguageOptions.length === 0}
-                        />
-                      ) : null}
-                    </div>
+                          disabled={submitStatus === 'loading' || !accountId || modifiedCount === 0}
+                        >
+                          {t('repoCard.readme.saveAll')}
+                        </Button>
+                      </>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={startEditing} disabled={loadState !== 'loaded' || !accountId}>
+                        <PencilLine className="size-3.5" />
+                        {t('repoCard.readme.editWorkspace')}
+                      </Button>
+                    )}
                   </div>
-                ) : null}
-              </div>
 
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.5rem] border border-border/70 bg-background/35 p-4">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                  <Globe2 className="size-3.5" />
-                  {t('repoCard.readme.languagesTitle')}
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">{t('repoCard.readme.languagesDescription')}</p>
-
-                <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-                  {workspace.map((variant) => (
-                    <button
-                      key={variant.path}
-                      type="button"
-                      onClick={() => setActivePath(variant.path)}
-                      className={cn(
-                        'w-full rounded-[1.25rem] border px-3 py-3 text-left transition-colors',
-                        activeVariant?.path === variant.path
-                          ? 'border-primary/40 bg-primary/10'
-                          : 'border-border/70 bg-background/35 hover:bg-accent/30',
-                      )}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="truncate text-sm font-semibold text-foreground">{variant.path}</span>
-                        {variant.dirty ? <span className="status-chip">{t('repoCard.readme.unsaved')}</span> : null}
+                  {isEditing ? (
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                          <Copy className="size-3.5" />
+                          {t('repoCard.readme.copyFromTitle')}
+                        </div>
+                        <SearchableSelect
+                          options={copySourceOptions}
+                          value={selectedCopySource}
+                          onChange={(value) => {
+                            setSelectedCopySource(value);
+                            handleCopyFromVariant(value);
+                          }}
+                          placeholder={t('repoCard.readme.copyFromPlaceholder')}
+                          searchPlaceholder={t('repoCard.readme.copyFromSearchPlaceholder')}
+                          emptyMessage={t('repoCard.readme.copyFromEmpty')}
+                          disabled={!activeVariant || copySourceOptions.length === 0}
+                        />
                       </div>
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                        <span className="rounded-full border border-border/70 px-2 py-0.5">{variant.locale.toUpperCase()}</span>
-                        <span className="rounded-full border border-border/70 px-2 py-0.5">{t(`repoCard.readme.roles.${variant.role}`)}</span>
-                        {!variant.exists ? <span className="rounded-full border border-border/70 px-2 py-0.5">{t('repoCard.readme.draftOnly')}</span> : null}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </aside>
 
-            {activeVariant ? (
-              <div className="flex min-h-0 flex-col gap-4 overflow-hidden rounded-[1.75rem] border border-border/70 bg-background/20 p-4">
+                      <div>
+                        <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                          <span className="flex items-center gap-2">
+                            <Plus className="size-3.5" />
+                            {t('repoCard.readme.addLanguageTitle')}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 px-2.5"
+                            onClick={() => setShowAddLanguagePicker((current) => !current)}
+                            disabled={addLanguageOptions.length === 0}
+                          >
+                            <Plus className="size-3.5" />
+                            {t('repoCard.readme.addLanguageTitle')}
+                          </Button>
+                        </div>
+                        {showAddLanguagePicker ? (
+                          <SearchableSelect
+                            options={addLanguageOptions}
+                            value={selectedLanguage}
+                            onChange={(value) => {
+                              setSelectedLanguage(value);
+                              handleAddLanguage(value);
+                            }}
+                            placeholder={t('repoCard.readme.addLanguagePlaceholder')}
+                            searchPlaceholder={t('repoCard.readme.addLanguageSearchPlaceholder')}
+                            emptyMessage={t('repoCard.readme.addLanguageEmpty')}
+                            disabled={addLanguageOptions.length === 0}
+                          />
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.5rem] border border-border/70 bg-background/35 p-4">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    <Globe2 className="size-3.5" />
+                    {t('repoCard.readme.languagesTitle')}
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">{t('repoCard.readme.languagesDescription')}</p>
+
+                  <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                    {workspace.map((variant) => (
+                      <button
+                        key={variant.path}
+                        type="button"
+                        onClick={() => setActivePath(variant.path)}
+                        className={cn(
+                          'w-full rounded-[1.25rem] border px-3 py-3 text-left transition-colors',
+                          activeVariant?.path === variant.path
+                            ? 'border-primary/40 bg-primary/10'
+                            : 'border-border/70 bg-background/35 hover:bg-accent/30',
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="truncate text-sm font-semibold text-foreground">{variant.path}</span>
+                          {variant.dirty ? <span className="status-chip">{t('repoCard.readme.unsaved')}</span> : null}
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                          <span className="rounded-full border border-border/70 px-2 py-0.5">{variant.locale.toUpperCase()}</span>
+                          <span className="rounded-full border border-border/70 px-2 py-0.5">{t(`repoCard.readme.roles.${variant.role}`)}</span>
+                          {!variant.exists ? <span className="rounded-full border border-border/70 px-2 py-0.5">{t('repoCard.readme.draftOnly')}</span> : null}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </aside>
+
+              {activeVariant ? (
+                <div className="readme-workspace__detail rounded-[1.75rem] border border-border/70 bg-background/20 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-3">
@@ -538,8 +539,8 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
                   </div>
 
                   {isEditing ? (
-                    <div className="grid min-h-0 flex-1 gap-4 overflow-auto xl:grid-cols-2 xl:overflow-hidden">
-                      <section className="space-y-3 xl:flex xl:min-h-0 xl:flex-col xl:space-y-0">
+                    <div className="readme-workspace__detail-body">
+                      <section className="readme-workspace__panel">
                         <div className="flex items-center justify-between gap-3">
                           <h5 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                             {t('repoCard.readme.editorTitle')}
@@ -549,28 +550,34 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
                           </span>
                         </div>
                         <textarea
-                          className="min-h-[18rem] w-full rounded-[1.5rem] border border-border/70 bg-background/45 px-4 py-4 font-mono text-sm leading-6 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-[3px] focus:ring-primary/20 xl:min-h-0 xl:flex-1 xl:resize-none"
+                          className="min-h-[20rem] w-full flex-1 rounded-[1.5rem] border border-border/70 bg-background/45 px-4 py-4 font-mono text-sm leading-6 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-[3px] focus:ring-primary/20 lg:resize-none"
                           value={activeVariant.draft}
                           onChange={(event) => setWorkspace((current) => updateVariantDraft(current, activeVariant.path, event.target.value))}
                           placeholder={t('repoCard.readme.editorPlaceholder')}
                         />
                       </section>
 
-                      <section className="space-y-3 xl:flex xl:min-h-0 xl:flex-col xl:space-y-0">
+                      <section className="readme-workspace__panel">
                         <h5 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                           {t('repoCard.readme.previewTitle')}
                         </h5>
                         <MarkdownPreview
                           content={activeVariant.draft}
                           emptyText={t('repoCard.readme.previewEmpty')}
-                          className="xl:flex xl:h-full xl:min-h-0 xl:flex-col"
-                          bodyClassName="min-h-[18rem] xl:min-h-0 xl:flex-1 xl:max-h-none"
-                          emptyClassName="min-h-[18rem] xl:min-h-0 xl:flex-1"
+                          className="flex min-h-[20rem] flex-1 flex-col"
+                          bodyClassName="min-h-0 flex-1 max-h-none"
+                          emptyClassName="min-h-[20rem] flex-1"
                         />
                       </section>
                     </div>
                   ) : activeVariant.exists ? (
-                    <MarkdownPreview content={activeVariant.content} emptyText={t('repoCard.readme.previewEmpty')} />
+                    <MarkdownPreview
+                      content={activeVariant.content}
+                      emptyText={t('repoCard.readme.previewEmpty')}
+                      className="flex min-h-0 flex-1 flex-col"
+                      bodyClassName="min-h-0 flex-1 max-h-none"
+                      emptyClassName="min-h-[20rem] flex-1"
+                    />
                   ) : (
                     <div className="rounded-[1.75rem] border border-dashed border-border/70 bg-background/20 px-6 py-12 text-center">
                       <PencilLine className="mx-auto size-8 text-primary/80" />
@@ -578,8 +585,9 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
                       <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('repoCard.readme.emptyDescription')}</p>
                     </div>
                   )}
-              </div>
-            ) : null}
+                </div>
+              ) : null}
+            </div>
           </div>
         )}
       </div>
