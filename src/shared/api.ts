@@ -82,6 +82,66 @@ export interface FileContentResult {
   exists: boolean;
 }
 
+export type ReadmeVariantRole = 'primary' | 'canonical-en' | 'localized';
+
+export interface ReadmeVariant {
+  path: string;
+  locale: string;
+  role: ReadmeVariantRole;
+  exists: boolean;
+  content: string;
+  sha: string;
+}
+
+export interface ReadmeWorkspaceResult {
+  variants: ReadmeVariant[];
+}
+
+export interface ReadmeWorkspaceVariantDraft {
+  path: string;
+  locale: string;
+  role: ReadmeVariantRole;
+  exists: boolean;
+  sha: string;
+  content: string;
+  originalContent: string;
+}
+
+export type ReadmeBatchSubmissionStrategy = 'direct' | 'pull_request';
+
+export interface SubmitReadmeWorkspacePayload {
+  defaultBranch: string;
+  strategy: ReadmeBatchSubmissionStrategy;
+  commitMessage: string;
+  branchName?: string;
+  pullRequestTitle?: string;
+  variants: ReadmeWorkspaceVariantDraft[];
+}
+
+export type ReadmeBatchSubmissionFileStatus = 'written' | 'skipped' | 'failed';
+
+export interface ReadmeBatchSubmissionFileResult {
+  path: string;
+  locale: string;
+  role: ReadmeVariantRole;
+  attempted: boolean;
+  status: ReadmeBatchSubmissionFileStatus;
+  content: string;
+  newSha?: string;
+  error?: string;
+  conflict?: boolean;
+}
+
+export interface ReadmeBatchSubmissionResult {
+  success: boolean;
+  strategy: ReadmeBatchSubmissionStrategy;
+  branchName?: string;
+  files: ReadmeBatchSubmissionFileResult[];
+  pullRequest?: PullRequestResult;
+  failedPath?: string;
+  error?: string;
+}
+
 export interface CommitFilePayload {
   content: string;
   message: string;
@@ -122,6 +182,44 @@ export interface UpdateRepoResult {
 export interface UpdateRepoTopicsResult {
   names: string[];
 }
+
+export type GitHubRepoCreationOwnerType = 'personal' | 'organization';
+
+export interface GitHubRepoCreationOwnerTarget {
+  type: GitHubRepoCreationOwnerType;
+  login: string;
+}
+
+export type GitHubRepoCreationVisibility = 'public' | 'private';
+
+export interface CreateGitHubRepoPayload {
+  owner: GitHubRepoCreationOwnerTarget;
+  name: string;
+  description?: string;
+  visibility: GitHubRepoCreationVisibility;
+  initializeWithReadme: boolean;
+  gitignoreTemplate?: string | null;
+  licenseTemplate?: string | null;
+}
+
+export type CreateGitHubRepoErrorCode =
+  | 'validation'
+  | 'permission_denied'
+  | 'rate_limited'
+  | 'network'
+  | 'unauthorized'
+  | 'unknown';
+
+export type CreateGitHubRepoResult =
+  | {
+    success: true;
+    repo: GitHubRepo;
+  }
+  | {
+    success: false;
+    errorCode: CreateGitHubRepoErrorCode;
+    errorMessage: string;
+  };
 
 export type GitHubActionRunState = 'running' | 'failed' | 'passed' | 'empty' | 'error';
 

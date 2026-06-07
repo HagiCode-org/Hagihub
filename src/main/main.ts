@@ -3,17 +3,20 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   commitFile,
+  createGitHubRepo,
   createPullRequest,
   createRef,
   dispatchGitHubWorkflow,
   fetchActionsSummaries,
   fetchFileContent,
   fetchOrgs,
+  fetchReadmeWorkspace,
   fetchRepoDetails,
   fetchRepos,
   listGitHubRepoWorkflows,
   refreshManagedActionRuns,
   searchGitHubWorkflows,
+  submitReadmeWorkspace,
   updateRepo,
   updateRepoTopics,
 } from './github-api.js';
@@ -25,6 +28,8 @@ import type {
   AppInfo,
   CommitFilePayload,
   CommitFileResult,
+  CreateGitHubRepoPayload,
+  CreateGitHubRepoResult,
   CreatePullRequestPayload,
   CreateRefPayload,
   ExternalOpenResult,
@@ -38,12 +43,15 @@ import type {
   OrgsResult,
   PlatformId,
   PullRequestResult,
+  ReadmeBatchSubmissionResult,
   RefreshManagedActionsResult,
+  ReadmeWorkspaceResult,
   RepoDetailsResult,
   ReposResult,
   SendNotificationParams,
   SendNotificationResult,
   SearchGitHubWorkflowsResult,
+  SubmitReadmeWorkspacePayload,
   UpdateRepoPayload,
   UpdateRepoResult,
   UpdateRepoTopicsResult,
@@ -325,6 +333,13 @@ function registerIpcHandlers(): void {
       };
     });
   });
+  ipcMain.handle(
+    'hagihub:create-github-repo',
+    async (_event, accountId: string, payload: CreateGitHubRepoPayload): Promise<CreateGitHubRepoResult> => {
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
+      return await createGitHubRepo(token, payload);
+    },
+  );
   ipcMain.handle('hagihub:invalidate-github-cache', async (): Promise<void> => {
     githubCache.invalidateAll();
   });
@@ -347,6 +362,20 @@ function registerIpcHandlers(): void {
     async (_event, accountId: string, owner: string, repo: string, path: string): Promise<FileContentResult> => {
       const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
       return await fetchFileContent(token, owner, repo, path);
+    },
+  );
+  ipcMain.handle(
+    'hagihub:fetch-readme-workspace',
+    async (_event, accountId: string, owner: string, repo: string): Promise<ReadmeWorkspaceResult> => {
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
+      return await fetchReadmeWorkspace(token, owner, repo);
+    },
+  );
+  ipcMain.handle(
+    'hagihub:submit-readme-workspace',
+    async (_event, accountId: string, owner: string, repo: string, payload: SubmitReadmeWorkspacePayload): Promise<ReadmeBatchSubmissionResult> => {
+      const token = await requireGitHubAuthManager().getDecryptedToken(accountId);
+      return await submitReadmeWorkspace(token, owner, repo, payload);
     },
   );
   ipcMain.handle(

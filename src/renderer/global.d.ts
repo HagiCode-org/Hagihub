@@ -2,6 +2,8 @@ import type {
   AppInfo,
   CommitFilePayload,
   CommitFileResult,
+  CreateGitHubRepoPayload,
+  CreateGitHubRepoResult,
   CreatePullRequestPayload,
   CreateRefPayload,
   DeviceFlowPollResult,
@@ -15,14 +17,17 @@ import type {
   GitHubWorkflowDispatchRequest,
   GitHubWorkflowDispatchResponse,
   OrgsResult,
+  ReadmeBatchSubmissionResult,
   ManagedActionsResult,
   PullRequestResult,
   RefreshManagedActionsResult,
+  ReadmeWorkspaceResult,
   RepoDetailsResult,
   ReposResult,
   SendNotificationParams,
   SendNotificationResult,
   SearchGitHubWorkflowsResult,
+  SubmitReadmeWorkspacePayload,
   UpdateRepoPayload,
   UpdateRepoResult,
   UpdateRepoTopicsResult,
@@ -39,9 +44,12 @@ interface HagihubApi {
   invalidateGitHubCache: () => Promise<void>;
   fetchGitHubRepos: (accountId: string) => Promise<ReposResult>;
   fetchGitHubOrgs: (accountId: string) => Promise<OrgsResult>;
+  createGitHubRepo: (accountId: string, payload: CreateGitHubRepoPayload) => Promise<CreateGitHubRepoResult>;
   fetchGitHubActions: (accountId: string, repoFullNames: string[]) => Promise<GitHubActionsResult>;
   fetchRepoDetails: (accountId: string, owner: string, repo: string) => Promise<RepoDetailsResult>;
   fetchFileContent: (accountId: string, owner: string, repo: string, path: string) => Promise<FileContentResult>;
+  fetchReadmeWorkspace: (accountId: string, owner: string, repo: string) => Promise<ReadmeWorkspaceResult>;
+  submitReadmeWorkspace: (accountId: string, owner: string, repo: string, payload: SubmitReadmeWorkspacePayload) => Promise<ReadmeBatchSubmissionResult>;
   commitFile: (accountId: string, owner: string, repo: string, path: string, payload: CommitFilePayload) => Promise<CommitFileResult>;
   createRef: (accountId: string, owner: string, repo: string, payload: CreateRefPayload) => Promise<void>;
   createPullRequest: (accountId: string, owner: string, repo: string, payload: CreatePullRequestPayload) => Promise<PullRequestResult>;
