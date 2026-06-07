@@ -3,6 +3,7 @@ import type {
   CommitFilePayload,
   CommitFileResult,
   CreateGitHubRepoErrorCode,
+  CreateGitHubRepoFailure,
   CreateGitHubRepoPayload,
   CreateGitHubRepoResult,
   FileContentResult,
@@ -33,6 +34,7 @@ import type {
   UpdateRepoPayload,
   UpdateRepoTopicsResult,
 } from '../shared/api.js';
+import { buildGitHubRepoUrl } from '../shared/github-special-repos.js';
 
 const GITHUB_API_ROOT = 'https://api.github.com';
 const GITHUB_API_VERSION = '2022-11-28';
@@ -277,12 +279,32 @@ function normalizeOptionalString(value: string | null | undefined): string | und
 function buildCreateGitHubRepoFailure(
   errorCode: CreateGitHubRepoErrorCode,
   errorMessage: string,
-): Extract<CreateGitHubRepoResult, { success: false }> {
+  options?: {
+    existingRepoUrl?: string;
+  },
+): CreateGitHubRepoFailure {
   return {
     success: false,
     errorCode,
     errorMessage,
+    ...(options?.existingRepoUrl ? { existingRepoUrl: options.existingRepoUrl } : {}),
   };
+}
+
+function isDuplicateCreateRepoDetail(detail: string | null): boolean {
+  const normalizedDetail = detail?.toLowerCase();
+
+  if (!normalizedDetail) {
+    return false;
+  }
+
+  return normalizedDetail.includes('name already exists')
+    || normalizedDetail.includes('already exists');
+}
+
+function extractGitHubRepoUrl(detail: string | null): string | undefined {
+  const match = detail?.match(/https:\/\/github\.com\/[^\s"')>]+/iu);
+  return match?.[0];
 }
 
 function isRateLimitResponse(response: Response, detail: string | null): boolean {
@@ -293,7 +315,11 @@ function isRateLimitResponse(response: Response, detail: string | null): boolean
     || response.status === 429;
 }
 
-function mapCreateGitHubRepoFailure(response: Response, detail: string | null): Extract<CreateGitHubRepoResult, { success: false }> {
+function mapCreateGitHubRepoFailure(
+  response: Response,
+  detail: string | null,
+  payload: CreateGitHubRepoPayload,
+): CreateGitHubRepoFailure {
   if (response.status === 401) {
     return buildCreateGitHubRepoFailure(
       'unauthorized',
@@ -312,6 +338,16 @@ function mapCreateGitHubRepoFailure(response: Response, detail: string | null): 
     return buildCreateGitHubRepoFailure(
       'permission_denied',
       detail ?? 'GitHub denied permission to create a repository for the selected owner.',
+    );
+  }
+
+  if (response.status === 422 && isDuplicateCreateRepoDetail(detail)) {
+    return buildCreateGitHubRepoFailure(
+      'duplicate',
+      detail ?? 'A repository with this name already exists for the selected owner.',
+      {
+        existingRepoUrl: extractGitHubRepoUrl(detail) ?? buildGitHubRepoUrl(payload.owner.login, payload.name),
+      },
     );
   }
 
@@ -1505,7 +1541,7 @@ export async function createGitHubRepo(token: string, payload: CreateGitHubRepoP
 
   if (!response.ok) {
     const detail = await readErrorMessage(response);
-    return mapCreateGitHubRepoFailure(response, detail);
+    return mapCreateGitHubRepoFailure(response, detail, payload);
   }
 
   const data = await response.json() as RawGitHubRepo;

@@ -203,6 +203,7 @@ export interface CreateGitHubRepoPayload {
 }
 
 export type CreateGitHubRepoErrorCode =
+  | 'duplicate'
   | 'validation'
   | 'permission_denied'
   | 'rate_limited'
@@ -210,16 +211,19 @@ export type CreateGitHubRepoErrorCode =
   | 'unauthorized'
   | 'unknown';
 
+export interface CreateGitHubRepoFailure {
+  success: false;
+  errorCode: CreateGitHubRepoErrorCode;
+  errorMessage: string;
+  existingRepoUrl?: string;
+}
+
 export type CreateGitHubRepoResult =
   | {
     success: true;
     repo: GitHubRepo;
   }
-  | {
-    success: false;
-    errorCode: CreateGitHubRepoErrorCode;
-    errorMessage: string;
-  };
+  | CreateGitHubRepoFailure;
 
 export type GitHubActionRunState = 'running' | 'failed' | 'passed' | 'empty' | 'error';
 
