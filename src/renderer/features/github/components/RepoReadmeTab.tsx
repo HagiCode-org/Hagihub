@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { FileText, LoaderCircle, PencilLine } from 'lucide-react';
+import { Copy, FileText, Globe2, Languages, LoaderCircle, PencilLine, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { ReadmeBatchSubmissionResult, ReadmeVariant } from '../../../../shared/api';
 import { Button } from '@/components/ui/button';
 import { MarkdownPreview } from '@/components/ui/markdown-preview';
+import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import { cn } from '@/lib/utils';
 import CommitStrategyDialog, { type CommitStrategyDecision } from './CommitStrategyDialog';
 
@@ -13,45 +15,185 @@ interface RepoReadmeTabProps {
   defaultBranch: string;
 }
 
+interface ReadmeWorkspaceVariantState extends ReadmeVariant {
+  originalContent: string;
+  draft: string;
+  dirty: boolean;
+  sourceVariantPath?: string;
+}
+
 type LoadState = 'idle' | 'loading' | 'loaded' | 'error';
 
-function buildCommitMessage(action: 'create' | 'update', filename: string): string {
-  const verb = action === 'create' ? 'Create' : 'Update';
-  return `${verb} ${filename} via Hagihub`;
-}
+const PRIMARY_README_PATH = 'README.md';
+const CANONICAL_ENGLISH_README_PATH = 'README_en-us.md';
 
-function buildPullRequestTitle(action: 'create' | 'update', filename: string): string {
-  const verb = action === 'create' ? 'Create' : 'Update';
-  return `${verb} ${filename} via Hagihub`;
-}
+const LANGUAGE_OPTIONS: SearchableSelectOption[] = [
+  { value: 'zh-cn', label: 'zh-CN', description: 'Chinese (Simplified)' },
+  { value: 'ja-jp', label: 'ja-JP', description: 'Japanese' },
+  { value: 'ko-kr', label: 'ko-KR', description: 'Korean' },
+  { value: 'fr-fr', label: 'fr-FR', description: 'French' },
+  { value: 'de-de', label: 'de-DE', description: 'German' },
+  { value: 'es-es', label: 'es-ES', description: 'Spanish' },
+  { value: 'pt-br', label: 'pt-BR', description: 'Portuguese (Brazil)' },
+];
 
-function resolveSaveError(error: unknown, fallback: string, conflict: string): string {
-  if (error instanceof Error) {
-    if (error.message.includes('409')) {
-      return conflict;
+function compareReadmeVariantOrder(left: ReadmeVariant, right: ReadmeVariant): number {
+  const rank = (path: string, role: ReadmeVariant['role']): number => {
+    if (path === PRIMARY_README_PATH || role === 'primary') {
+      return 0;
     }
 
-    return error.message;
+    if (path === CANONICAL_ENGLISH_README_PATH || role === 'canonical-en') {
+      return 1;
+    }
+
+    return 2;
+  };
+
+  const roleComparison = rank(left.path, left.role) - rank(right.path, right.role);
+  if (roleComparison !== 0) {
+    return roleComparison;
   }
 
-  return fallback;
+  const localeComparison = left.locale.localeCompare(right.locale);
+  return localeComparison !== 0 ? localeComparison : left.path.localeCompare(right.path);
+}
+
+function sortReadmeVariants<T extends ReadmeVariant>(variants: T[]): T[] {
+  return [...variants].sort(compareReadmeVariantOrder);
+}
+
+function createWorkspaceVariants(variants: ReadmeVariant[]): ReadmeWorkspaceVariantState[] {
+  return sortReadmeVariants(variants).map((variant) => ({
+    ...variant,
+    originalContent: variant.content,
+    draft: variant.content,
+    dirty: false,
+  }));
+}
+
+function isEnglishVariant(path: string): boolean {
+  return path === PRIMARY_README_PATH || path === CANONICAL_ENGLISH_README_PATH;
+}
+
+function updateVariantDraft(
+  variants: ReadmeWorkspaceVariantState[],
+  path: string,
+  draft: string,
+  sourceVariantPath?: string,
+): ReadmeWorkspaceVariantState[] {
+  return variants.map((variant) => {
+    if (isEnglishVariant(path) && isEnglishVariant(variant.path)) {
+      return {
+        ...variant,
+        draft,
+        dirty: draft !== variant.originalContent,
+        sourceVariantPath,
+      };
+    }
+
+    if (variant.path !== path) {
+      return variant;
+    }
+
+    return {
+      ...variant,
+      draft,
+      dirty: draft !== variant.originalContent,
+      sourceVariantPath,
+    };
+  });
+}
+
+function resetWorkspaceDrafts(variants: ReadmeWorkspaceVariantState[]): ReadmeWorkspaceVariantState[] {
+  return variants.map((variant) => ({
+    ...variant,
+    draft: variant.originalContent,
+    dirty: false,
+    sourceVariantPath: undefined,
+  }));
+}
+
+function applyReadmeSubmissionResult(
+  variants: ReadmeWorkspaceVariantState[],
+  result: ReadmeBatchSubmissionResult,
+): ReadmeWorkspaceVariantState[] {
+  const writtenByPath = new Map(result.files.filter((file) => file.status === 'written').map((file) => [file.path, file]));
+
+  return variants.map((variant) => {
+    const written = writtenByPath.get(variant.path);
+    if (!written) {
+      return variant;
+    }
+
+    return {
+      ...variant,
+      exists: true,
+      sha: written.newSha ?? variant.sha,
+      content: written.content,
+      originalContent: written.content,
+      draft: written.content,
+      dirty: false,
+      sourceVariantPath: undefined,
+    };
+  });
+}
+
+function createLocalizedReadmePath(locale: string): string {
+  return `README_${locale}.md`;
+}
+
+function buildReadmeCommitMessage(variants: ReadmeWorkspaceVariantState[]): string {
+  return variants.some((variant) => variant.exists)
+    ? 'Update README variants via Hagihub'
+    : 'Create README variants via Hagihub';
+}
+
+function buildReadmePullRequestTitle(variants: ReadmeWorkspaceVariantState[]): string {
+  return buildReadmeCommitMessage(variants);
+}
+
+function resolveSaveError(
+  result: ReadmeBatchSubmissionResult,
+  fallback: string,
+  fileConflictMessage: (filename: string) => string,
+  fileFailureMessage: (filename: string, error: string) => string,
+  partialSaveHint: (count: number) => string,
+): string {
+  const failedFile = result.failedPath ? result.files.find((file) => file.path === result.failedPath) : undefined;
+
+  let message = fallback;
+  if (failedFile?.conflict) {
+    message = fileConflictMessage(failedFile.path);
+  } else if (failedFile) {
+    message = fileFailureMessage(failedFile.path, failedFile.error ?? result.error ?? fallback);
+  } else if (result.error) {
+    message = result.error;
+  }
+
+  const writtenCount = result.files.filter((file) => file.status === 'written').length;
+  if (result.strategy === 'direct' && writtenCount > 0) {
+    return `${message} ${partialSaveHint(writtenCount)}`;
+  }
+
+  return message;
 }
 
 function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabProps) {
   const { t } = useTranslation('github');
   const [loadState, setLoadState] = useState<LoadState>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [content, setContent] = useState('');
-  const [draft, setDraft] = useState('');
-  const [sha, setSha] = useState('');
-  const [exists, setExists] = useState(false);
+  const [workspace, setWorkspace] = useState<ReadmeWorkspaceVariantState[]>([]);
+  const [activePath, setActivePath] = useState(PRIMARY_README_PATH);
   const [isEditing, setIsEditing] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading'>('idle');
   const [dialogError, setDialogError] = useState<string | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+  const [selectedCopySource, setSelectedCopySource] = useState<string | null>(null);
 
-  const loadReadme = async () => {
+  const loadReadmeWorkspace = async () => {
     if (!accountId) {
       return;
     }
@@ -60,11 +202,10 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
     setError(null);
 
     try {
-      const result = await window.hagihub.fetchFileContent(accountId, owner, repo, 'README.md');
-      setContent(result.content);
-      setDraft(result.content);
-      setSha(result.sha);
-      setExists(result.exists);
+      const result = await window.hagihub.fetchReadmeWorkspace(accountId, owner, repo);
+      const nextWorkspace = createWorkspaceVariants(result.variants);
+      setWorkspace(nextWorkspace);
+      setActivePath((current) => nextWorkspace.some((variant) => variant.path === current) ? current : PRIMARY_README_PATH);
       setLoadState('loaded');
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : t('repoCard.readme.loadFailed'));
@@ -73,78 +214,142 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
   };
 
   useEffect(() => {
-    void loadReadme();
+    void loadReadmeWorkspace();
   }, [accountId, owner, repo]);
 
+  const activeVariant = workspace.find((variant) => variant.path === activePath) ?? workspace[0] ?? null;
+  const modifiedCount = workspace.filter((variant) => variant.dirty).length;
+  const addLanguageOptions = LANGUAGE_OPTIONS.filter((option) => !workspace.some((variant) => variant.locale === option.value));
+  const copySourceOptions = workspace
+    .filter((variant) => variant.path !== activePath)
+    .map((variant) => ({
+      value: variant.path,
+      label: variant.path,
+      description: variant.locale.toUpperCase(),
+    }));
+
   const startEditing = () => {
-    setDraft(content);
     setIsEditing(true);
     setSaveMessage(null);
   };
 
   const cancelEditing = () => {
-    setDraft(content);
+    setWorkspace((current) => resetWorkspaceDrafts(current));
     setIsEditing(false);
     setDialogError(null);
+    setSaveMessage(null);
+    setSelectedCopySource(null);
+    setSelectedLanguage(null);
+  };
+
+  const handleAddLanguage = (locale: string | null) => {
+    setSelectedLanguage(null);
+
+    if (!locale) {
+      return;
+    }
+
+    const path = createLocalizedReadmePath(locale);
+    if (workspace.some((variant) => variant.path === path)) {
+      setActivePath(path);
+      return;
+    }
+
+    const nextVariant: ReadmeWorkspaceVariantState = {
+      path,
+      locale,
+      role: 'localized',
+      exists: false,
+      content: '',
+      originalContent: '',
+      draft: '',
+      sha: '',
+      dirty: true,
+    };
+
+    setWorkspace((current) => sortReadmeVariants([...current, nextVariant]));
+    setActivePath(path);
+    setIsEditing(true);
+    setSaveMessage(null);
+  };
+
+  const handleCopyFromVariant = (sourcePath: string | null) => {
+    setSelectedCopySource(null);
+
+    if (!sourcePath || !activeVariant) {
+      return;
+    }
+
+    const sourceVariant = workspace.find((variant) => variant.path === sourcePath);
+    if (!sourceVariant) {
+      return;
+    }
+
+    setWorkspace((current) => updateVariantDraft(current, activeVariant.path, sourceVariant.draft, sourceVariant.path));
+    setIsEditing(true);
     setSaveMessage(null);
   };
 
   const confirmSave = async (decision: CommitStrategyDecision) => {
-    if (!accountId) {
+    if (!accountId || modifiedCount === 0) {
       return;
     }
 
     setSubmitStatus('loading');
     setDialogError(null);
-
-    const action = exists ? 'update' : 'create';
-
     try {
-      if (decision.strategy === 'pull_request') {
-        const branchName = decision.branchName?.trim() ?? '';
 
-        await window.hagihub.createRef(accountId, owner, repo, {
-          ref: branchName,
-          sha: defaultBranch,
-        });
+      const result = await window.hagihub.submitReadmeWorkspace(accountId, owner, repo, {
+        defaultBranch,
+        strategy: decision.strategy,
+        branchName: decision.branchName?.trim(),
+        commitMessage: buildReadmeCommitMessage(workspace),
+        pullRequestTitle: buildReadmePullRequestTitle(workspace),
+        variants: workspace.map((variant) => ({
+          path: variant.path,
+          locale: variant.locale,
+          role: variant.role,
+          exists: variant.exists,
+          sha: variant.sha,
+          content: variant.draft,
+          originalContent: variant.originalContent,
+        })),
+      });
 
-        const commitResult = await window.hagihub.commitFile(accountId, owner, repo, 'README.md', {
-          content: draft,
-          message: buildCommitMessage(action, 'README.md'),
-          branch: branchName,
-          sha,
-        });
+      const writtenCount = result.files.filter((file) => file.status === 'written').length;
 
-        const pullRequest = await window.hagihub.createPullRequest(accountId, owner, repo, {
-          title: buildPullRequestTitle(action, 'README.md'),
-          head: branchName,
-          base: defaultBranch,
-        });
+      if (!result.success) {
+        if (result.strategy === 'direct' && writtenCount > 0) {
+          setWorkspace((current) => applyReadmeSubmissionResult(current, result));
+        }
 
-        setContent(draft);
-        setSha(commitResult.newSha);
-        setExists(true);
-        setIsEditing(false);
-        setDialogOpen(false);
-        setSaveMessage(t('repoCard.readme.prSuccess', { number: pullRequest.number }));
-      } else {
-        const commitResult = await window.hagihub.commitFile(accountId, owner, repo, 'README.md', {
-          content: draft,
-          message: buildCommitMessage(action, 'README.md'),
-          branch: defaultBranch,
-          sha,
-        });
-
-        setContent(draft);
-        setSha(commitResult.newSha);
-        setExists(true);
-        setIsEditing(false);
-        setDialogOpen(false);
-        setSaveMessage(t('repoCard.readme.saveSuccess'));
+        setDialogError(resolveSaveError(
+          result,
+          t('repoCard.readme.saveFailed'),
+          (filename) => t('repoCard.readme.conflictFile', { filename }),
+          (filename, reason) => t('repoCard.readme.saveFailedFile', { filename, error: reason }),
+          (count) => t('repoCard.readme.partialSaveHint', { count }),
+        ));
+        return;
       }
+
+      if (result.strategy === 'pull_request' && result.pullRequest) {
+        await loadReadmeWorkspace();
+        setIsEditing(false);
+        setDialogOpen(false);
+        setSaveMessage(t('repoCard.readme.prSuccessSummary', {
+          number: result.pullRequest.number,
+          count: writtenCount,
+        }));
+        return;
+      }
+
+      setWorkspace((current) => applyReadmeSubmissionResult(current, result));
+      setIsEditing(false);
+      setDialogOpen(false);
+      setSaveMessage(t('repoCard.readme.saveSuccessSummary', { count: writtenCount }));
     } catch (saveError) {
-      setDialogError(resolveSaveError(saveError, t('repoCard.readme.saveFailed'), t('repoCard.readme.conflict')));
-      return;
+      setDialogError(saveError instanceof Error ? saveError.message : t('repoCard.readme.saveFailed'));
     } finally {
       setSubmitStatus('idle');
     }
@@ -161,7 +366,7 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
         ) : loadState === 'error' ? (
           <div className="rounded-[1.5rem] border border-destructive/30 bg-destructive/8 px-5 py-5">
             <p className="text-sm text-destructive">{error}</p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => void loadReadme()}>
+            <Button variant="outline" size="sm" className="mt-4" onClick={() => void loadReadmeWorkspace()}>
               {t('repoList.retry')}
             </Button>
           </div>
@@ -179,86 +384,199 @@ function RepoReadmeTab({ accountId, owner, repo, defaultBranch }: RepoReadmeTabP
                       setDialogError(null);
                       setDialogOpen(true);
                     }}
-                    disabled={submitStatus === 'loading' || !accountId}
+                    disabled={submitStatus === 'loading' || !accountId || modifiedCount === 0}
                   >
-                    {t('repoCard.readme.save')}
+                    {t('repoCard.readme.saveAll')}
                   </Button>
                 </>
               ) : (
                 <Button variant="outline" size="sm" onClick={startEditing} disabled={loadState !== 'loaded' || !accountId}>
                   <PencilLine className="size-3.5" />
-                  {exists ? t('repoCard.readme.edit') : t('repoCard.readme.create')}
+                  {t('repoCard.readme.editWorkspace')}
                 </Button>
               )}
             </div>
 
             <div className="flex items-center gap-3">
               <span className="rounded-xl bg-primary/12 p-2 text-primary">
-                <FileText className="size-4" />
+                <Languages className="size-4" />
               </span>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">README.md</h3>
-                <p className="text-sm text-muted-foreground">{t('repoCard.readme.description')}</p>
+                <h3 className="text-lg font-semibold text-foreground">{t('repoCard.readme.workspaceLabel')}</h3>
+                <p className="text-sm text-muted-foreground">{t('repoCard.readme.workspaceDescription')}</p>
               </div>
             </div>
 
             {saveMessage ? (
-              <p className={cn('text-sm', saveMessage === t('repoCard.readme.saveSuccess') || saveMessage.includes('#') ? 'text-emerald-300' : 'text-destructive')}>
+              <p className="text-sm text-emerald-300">
                 {saveMessage}
               </p>
             ) : null}
 
-            {isEditing ? (
-              <div className="grid gap-4 overflow-auto xl:min-h-0 xl:flex-1 xl:grid-cols-2 xl:overflow-hidden">
-                <section className="space-y-3 xl:flex xl:min-h-0 xl:flex-col xl:gap-3 xl:space-y-0">
-                  <div className="flex items-center justify-between gap-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      {t('repoCard.readme.editorTitle')}
-                    </h4>
-                    <span className="font-mono text-[11px] text-muted-foreground">
-                      {t('repoCard.readme.editorStats', { count: draft.length })}
-                    </span>
+            <div className="grid min-h-0 flex-1 gap-4 overflow-hidden xl:grid-cols-[18rem,minmax(0,1fr)]">
+              <aside className="flex min-h-0 flex-col gap-4 overflow-hidden rounded-[1.75rem] border border-border/70 bg-background/25 p-4">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    <Globe2 className="size-3.5" />
+                    {t('repoCard.readme.languagesTitle')}
                   </div>
-                  <textarea
-                    className="min-h-[18rem] w-full rounded-[1.5rem] border border-border/70 bg-background/45 px-4 py-4 font-mono text-sm leading-6 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-[3px] focus:ring-primary/20 xl:min-h-0 xl:flex-1 xl:resize-none"
-                    value={draft}
-                    onChange={(event) => setDraft(event.target.value)}
-                    placeholder={t('repoCard.readme.editorPlaceholder')}
-                  />
-                </section>
+                  <p className="mt-2 text-sm text-muted-foreground">{t('repoCard.readme.languagesDescription')}</p>
+                </div>
 
-                <section className="space-y-3 xl:flex xl:min-h-0 xl:flex-col xl:gap-3 xl:space-y-0">
-                  <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    {t('repoCard.readme.previewTitle')}
-                  </h4>
-                  <MarkdownPreview
-                    content={draft}
-                    emptyText={t('repoCard.readme.previewEmpty')}
-                    className="xl:flex xl:h-full xl:min-h-0 xl:flex-col"
-                    bodyClassName="min-h-[18rem] xl:min-h-0 xl:flex-1 xl:max-h-none"
-                    emptyClassName="min-h-[18rem] xl:min-h-0 xl:flex-1"
-                  />
-                </section>
-              </div>
-            ) : exists ? (
-              <MarkdownPreview
-                content={content}
-                emptyText={t('repoCard.readme.previewEmpty')}
-              />
-            ) : (
-              <div className="rounded-[1.75rem] border border-dashed border-border/70 bg-background/20 px-6 py-12 text-center">
-                <PencilLine className="mx-auto size-8 text-primary/80" />
-                <h4 className="mt-4 text-lg font-semibold text-foreground">{t('repoCard.readme.emptyTitle')}</h4>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('repoCard.readme.emptyDescription')}</p>
-              </div>
-            )}
+                <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                  {workspace.map((variant) => (
+                    <button
+                      key={variant.path}
+                      type="button"
+                      onClick={() => setActivePath(variant.path)}
+                      className={cn(
+                        'w-full rounded-[1.25rem] border px-3 py-3 text-left transition-colors',
+                        activeVariant?.path === variant.path
+                          ? 'border-primary/40 bg-primary/10'
+                          : 'border-border/70 bg-background/35 hover:bg-accent/30',
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="truncate text-sm font-semibold text-foreground">{variant.path}</span>
+                        {variant.dirty ? <span className="status-chip">{t('repoCard.readme.unsaved')}</span> : null}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                        <span className="rounded-full border border-border/70 px-2 py-0.5">{variant.locale.toUpperCase()}</span>
+                        <span className="rounded-full border border-border/70 px-2 py-0.5">{t(`repoCard.readme.roles.${variant.role}`)}</span>
+                        {!variant.exists ? <span className="rounded-full border border-border/70 px-2 py-0.5">{t('repoCard.readme.draftOnly')}</span> : null}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {isEditing ? (
+                  <div className="space-y-3 border-t border-border/60 pt-4">
+                    <div>
+                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        <Plus className="size-3.5" />
+                        {t('repoCard.readme.addLanguageTitle')}
+                      </div>
+                      <div className="mt-3">
+                        <SearchableSelect
+                          options={addLanguageOptions}
+                          value={selectedLanguage}
+                          onChange={(value) => {
+                            setSelectedLanguage(value);
+                            handleAddLanguage(value);
+                          }}
+                          placeholder={t('repoCard.readme.addLanguagePlaceholder')}
+                          searchPlaceholder={t('repoCard.readme.addLanguageSearchPlaceholder')}
+                          emptyMessage={t('repoCard.readme.addLanguageEmpty')}
+                          disabled={addLanguageOptions.length === 0}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        <Copy className="size-3.5" />
+                        {t('repoCard.readme.copyFromTitle')}
+                      </div>
+                      <div className="mt-3">
+                        <SearchableSelect
+                          options={copySourceOptions}
+                          value={selectedCopySource}
+                          onChange={(value) => {
+                            setSelectedCopySource(value);
+                            handleCopyFromVariant(value);
+                          }}
+                          placeholder={t('repoCard.readme.copyFromPlaceholder')}
+                          searchPlaceholder={t('repoCard.readme.copyFromSearchPlaceholder')}
+                          emptyMessage={t('repoCard.readme.copyFromEmpty')}
+                          disabled={!activeVariant || copySourceOptions.length === 0}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </aside>
+
+              {activeVariant ? (
+                <div className="flex min-h-0 flex-col gap-4 overflow-hidden rounded-[1.75rem] border border-border/70 bg-background/20 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <span className="rounded-xl bg-primary/12 p-2 text-primary">
+                          <FileText className="size-4" />
+                        </span>
+                        <div>
+                          <h4 className="text-lg font-semibold text-foreground">{activeVariant.path}</h4>
+                          <p className="text-sm text-muted-foreground">{t('repoCard.readme.variantDescription', { locale: activeVariant.locale.toUpperCase() })}</p>
+                        </div>
+                      </div>
+                      {activeVariant.sourceVariantPath ? (
+                        <p className="mt-3 text-sm text-muted-foreground">
+                          {t('repoCard.readme.copiedFrom', { filename: activeVariant.sourceVariantPath })}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      <span className="rounded-full border border-border/70 px-2 py-1">{t(`repoCard.readme.roles.${activeVariant.role}`)}</span>
+                      <span className="rounded-full border border-border/70 px-2 py-1">{activeVariant.locale.toUpperCase()}</span>
+                      <span className="rounded-full border border-border/70 px-2 py-1">
+                        {activeVariant.exists ? t('repoCard.readme.saved') : t('repoCard.readme.draftOnly')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {isEditing ? (
+                    <div className="grid min-h-0 flex-1 gap-4 overflow-auto xl:grid-cols-2 xl:overflow-hidden">
+                      <section className="space-y-3 xl:flex xl:min-h-0 xl:flex-col xl:space-y-0">
+                        <div className="flex items-center justify-between gap-3">
+                          <h5 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            {t('repoCard.readme.editorTitle')}
+                          </h5>
+                          <span className="font-mono text-[11px] text-muted-foreground">
+                            {t('repoCard.readme.editorStats', { count: activeVariant.draft.length })}
+                          </span>
+                        </div>
+                        <textarea
+                          className="min-h-[18rem] w-full rounded-[1.5rem] border border-border/70 bg-background/45 px-4 py-4 font-mono text-sm leading-6 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-[3px] focus:ring-primary/20 xl:min-h-0 xl:flex-1 xl:resize-none"
+                          value={activeVariant.draft}
+                          onChange={(event) => setWorkspace((current) => updateVariantDraft(current, activeVariant.path, event.target.value))}
+                          placeholder={t('repoCard.readme.editorPlaceholder')}
+                        />
+                      </section>
+
+                      <section className="space-y-3 xl:flex xl:min-h-0 xl:flex-col xl:space-y-0">
+                        <h5 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                          {t('repoCard.readme.previewTitle')}
+                        </h5>
+                        <MarkdownPreview
+                          content={activeVariant.draft}
+                          emptyText={t('repoCard.readme.previewEmpty')}
+                          className="xl:flex xl:h-full xl:min-h-0 xl:flex-col"
+                          bodyClassName="min-h-[18rem] xl:min-h-0 xl:flex-1 xl:max-h-none"
+                          emptyClassName="min-h-[18rem] xl:min-h-0 xl:flex-1"
+                        />
+                      </section>
+                    </div>
+                  ) : activeVariant.exists ? (
+                    <MarkdownPreview content={activeVariant.content} emptyText={t('repoCard.readme.previewEmpty')} />
+                  ) : (
+                    <div className="rounded-[1.75rem] border border-dashed border-border/70 bg-background/20 px-6 py-12 text-center">
+                      <PencilLine className="mx-auto size-8 text-primary/80" />
+                      <h5 className="mt-4 text-lg font-semibold text-foreground">{t('repoCard.readme.emptyTitle')}</h5>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('repoCard.readme.emptyDescription')}</p>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
           </div>
         )}
       </div>
 
       <CommitStrategyDialog
         open={dialogOpen}
-        filename="README.md"
+        filename={t('repoCard.readme.workspaceLabel')}
+        branchSeed="readme-set"
+        scopeNote={t('repoCard.readme.batchScope', { count: modifiedCount })}
         defaultBranch={defaultBranch}
         submitStatus={submitStatus}
         error={dialogError}

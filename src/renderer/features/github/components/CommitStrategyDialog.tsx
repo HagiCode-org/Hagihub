@@ -15,6 +15,8 @@ export interface CommitStrategyDecision {
 interface CommitStrategyDialogProps {
   open: boolean;
   filename: string;
+  branchSeed?: string;
+  scopeNote?: string;
   defaultBranch: string;
   submitStatus: 'idle' | 'loading';
   error: string | null;
@@ -44,6 +46,8 @@ export function createSuggestedBranchName(filename: string, now = new Date()): s
 function CommitStrategyDialog({
   open,
   filename,
+  branchSeed,
+  scopeNote,
   defaultBranch,
   submitStatus,
   error,
@@ -52,7 +56,8 @@ function CommitStrategyDialog({
 }: CommitStrategyDialogProps) {
   const { t } = useTranslation('github');
   const [strategy, setStrategy] = useState<CommitStrategy>('direct');
-  const [branchName, setBranchName] = useState(() => createSuggestedBranchName(filename));
+  const branchTarget = branchSeed ?? filename;
+  const [branchName, setBranchName] = useState(() => createSuggestedBranchName(branchTarget));
 
   useEffect(() => {
     if (!open) {
@@ -60,8 +65,8 @@ function CommitStrategyDialog({
     }
 
     setStrategy('direct');
-    setBranchName(createSuggestedBranchName(filename));
-  }, [filename, open]);
+    setBranchName(createSuggestedBranchName(branchTarget));
+  }, [branchTarget, open]);
 
   useEffect(() => {
     if (!open) {
@@ -104,6 +109,7 @@ function CommitStrategyDialog({
           <div>
             <h2 className="text-2xl font-semibold text-foreground">{t('repoCard.commitDialog.title', { filename })}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{t('repoCard.commitDialog.description')}</p>
+            {scopeNote ? <p className="mt-2 text-sm text-muted-foreground">{scopeNote}</p> : null}
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} disabled={isSubmitting} aria-label={t('repoCard.commitDialog.close')}>
             <X />
