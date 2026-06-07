@@ -152,6 +152,27 @@ createDialog:
   successTitle: Repository created
   successMessage: '{{repo}} is now available in the repository list.'
   refreshFailed: The repository was created, but Hagihub could not refresh the list automatically. Use Refresh repositories to load it again.
+  specialRepos:
+    title: Special repository types
+    description: Pick a common GitHub special repository pattern to fill the name automatically. Owner-aware patterns update when the selected owner changes.
+    clearSelection: Clear selection
+    github:
+      label: .github
+      description: GitHub configuration repository for issue templates, workflows, and community guidance.
+    githubPages:
+      label: .github.io
+      description: GitHub Pages site repository for the selected owner.
+      tooltip: This pattern resolves to {{owner}}.github.io for the current owner.
+    username:
+      label: '{{owner}}'
+      description: Personal profile repository with the same name as your GitHub username.
+      tooltip: Available only when the selected owner is a personal account.
+    errors:
+      duplicate: The repository '{{name}}' already exists for this owner.
+      duplicateAction: Review the existing repository, choose a different name, or continue anyway if you still want GitHub to make the final decision.
+      viewExisting: View existing repository
+      closeWarning: Close
+      createAnyway: Create anyway
   ownerTypes:
     personal: Personal account
     organization: Organization
@@ -322,6 +343,7 @@ errors:
   deviceFlowFailed: GitHub authorization failed.
   storageReset: Saved GitHub account data was reset because the local storage file was corrupted.
   openBrowserFailed: Hagihub could not open the GitHub authorization page.
+  openPullRequestFailed: Hagihub could not open the pull request in your browser.
   orgsPartialFailed: Organizations could not be loaded. Personal repositories are still available.
   fetchActionsFailed: Failed to load GitHub Actions workflow data.
   loadManagedActionsFailed: Failed to restore managed workflows.

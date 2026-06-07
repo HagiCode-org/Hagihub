@@ -152,6 +152,27 @@ createDialog:
   successTitle: 仓库已创建
   successMessage: '{{repo}} 已出现在仓库列表中。'
   refreshFailed: 仓库已经创建成功，但 Hagihub 暂时无法自动刷新列表。请使用“刷新仓库”重新加载。
+  specialRepos:
+    title: 特殊仓库类型
+    description: 选择常见的 GitHub 特殊仓库模式后，名称会自动填写；依赖归属方的模式会在归属变化时自动更新。
+    clearSelection: 清除选择
+    github:
+      label: .github
+      description: 用于 Issue 模板、工作流和社区规范的 GitHub 配置仓库。
+    githubPages:
+      label: .github.io
+      description: 当前归属方的 GitHub Pages 站点仓库。
+      tooltip: 这个模式会按当前归属方解析为 {{owner}}.github.io。
+    username:
+      label: '{{owner}}'
+      description: 与你的 GitHub 用户名同名的个人资料仓库。
+      tooltip: 仅在当前归属方是个人账号时可用。
+    errors:
+      duplicate: 当前归属方下已经存在名为“{{name}}”的仓库。
+      duplicateAction: 你可以查看现有仓库、修改名称，或继续提交并让 GitHub 最终裁决。
+      viewExisting: 查看现有仓库
+      closeWarning: 关闭
+      createAnyway: 仍然创建
   ownerTypes:
     personal: 个人账号
     organization: 组织
@@ -322,6 +343,7 @@ errors:
   deviceFlowFailed: GitHub 授权失败。
   storageReset: 本地 GitHub 账号存储文件已损坏，应用已自动重置并备份原文件。
   openBrowserFailed: Hagihub 无法打开 GitHub 授权页面。
+  openPullRequestFailed: Hagihub 无法在浏览器中打开对应的拉取请求。
   orgsPartialFailed: 组织列表加载失败，但个人仓库仍然可用。
   fetchActionsFailed: 加载 GitHub Actions 工作流数据失败。
   loadManagedActionsFailed: 恢复已托管工作流失败。
