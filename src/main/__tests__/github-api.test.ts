@@ -5,6 +5,7 @@ import {
   createGitHubRepo,
   extractWorkflowDispatchMetadata,
   fetchFileContent,
+  parseActionRecommendations,
   fetchReadmeWorkspace,
   normalizeReadmeVariantContent,
   resolveManagedWorkflowState,
@@ -88,6 +89,43 @@ on:
 
     assert.equal(metadata.supportsDispatch, false);
     assert.deepEqual(metadata.inputs, []);
+  });
+});
+
+describe('parseActionRecommendations', () => {
+  it('parses valid recommendation entries and skips invalid ones', () => {
+    const result = parseActionRecommendations(`
+action_recommendations:
+  - id: build
+    watch: true
+    reason: Core build process
+  - id: deploy
+    include: true
+    watch: false
+  - id: ''
+    include: true
+  - id: invalid-flags
+    watch: yes
+`);
+
+    assert.deepEqual(result, [
+      {
+        id: 'build',
+        watch: true,
+        reason: 'Core build process',
+      },
+      {
+        id: 'deploy',
+        watch: false,
+        include: true,
+      },
+    ]);
+  });
+
+  it('returns an empty array for invalid yaml or unexpected root shape', () => {
+    assert.deepEqual(parseActionRecommendations('action_recommendations: ['), []);
+    assert.deepEqual(parseActionRecommendations('[]'), []);
+    assert.deepEqual(parseActionRecommendations('action_recommendations: {}'), []);
   });
 });
 

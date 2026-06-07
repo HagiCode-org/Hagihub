@@ -1,5 +1,6 @@
 import { load as loadYaml } from 'js-yaml';
 import type {
+  ActionRecommendationEntry,
   CommitFilePayload,
   CommitFileResult,
   CreateGitHubRepoErrorCode,
@@ -276,6 +277,10 @@ function normalizeOptionalString(value: string | null | undefined): string | und
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function buildCreateGitHubRepoFailure(
   errorCode: CreateGitHubRepoErrorCode,
   errorMessage: string,
@@ -540,6 +545,79 @@ export function extractWorkflowDispatchMetadata(content: string): WorkflowDispat
     supportsDispatch: true,
     inputs: normalizeDispatchInputs(record.inputs),
   };
+}
+
+export function parseActionRecommendations(content: string): ActionRecommendationEntry[] {
+  let parsed: unknown;
+
+  try {
+    parsed = loadYaml(content);
+  } catch (error) {
+    console.warn('[github-api] Failed to parse action recommendation settings.', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return [];
+  }
+
+  if (!isRecord(parsed)) {
+    console.warn('[github-api] Invalid action recommendation settings root. Expected an object.');
+    return [];
+  }
+
+  const rawRecommendations = parsed.action_recommendations;
+  if (rawRecommendations === undefined) {
+    console.warn('[github-api] Missing action_recommendations in action recommendation settings.');
+    return [];
+  }
+
+  if (!Array.isArray(rawRecommendations)) {
+    console.warn('[github-api] Invalid action_recommendations in action recommendation settings. Expected an array.');
+    return [];
+  }
+
+  const recommendations: ActionRecommendationEntry[] = [];
+
+  for (const entry of rawRecommendations) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+
+    const id = normalizeOptionalString(typeof entry.id === 'string' ? entry.id : undefined);
+    if (!id) {
+      continue;
+    }
+
+    if (entry.watch !== undefined && typeof entry.watch !== 'boolean') {
+      continue;
+    }
+
+    if (entry.include !== undefined && typeof entry.include !== 'boolean') {
+      continue;
+    }
+
+    if (entry.reason !== undefined && typeof entry.reason !== 'string') {
+      continue;
+    }
+
+    const recommendation: ActionRecommendationEntry = { id };
+
+    if (typeof entry.watch === 'boolean') {
+      recommendation.watch = entry.watch;
+    }
+
+    if (typeof entry.include === 'boolean') {
+      recommendation.include = entry.include;
+    }
+
+    const reason = normalizeOptionalString(typeof entry.reason === 'string' ? entry.reason : undefined);
+    if (reason) {
+      recommendation.reason = reason;
+    }
+
+    recommendations.push(recommendation);
+  }
+
+  return recommendations;
 }
 
 export function resolveManagedWorkflowState(run: GitHubWorkflowRun | null): GitHubManagedWorkflowState {

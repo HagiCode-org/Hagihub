@@ -82,6 +82,18 @@ export interface FileContentResult {
   exists: boolean;
 }
 
+export interface ActionRecommendationEntry {
+  id: string;
+  watch?: boolean;
+  include?: boolean;
+  reason?: string;
+}
+
+export interface FetchActionRecommendationsResult {
+  repoFullName: string;
+  recommendations: ActionRecommendationEntry[];
+}
+
 export type ReadmeVariantRole = 'primary' | 'canonical-en' | 'localized';
 
 export interface ReadmeVariant {
