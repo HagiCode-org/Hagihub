@@ -88,6 +88,10 @@ repoList:
   retry: Retry loading
   emptyTitle: No repositories found
   emptyDescription: GitHub returned an empty repository list. Check whether the authorized account has the required repo scope.
+  createAction: Create repository
+  dismissFeedback: Dismiss feedback
+  filteredEmptyTitle: No repositories match the current filters
+  filteredEmptyDescription: Adjust the owner, visibility, or search filters to show repositories again.
   repoCountLabel: '{{count}} repositories'
   personalRepos: Personal repositories
   personalDescription: Repositories owned directly by the active account or not matched to a loaded organization.
@@ -113,6 +117,52 @@ repoList:
     private: Private
     updated: Updated 7d
     updatedCount: '{{count}} repos updated in 7d'
+createDialog:
+  title: Create repository
+  description: Create a personal or organization-owned repository without leaving Hagihub.
+  close: Close dialog
+  selected: Selected
+  ownerLabel: Owner
+  ownerPlaceholder: Select an owner
+  ownerSearchPlaceholder: Search owners...
+  ownerEmpty: No owners available
+  nameLabel: Repository name
+  namePlaceholder: Enter a repository name
+  descriptionLabel: Description
+  descriptionPlaceholder: Optional repository description
+  visibilityLabel: Visibility
+  visibilityPublic: Public
+  visibilityPublicHint: Anyone can see this repository and clone it.
+  visibilityPrivate: Private
+  visibilityPrivateHint: Only approved collaborators can see this repository.
+  initializationTitle: Initialization options
+  initializationDescription: Choose whether GitHub should create the first commit for this repository.
+  initializeWithReadme: Add a README
+  gitignoreLabel: .gitignore template
+  gitignorePlaceholder: Choose a template
+  gitignoreSearchPlaceholder: Search templates...
+  gitignoreEmpty: No templates found
+  licenseLabel: License
+  licensePlaceholder: Choose a license
+  licenseSearchPlaceholder: Search licenses...
+  licenseEmpty: No licenses found
+  cancel: Cancel
+  create: Create repository
+  creating: Creating
+  successTitle: Repository created
+  successMessage: '{{repo}} is now available in the repository list.'
+  refreshFailed: The repository was created, but Hagihub could not refresh the list automatically. Use Refresh repositories to load it again.
+  ownerTypes:
+    personal: Personal account
+    organization: Organization
+  errors:
+    nameRequired: Repository name is required.
+    validation: GitHub rejected the repository settings. Review the name and initialization options, then try again.
+    permissionDenied: GitHub denied permission to create a repository for the selected owner.
+    rateLimited: GitHub rate limits prevented repository creation. Wait a moment and try again.
+    network: Hagihub could not reach GitHub. Check the network connection and try again.
+    unauthorized: GitHub authentication expired. Reconnect this account and try again.
+    unknown: GitHub could not create the repository. Try again in a moment.
 repoCard:
   private: Private
   public: Public
@@ -171,13 +221,13 @@ repoCard:
     license: LICENSE
   commitDialog:
     title: Save {{filename}}
-    description: Choose whether Hagihub should write directly to the default branch or open a pull request.
+    description: Choose whether Hagihub should write the selected changes directly to the default branch or open a pull request.
     close: Close
     selected: Selected
     directTitle: Commit to {{branch}}
-    directDescription: Write the file directly to the repository default branch immediately.
+    directDescription: Write the selected changes directly to the repository default branch immediately.
     prTitle: Create Pull Request
-    prDescription: Create a new branch from {{branch}}, commit the file there, then open a pull request.
+    prDescription: Create a new branch from {{branch}}, commit the selected changes there, then open a pull request.
     branchLabel: Pull request branch name
     branchPlaceholder: Enter a branch name
     branchHint: Hagihub suggests a branch name automatically, but you can edit it before the branch is created.
@@ -186,24 +236,53 @@ repoCard:
     confirmDirect: Commit to branch
     confirmPr: Create pull request
   readme:
-    description: View or edit the repository README.md file as plain text.
-    loading: Loading README.md
-    loadFailed: Failed to load README.md.
+    description: Manage the repository README set as a multilingual workspace.
+    workspaceLabel: README Workspace
+    workspaceDescription: Edit, copy, and submit the managed README language set from one place.
+    loading: Loading README workspace
+    loadFailed: Failed to load the README workspace.
+    languagesTitle: Languages
+    languagesDescription: Switch between managed README variants and keep their language links synchronized.
+    variantDescription: Managed README variant for {{locale}}.
     editorTitle: Editor
     editorStats: '{{count}} chars'
-    editorPlaceholder: Start writing the repository README here.
+    editorPlaceholder: Start writing the selected README variant here.
     previewTitle: Preview
     previewEmpty: Markdown preview will appear here as you write.
-    emptyTitle: No README.md yet
-    emptyDescription: Start with an empty README or choose the create action to draft one inside Hagihub.
+    emptyTitle: No content in this README variant yet
+    emptyDescription: Start from a blank draft or copy from another managed README variant.
     edit: Edit README
     create: Create README
+    editWorkspace: Edit README workspace
     save: Save README
+    saveAll: Save all README changes
     cancel: Cancel
     saveSuccess: README.md saved.
     saveFailed: Failed to save README.md.
     prSuccess: Pull request #{{number}} created for README.md.
     conflict: README.md was modified elsewhere. Refresh and try again.
+    saveSuccessSummary: Saved {{count}} README variants.
+    prSuccessSummary: Pull request #{{number}} created for {{count}} README variants.
+    conflictFile: '{{filename}} was modified elsewhere. Refresh and try again.'
+    saveFailedFile: 'Failed to save {{filename}}: {{error}}'
+    partialSaveHint: '{{count}} README variants were already written before the workflow stopped.'
+    batchScope: '{{count}} modified README variants will be submitted together.'
+    addLanguageTitle: Add language
+    addLanguagePlaceholder: Choose a language variant
+    addLanguageSearchPlaceholder: Search language variants...
+    addLanguageEmpty: No additional language variants are available.
+    copyFromTitle: Copy from variant
+    copyFromPlaceholder: Select a source README
+    copyFromSearchPlaceholder: Search README variants...
+    copyFromEmpty: No other README variants are available to copy from.
+    copiedFrom: Copied from {{filename}}.
+    saved: Saved in repository
+    draftOnly: Draft only
+    unsaved: Unsaved
+    roles:
+      primary: Primary README
+      canonical-en: Canonical English
+      localized: Localized variant
   license:
     description: View, draft, or replace the repository LICENSE file.
     loading: Loading LICENSE

@@ -88,6 +88,10 @@ repoList:
   retry: 重新加载
   emptyTitle: 暂无仓库
   emptyDescription: GitHub 返回了空仓库列表，请确认当前授权账号具备 `repo` 权限范围。
+  createAction: 创建仓库
+  dismissFeedback: 关闭提示
+  filteredEmptyTitle: 当前筛选条件下没有匹配的仓库
+  filteredEmptyDescription: 调整归属、可见性或搜索条件后，再查看仓库列表。
   repoCountLabel: '{{count}} 个仓库'
   personalRepos: 个人仓库
   personalDescription: 当前活跃账号直接拥有，或未匹配到已加载组织的仓库。
@@ -113,6 +117,52 @@ repoList:
     private: 私有
     updated: 7 天内更新
     updatedCount: '{{count}} 个仓库在 7 天内更新'
+createDialog:
+  title: 创建仓库
+  description: 无需离开 Hagihub，即可创建个人仓库或组织仓库。
+  close: 关闭对话框
+  selected: 已选择
+  ownerLabel: 归属
+  ownerPlaceholder: 选择归属方
+  ownerSearchPlaceholder: 搜索归属方...
+  ownerEmpty: 暂无可用归属方
+  nameLabel: 仓库名称
+  namePlaceholder: 输入仓库名称
+  descriptionLabel: 描述
+  descriptionPlaceholder: 可选的仓库描述
+  visibilityLabel: 可见性
+  visibilityPublic: 公开
+  visibilityPublicHint: 任何人都可以查看并克隆这个仓库。
+  visibilityPrivate: 私有
+  visibilityPrivateHint: 只有获准的协作者可以查看这个仓库。
+  initializationTitle: 初始化选项
+  initializationDescription: 选择是否由 GitHub 为这个仓库创建第一次提交。
+  initializeWithReadme: 添加 README
+  gitignoreLabel: .gitignore 模板
+  gitignorePlaceholder: 选择一个模板
+  gitignoreSearchPlaceholder: 搜索模板...
+  gitignoreEmpty: 没有匹配的模板
+  licenseLabel: 许可证
+  licensePlaceholder: 选择一个许可证
+  licenseSearchPlaceholder: 搜索许可证...
+  licenseEmpty: 没有匹配的许可证
+  cancel: 取消
+  create: 创建仓库
+  creating: 创建中
+  successTitle: 仓库已创建
+  successMessage: '{{repo}} 已出现在仓库列表中。'
+  refreshFailed: 仓库已经创建成功，但 Hagihub 暂时无法自动刷新列表。请使用“刷新仓库”重新加载。
+  ownerTypes:
+    personal: 个人账号
+    organization: 组织
+  errors:
+    nameRequired: 仓库名称不能为空。
+    validation: GitHub 拒绝了当前仓库设置，请检查名称和初始化选项后重试。
+    permissionDenied: GitHub 拒绝了为当前归属方创建仓库的权限请求。
+    rateLimited: GitHub 触发了速率限制，请稍后再试。
+    network: Hagihub 当前无法连接到 GitHub，请检查网络后重试。
+    unauthorized: GitHub 授权已经失效，请重新连接当前账号后再试。
+    unknown: GitHub 暂时无法创建这个仓库，请稍后重试。
 repoCard:
   private: 私有
   public: 公开
@@ -171,13 +221,13 @@ repoCard:
     license: LICENSE
   commitDialog:
     title: 保存 {{filename}}
-    description: 选择直接写入默认分支，或先创建分支并发起拉取请求。
+    description: 选择直接把这次改动写入默认分支，或先创建分支并发起拉取请求。
     close: 关闭
     selected: 已选择
     directTitle: 直接提交到 {{branch}}
-    directDescription: 立即将文件写入仓库默认分支。
+    directDescription: 立即将这次选中的改动写入仓库默认分支。
     prTitle: 创建拉取请求
-    prDescription: 从 {{branch}} 创建新分支，在新分支上提交文件，然后自动发起拉取请求。
+    prDescription: 从 {{branch}} 创建新分支，在新分支上提交这次改动，然后自动发起拉取请求。
     branchLabel: 拉取请求分支名
     branchPlaceholder: 输入分支名
     branchHint: Hagihub 会先生成一个建议分支名，你也可以在创建前自行修改。
@@ -186,24 +236,53 @@ repoCard:
     confirmDirect: 提交到分支
     confirmPr: 创建拉取请求
   readme:
-    description: 以纯文本方式查看或编辑仓库的 README.md 文件。
-    loading: 正在加载 README.md
-    loadFailed: 加载 README.md 失败。
+    description: 以多语言工作区的方式管理仓库 README 集合。
+    workspaceLabel: README 工作区
+    workspaceDescription: 在一个界面里编辑、复制并提交受管的 README 语言版本。
+    loading: 正在加载 README 工作区
+    loadFailed: 加载 README 工作区失败。
+    languagesTitle: 语言版本
+    languagesDescription: 在受管的 README 版本之间切换，并保持语言导航链接同步。
+    variantDescription: '{{locale}} 对应的 README 语言版本。'
     editorTitle: 编辑区
     editorStats: '{{count}} 个字符'
-    editorPlaceholder: 在这里编写仓库 README 内容。
+    editorPlaceholder: 在这里编写当前 README 版本的内容。
     previewTitle: 预览区
     previewEmpty: 这里会随着编辑实时显示 Markdown 预览。
-    emptyTitle: 还没有 README.md
-    emptyDescription: 可以直接从空白内容开始，也可以点击创建来起草 README。
+    emptyTitle: 这个 README 版本还没有内容
+    emptyDescription: 可以从空白草稿开始，也可以先从其他 README 版本复制内容。
     edit: 编辑 README
     create: 创建 README
+    editWorkspace: 编辑 README 工作区
     save: 保存 README
+    saveAll: 保存全部 README 改动
     cancel: 取消
     saveSuccess: README.md 已保存。
     saveFailed: 保存 README.md 失败。
     prSuccess: 已为 README.md 创建拉取请求 #{{number}}。
     conflict: README.md 已被其他人修改，请刷新后再试。
+    saveSuccessSummary: 已保存 {{count}} 个 README 版本。
+    prSuccessSummary: 已为 {{count}} 个 README 版本创建拉取请求 #{{number}}。
+    conflictFile: '{{filename}} 已被其他人修改，请刷新后重试。'
+    saveFailedFile: '保存 {{filename}} 失败：{{error}}'
+    partialSaveHint: 工作流停止前已有 {{count}} 个 README 版本写入成功。
+    batchScope: 将会把 {{count}} 个已修改的 README 版本一起提交。
+    addLanguageTitle: 添加语言
+    addLanguagePlaceholder: 选择一个语言版本
+    addLanguageSearchPlaceholder: 搜索语言版本...
+    addLanguageEmpty: 没有更多可添加的语言版本。
+    copyFromTitle: 从其他版本复制
+    copyFromPlaceholder: 选择一个源 README
+    copyFromSearchPlaceholder: 搜索 README 版本...
+    copyFromEmpty: 没有其他 README 版本可供复制。
+    copiedFrom: 已从 {{filename}} 复制内容。
+    saved: 已存在于仓库
+    draftOnly: 仅草稿
+    unsaved: 未保存
+    roles:
+      primary: 主 README
+      canonical-en: 英文基准
+      localized: 本地化版本
   license:
     description: 查看、起草或替换仓库的 LICENSE 文件。
     loading: 正在加载 LICENSE
