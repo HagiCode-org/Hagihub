@@ -9,6 +9,7 @@ import {
 import i18n from '@/locales';
 import type { RootState } from '@/store';
 import type {
+  ActionRecommendationEntry,
   GitHubManagedWorkflow,
   GitHubManagedWorkflowReference,
   GitHubWorkflowDispatchResponse,
@@ -88,6 +89,16 @@ function toMessage(error: unknown, fallbackKey: string): string {
   }
 
   return i18n.t(fallbackKey, { ns: 'github' });
+}
+
+function splitRepoFullName(repoFullName: string): { owner: string; repo: string } {
+  const [owner, repo] = repoFullName.split('/');
+
+  if (!owner || !repo) {
+    throw new Error(`Invalid repository name: ${repoFullName}`);
+  }
+
+  return { owner, repo };
 }
 
 interface RejectableThunkApi<TResult, TDispatch> {
@@ -180,7 +191,12 @@ export const loadManagedWorkflowsForActiveAccount = createAsyncThunk<
 );
 
 export const loadMultiRepoWorkflows = createAsyncThunk<
-  { accountId: string; candidateWorkflows: GitHubWorkflowSummary[]; loadErrors: Record<string, string> },
+  {
+    accountId: string;
+    candidateWorkflows: GitHubWorkflowSummary[];
+    loadErrors: Record<string, string>;
+    actionRecommendations: Record<string, ActionRecommendationEntry[]>;
+  },
   { accountId: string },
   { state: RootState }
 >(
@@ -190,6 +206,7 @@ export const loadMultiRepoWorkflows = createAsyncThunk<
     const total = selectedRepoFullNames.length;
     const candidateWorkflows: GitHubWorkflowSummary[] = [];
     const loadErrors: Record<string, string> = {};
+    const actionRecommendations: Record<string, ActionRecommendationEntry[]> = {};
 
     dispatch(transferLoadProgressUpdated(createTransferLoadProgressPayload(
       candidateWorkflows,
@@ -202,6 +219,22 @@ export const loadMultiRepoWorkflows = createAsyncThunk<
 
     for (let index = 0; index < selectedRepoFullNames.length; index += 1) {
       const repoFullName = selectedRepoFullNames[index];
+      const { owner, repo } = splitRepoFullName(repoFullName);
+      let workflowLoadFailed = false;
+      let repoRecommendations: ActionRecommendationEntry[] = [];
+
+      const recommendationsPromise = window.hagihub
+        .fetchActionRecommendations(accountId, owner, repo)
+        .then((result) => {
+          repoRecommendations = result.recommendations;
+        })
+        .catch((error) => {
+          console.warn('[action-management] Failed to load action recommendations for repository.', {
+            accountId,
+            repoFullName,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
 
       try {
         const result = await withTimeout(
@@ -211,6 +244,7 @@ export const loadMultiRepoWorkflows = createAsyncThunk<
         );
         candidateWorkflows.push(...result.workflows);
       } catch (error) {
+        workflowLoadFailed = true;
         loadErrors[repoFullName] = toMessage(error, 'errors.loadRepoWorkflowsFailed');
         console.warn('[action-management] Failed to load workflows for repository.', {
           accountId,
@@ -218,6 +252,9 @@ export const loadMultiRepoWorkflows = createAsyncThunk<
           error: error instanceof Error ? error.message : String(error),
         });
       }
+
+      await recommendationsPromise;
+      actionRecommendations[repoFullName] = workflowLoadFailed ? [] : repoRecommendations;
 
       dispatch(transferLoadProgressUpdated(createTransferLoadProgressPayload(
         candidateWorkflows,
@@ -233,6 +270,7 @@ export const loadMultiRepoWorkflows = createAsyncThunk<
       accountId,
       candidateWorkflows: dedupeWorkflowSummaries([...candidateWorkflows]),
       loadErrors: { ...loadErrors },
+      actionRecommendations: { ...actionRecommendations },
     };
   },
 );

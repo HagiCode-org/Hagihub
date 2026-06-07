@@ -1,4 +1,5 @@
 import type {
+  ActionRecommendationEntry,
   GitHubManagedWorkflow,
   GitHubManagedWorkflowReference,
   GitHubWorkflowSummary,
@@ -30,6 +31,7 @@ export interface TransferModalState {
   selectedOwnerKey: string | null;
   repoSearchQuery: string;
   candidateWorkflows: GitHubWorkflowSummary[];
+  actionRecommendations: Record<string, ActionRecommendationEntry[]>;
   stagedSelection: GitHubManagedWorkflowReference[];
   workflowSearchQuery: string;
   selectedAvailableWorkflowKeys: string[];
@@ -148,6 +150,7 @@ export function createInitialTransferModalState(): TransferModalState {
     selectedOwnerKey: null,
     repoSearchQuery: '',
     candidateWorkflows: [],
+    actionRecommendations: {},
     stagedSelection: [],
     workflowSearchQuery: '',
     selectedAvailableWorkflowKeys: [],

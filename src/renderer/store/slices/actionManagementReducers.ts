@@ -217,6 +217,7 @@ export function registerActionManagementExtraReducers(builder: ActionReducerMapB
       }
 
       state.transferModal.candidateWorkflows = [];
+      state.transferModal.actionRecommendations = {};
       state.transferModal.workflowSearchQuery = '';
       state.transferModal.selectedAvailableWorkflowKeys = [];
       state.transferModal.selectedStagedWorkflowKeys = [];
@@ -233,6 +234,7 @@ export function registerActionManagementExtraReducers(builder: ActionReducerMapB
 
       state.activeAccountId = action.payload.accountId;
       state.transferModal.candidateWorkflows = action.payload.candidateWorkflows;
+      state.transferModal.actionRecommendations = action.payload.actionRecommendations;
       state.transferModal.selectedAvailableWorkflowKeys = [];
       state.transferModal.loadErrors = action.payload.loadErrors;
       state.transferModal.loadProgress = {
