@@ -1,6 +1,11 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import i18n from '@/locales';
-import type { GitHubOrg, GitHubRepo } from '../../../shared/api';
+import type {
+  CreateGitHubRepoPayload,
+  CreateGitHubRepoResult,
+  GitHubOrg,
+  GitHubRepo,
+} from '../../../shared/api';
 
 type FetchStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
 
@@ -21,6 +26,17 @@ interface FetchReposArgs {
   forceRefresh?: boolean;
 }
 
+interface CreateRepoArgs {
+  accountId: string;
+  payload: CreateGitHubRepoPayload;
+}
+
+interface CreateRepoSuccessPayload {
+  createdRepo: GitHubRepo;
+  refreshedRepos: FetchReposPayload | null;
+  refreshError: string | null;
+}
+
 export type OrgFilterValue = 'all' | 'personal' | string;
 export type VisibilityFilter = 'all' | 'public' | 'private';
 
@@ -35,6 +51,10 @@ export interface GitHubReposState {
   visibilityFilter: VisibilityFilter;
   fetchStatus: FetchStatus;
   error: string | null;
+  createStatus: FetchStatus;
+  createError: string | null;
+  lastCreatedRepoFullName: string | null;
+  lastCreateRefreshError: string | null;
 }
 
 const initialState: GitHubReposState = {
@@ -48,6 +68,10 @@ const initialState: GitHubReposState = {
   visibilityFilter: 'all',
   fetchStatus: 'idle',
   error: null,
+  createStatus: 'idle',
+  createError: null,
+  lastCreatedRepoFullName: null,
+  lastCreateRefreshError: null,
 };
 
 function toMessage(error: unknown, fallbackKey: string): string {
@@ -99,30 +123,152 @@ function buildGroups(orgs: GitHubOrg[], repos: GitHubRepo[]): Pick<GitHubReposSt
   };
 }
 
+async function loadReposPayload(accountId: string, forceRefresh = false): Promise<FetchReposPayload> {
+  if (forceRefresh) {
+    await window.hagihub.invalidateGitHubCache();
+  }
+
+  const [orgsResult, reposResult] = await Promise.allSettled([
+    window.hagihub.fetchGitHubOrgs(accountId),
+    window.hagihub.fetchGitHubRepos(accountId),
+  ]);
+
+  if (reposResult.status === 'rejected') {
+    throw new Error(toMessage(reposResult.reason, 'errors.fetchReposFailed'));
+  }
+
+  return {
+    accountId,
+    orgs: orgsResult.status === 'fulfilled' ? orgsResult.value.orgs : [],
+    repos: reposResult.value.repos,
+    orgError: orgsResult.status === 'rejected'
+      ? toMessage(orgsResult.reason, 'errors.orgsPartialFailed')
+      : null,
+  };
+}
+
+function localizeCreateRepoFailure(
+  result: Extract<CreateGitHubRepoResult, { success: false }>,
+): string {
+  if (result.errorCode === 'validation') {
+    return result.errorMessage.trim().length > 0
+      ? result.errorMessage
+      : i18n.t('createDialog.errors.validation', { ns: 'github' });
+  }
+
+  if (result.errorCode === 'permission_denied') {
+    return i18n.t('createDialog.errors.permissionDenied', { ns: 'github' });
+  }
+
+  if (result.errorCode === 'rate_limited') {
+    return i18n.t('createDialog.errors.rateLimited', { ns: 'github' });
+  }
+
+  if (result.errorCode === 'network') {
+    return i18n.t('createDialog.errors.network', { ns: 'github' });
+  }
+
+  if (result.errorCode === 'unauthorized') {
+    return i18n.t('createDialog.errors.unauthorized', { ns: 'github' });
+  }
+
+  return result.errorMessage.trim().length > 0
+    ? result.errorMessage
+    : i18n.t('createDialog.errors.unknown', { ns: 'github' });
+}
+
+function repoMatchesSearch(repo: GitHubRepo, searchQuery: string): boolean {
+  const query = searchQuery.trim().toLowerCase();
+
+  if (query.length === 0) {
+    return true;
+  }
+
+  return repo.name.toLowerCase().includes(query)
+    || repo.fullName.toLowerCase().includes(query)
+    || (repo.description?.toLowerCase().includes(query) ?? false);
+}
+
+function repoMatchesVisibility(repo: GitHubRepo, visibilityFilter: VisibilityFilter): boolean {
+  if (visibilityFilter === 'all') {
+    return true;
+  }
+
+  return repo.isPrivate === (visibilityFilter === 'private');
+}
+
+function repoMatchesOwner(repo: GitHubRepo, activeOrgFilter: OrgFilterValue): boolean {
+  if (activeOrgFilter === 'all') {
+    return true;
+  }
+
+  if (activeOrgFilter === 'personal') {
+    return repo.owner.type !== 'Organization';
+  }
+
+  return repo.owner.login === activeOrgFilter;
+}
+
+function ensureCreatedRepoVisible(state: GitHubReposState, repo: GitHubRepo): void {
+  if (
+    repoMatchesSearch(repo, state.searchQuery)
+    && repoMatchesVisibility(repo, state.visibilityFilter)
+    && repoMatchesOwner(repo, state.activeOrgFilter)
+  ) {
+    return;
+  }
+
+  state.searchQuery = '';
+  state.visibilityFilter = repo.isPrivate ? 'private' : 'public';
+  state.activeOrgFilter = repo.owner.type === 'Organization' ? repo.owner.login : 'personal';
+}
+
+function applyFetchedRepos(state: GitHubReposState, payload: FetchReposPayload): void {
+  const { groupedRepos, personalRepos } = buildGroups(payload.orgs, payload.repos);
+  state.orgs = payload.orgs;
+  state.repos = payload.repos;
+  state.groupedRepos = groupedRepos;
+  state.personalRepos = personalRepos;
+  state.activeAccountId = payload.accountId;
+  state.fetchStatus = 'succeeded';
+  state.error = payload.orgError;
+}
+
 export const fetchRepos = createAsyncThunk<FetchReposPayload, FetchReposArgs, { rejectValue: string }>(
   'githubRepos/fetchRepos',
   async ({ accountId, forceRefresh = false }, { rejectWithValue }) => {
-    if (forceRefresh) {
-      await window.hagihub.invalidateGitHubCache();
+    try {
+      return await loadReposPayload(accountId, forceRefresh);
+    } catch (error) {
+      return rejectWithValue(toMessage(error, 'errors.fetchReposFailed'));
+    }
+  },
+);
+
+export const createRepo = createAsyncThunk<CreateRepoSuccessPayload, CreateRepoArgs, { rejectValue: string }>(
+  'githubRepos/createRepo',
+  async ({ accountId, payload }, { rejectWithValue }) => {
+    const result = await window.hagihub.createGitHubRepo(accountId, payload);
+
+    if (!result.success) {
+      return rejectWithValue(localizeCreateRepoFailure(result));
     }
 
-    const [orgsResult, reposResult] = await Promise.allSettled([
-      window.hagihub.fetchGitHubOrgs(accountId),
-      window.hagihub.fetchGitHubRepos(accountId),
-    ]);
+    try {
+      const refreshedRepos = await loadReposPayload(accountId, true);
 
-    if (reposResult.status === 'rejected') {
-      return rejectWithValue(toMessage(reposResult.reason, 'errors.fetchReposFailed'));
+      return {
+        createdRepo: result.repo,
+        refreshedRepos,
+        refreshError: null,
+      };
+    } catch {
+      return {
+        createdRepo: result.repo,
+        refreshedRepos: null,
+        refreshError: i18n.t('createDialog.refreshFailed', { ns: 'github' }),
+      };
     }
-
-    return {
-      accountId,
-      orgs: orgsResult.status === 'fulfilled' ? orgsResult.value.orgs : [],
-      repos: reposResult.value.repos,
-      orgError: orgsResult.status === 'rejected'
-        ? toMessage(orgsResult.reason, 'errors.orgsPartialFailed')
-        : null,
-    };
   },
 );
 
@@ -141,6 +287,10 @@ const githubReposSlice = createSlice({
       state.visibilityFilter = 'all';
       state.fetchStatus = 'idle';
       state.error = null;
+      state.createStatus = 'idle';
+      state.createError = null;
+      state.lastCreatedRepoFullName = null;
+      state.lastCreateRefreshError = null;
     },
     setActiveOrgFilter(state, action: PayloadAction<OrgFilterValue>) {
       state.activeOrgFilter = action.payload;
@@ -150,6 +300,14 @@ const githubReposSlice = createSlice({
     },
     setVisibilityFilter(state, action: PayloadAction<VisibilityFilter>) {
       state.visibilityFilter = action.payload;
+    },
+    resetCreateDialogState(state) {
+      state.createStatus = 'idle';
+      state.createError = null;
+    },
+    dismissCreateFeedback(state) {
+      state.lastCreatedRepoFullName = null;
+      state.lastCreateRefreshError = null;
     },
   },
   extraReducers: (builder) => {
@@ -167,23 +325,44 @@ const githubReposSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchRepos.fulfilled, (state, action) => {
-        const { groupedRepos, personalRepos } = buildGroups(action.payload.orgs, action.payload.repos);
-        state.orgs = action.payload.orgs;
-        state.repos = action.payload.repos;
-        state.groupedRepos = groupedRepos;
-        state.personalRepos = personalRepos;
-        state.activeAccountId = action.payload.accountId;
+        applyFetchedRepos(state, action.payload);
         state.activeOrgFilter = 'personal';
-        state.fetchStatus = 'succeeded';
-        state.error = action.payload.orgError;
       })
       .addCase(fetchRepos.rejected, (state, action) => {
         state.fetchStatus = 'failed';
         state.error = action.payload ?? i18n.t('errors.fetchReposFailed', { ns: 'github' });
+      })
+      .addCase(createRepo.pending, (state) => {
+        state.createStatus = 'loading';
+        state.createError = null;
+        state.lastCreatedRepoFullName = null;
+        state.lastCreateRefreshError = null;
+      })
+      .addCase(createRepo.fulfilled, (state, action) => {
+        if (action.payload.refreshedRepos) {
+          applyFetchedRepos(state, action.payload.refreshedRepos);
+          ensureCreatedRepoVisible(state, action.payload.createdRepo);
+        }
+
+        state.createStatus = 'succeeded';
+        state.createError = null;
+        state.lastCreatedRepoFullName = action.payload.createdRepo.fullName;
+        state.lastCreateRefreshError = action.payload.refreshError;
+      })
+      .addCase(createRepo.rejected, (state, action) => {
+        state.createStatus = 'failed';
+        state.createError = action.payload ?? i18n.t('createDialog.errors.unknown', { ns: 'github' });
       });
   },
 });
 
-export const { clearRepos, setActiveOrgFilter, setSearchQuery, setVisibilityFilter } = githubReposSlice.actions;
+export const {
+  clearRepos,
+  dismissCreateFeedback,
+  resetCreateDialogState,
+  setActiveOrgFilter,
+  setSearchQuery,
+  setVisibilityFilter,
+} = githubReposSlice.actions;
 
 export default githubReposSlice.reducer;
