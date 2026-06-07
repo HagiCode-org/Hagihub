@@ -47,8 +47,6 @@ export type VisibilityFilter = 'all' | 'public' | 'private';
 export interface GitHubReposState {
   orgs: GitHubOrg[];
   repos: GitHubRepo[];
-  groupedRepos: GitHubRepoGroup[];
-  personalRepos: GitHubRepo[];
   activeAccountId: string | null;
   activeOrgFilter: OrgFilterValue;
   searchQuery: string;
@@ -64,8 +62,6 @@ export interface GitHubReposState {
 const initialState: GitHubReposState = {
   orgs: [],
   repos: [],
-  groupedRepos: [],
-  personalRepos: [],
   activeAccountId: null,
   activeOrgFilter: 'all',
   searchQuery: '',
@@ -88,43 +84,6 @@ function toMessage(error: unknown, fallbackKey: string): string {
   }
 
   return i18n.t(fallbackKey, { ns: 'github' });
-}
-
-function sortRepos(repos: GitHubRepo[]): GitHubRepo[] {
-  return [...repos].sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt));
-}
-
-function buildGroups(orgs: GitHubOrg[], repos: GitHubRepo[]): Pick<GitHubReposState, 'groupedRepos' | 'personalRepos'> {
-  const orgMap = new Map(orgs.map((org) => [org.login, org]));
-  const grouped = new Map<string, GitHubRepo[]>();
-  const personalRepos: GitHubRepo[] = [];
-
-  for (const repo of repos) {
-    const org = orgMap.get(repo.owner.login);
-
-    if (!org) {
-      personalRepos.push(repo);
-      continue;
-    }
-
-    const group = grouped.get(org.login) ?? [];
-    group.push(repo);
-    grouped.set(org.login, group);
-  }
-
-  const groupedRepos = orgs
-    .slice()
-    .sort((left, right) => left.login.localeCompare(right.login))
-    .map((org) => ({
-      org,
-      repos: sortRepos(grouped.get(org.login) ?? []),
-    }))
-    .filter((group) => group.repos.length > 0);
-
-  return {
-    groupedRepos,
-    personalRepos: sortRepos(personalRepos),
-  };
 }
 
 async function loadReposPayload(accountId: string, forceRefresh = false): Promise<FetchReposPayload> {
@@ -254,11 +213,8 @@ function ensureCreatedRepoVisible(state: GitHubReposState, repo: GitHubRepo): vo
 }
 
 function applyFetchedRepos(state: GitHubReposState, payload: FetchReposPayload): void {
-  const { groupedRepos, personalRepos } = buildGroups(payload.orgs, payload.repos);
   state.orgs = payload.orgs;
   state.repos = payload.repos;
-  state.groupedRepos = groupedRepos;
-  state.personalRepos = personalRepos;
   state.activeAccountId = payload.accountId;
   state.fetchStatus = 'succeeded';
   state.error = payload.orgError;
@@ -309,8 +265,6 @@ const githubReposSlice = createSlice({
     clearRepos(state) {
       state.orgs = [];
       state.repos = [];
-      state.groupedRepos = [];
-      state.personalRepos = [];
       state.activeAccountId = null;
       state.activeOrgFilter = 'all';
       state.searchQuery = '';
@@ -345,8 +299,6 @@ const githubReposSlice = createSlice({
       .addCase(fetchRepos.pending, (state, action) => {
         state.orgs = [];
         state.repos = [];
-        state.groupedRepos = [];
-        state.personalRepos = [];
         state.activeAccountId = action.meta.arg.accountId;
         state.activeOrgFilter = 'all';
         state.searchQuery = '';
