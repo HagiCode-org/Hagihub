@@ -1,4 +1,4 @@
-import { ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Eye, Search, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { workflowKey } from '@/features/action-management/model';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,7 @@ function WorkflowTransferBox() {
   const { t } = useTranslation('github');
   const dispatch = useAppDispatch();
   const {
+    recommendationLookup,
     selectedAvailable,
     selectedAvailableKeys,
     selectedStaged,
@@ -63,6 +64,7 @@ function WorkflowTransferBox() {
           {rows.map((workflow) => {
             const key = workflowKey(workflow);
             const checked = selectedKeySet.has(key);
+            const recommendations = recommendationLookup[key] ?? [];
 
             return (
               <tr
@@ -80,6 +82,25 @@ function WorkflowTransferBox() {
                 </td>
                 <td className='px-3 py-3 align-top'>
                   <p className='text-sm font-medium text-foreground'>{workflow.workflowName}</p>
+                  {recommendations.length > 0 ? (
+                    <div className='mt-2 flex flex-wrap gap-2'>
+                      {recommendations.map((recommendation, index) => (
+                        <Badge
+                          key={`${recommendation.type}-${recommendation.reason ?? 'plain'}-${index}`}
+                          variant={recommendation.type === 'watch' ? 'secondary' : 'outline'}
+                          title={recommendation.reason}
+                          className='gap-1'
+                        >
+                          {recommendation.type === 'watch'
+                            ? <Eye className='size-3.5' />
+                            : <Star className='size-3.5' />}
+                          {recommendation.type === 'watch'
+                            ? t('actionManagement.recommendation.watch')
+                            : t('actionManagement.recommendation.include')}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : null}
                 </td>
                 <td className='px-3 py-3 align-top font-mono text-xs text-muted-foreground'>
                   {workflow.repoFullName}
