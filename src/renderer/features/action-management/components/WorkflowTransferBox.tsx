@@ -1,74 +1,42 @@
-import { useDeferredValue, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import { ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { workflowKey } from '@/features/action-management/model';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { selectActionTransferWorkflowSelectionView } from '@/store/selectors';
+import {
+  moveToStaged,
+  removeFromStaged,
+  setTransferWorkflowSearchQuery,
+  toggleTransferAvailableWorkflowKey,
+  toggleTransferStagedWorkflowKey,
+} from '@/store/slices/actionManagementSlice';
 import type { GitHubManagedWorkflowReference, GitHubWorkflowSummary } from '../../../../shared/api';
 
-interface WorkflowTransferBoxProps {
-  availableWorkflows: GitHubWorkflowSummary[];
-  stagedWorkflows: GitHubManagedWorkflowReference[];
-  onMoveToStaged: (workflows: GitHubWorkflowSummary[]) => void;
-  onRemoveFromStaged: (workflows: GitHubManagedWorkflowReference[]) => void;
-}
-
-function workflowKey(workflow: Pick<GitHubManagedWorkflowReference, 'repoFullName' | 'workflowId'>): string {
-  return workflow.repoFullName + '#' + workflow.workflowId;
-}
-
-function matchesQuery(
-  workflow: Pick<GitHubManagedWorkflowReference, 'workflowName' | 'workflowPath' | 'repoFullName'>,
-  query: string,
-): boolean {
-  if (!query) {
-    return true;
-  }
-
-  return workflow.workflowName.toLowerCase().includes(query)
-    || workflow.workflowPath.toLowerCase().includes(query)
-    || workflow.repoFullName.toLowerCase().includes(query);
-}
-
-function WorkflowTransferBox({
-  availableWorkflows,
-  stagedWorkflows,
-  onMoveToStaged,
-  onRemoveFromStaged,
-}: WorkflowTransferBoxProps) {
+function WorkflowTransferBox() {
   const { t } = useTranslation('github');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedAvailableKeys, setSelectedAvailableKeys] = useState<string[]>([]);
-  const [selectedStagedKeys, setSelectedStagedKeys] = useState<string[]>([]);
-  const deferredQuery = useDeferredValue(searchQuery.trim().toLowerCase());
-  const stagedKeySet = new Set(stagedWorkflows.map((workflow) => workflowKey(workflow)));
-  const visibleAvailableWorkflows = availableWorkflows.filter(
-    (workflow) => !stagedKeySet.has(workflowKey(workflow)) && matchesQuery(workflow, deferredQuery),
-  );
-
-  useEffect(() => {
-    const visibleKeys = new Set(visibleAvailableWorkflows.map((workflow) => workflowKey(workflow)));
-    setSelectedAvailableKeys((current) => current.filter((key) => visibleKeys.has(key)));
-  }, [visibleAvailableWorkflows]);
-
-  useEffect(() => {
-    const stagedKeys = new Set(stagedWorkflows.map((workflow) => workflowKey(workflow)));
-    setSelectedStagedKeys((current) => current.filter((key) => stagedKeys.has(key)));
-  }, [stagedWorkflows]);
-
-  const selectedAvailable = visibleAvailableWorkflows.filter((workflow) =>
-    selectedAvailableKeys.includes(workflowKey(workflow)),
-  );
-  const selectedStaged = stagedWorkflows.filter((workflow) => selectedStagedKeys.includes(workflowKey(workflow)));
+  const dispatch = useAppDispatch();
+  const {
+    selectedAvailable,
+    selectedAvailableKeys,
+    selectedStaged,
+    selectedStagedKeys,
+    stagedSelection,
+    visibleAvailableWorkflows,
+    workflowSearchQuery,
+  } = useAppSelector(selectActionTransferWorkflowSelectionView);
 
   const renderWorkflowTable = <T extends GitHubManagedWorkflowReference | GitHubWorkflowSummary>(options: {
     emptyState: string;
+    onRowDoubleClick: (workflow: T) => void;
+    onToggleKey: (key: string) => void;
     rows: T[];
     selectedKeys: string[];
-    setSelectedKeys: Dispatch<SetStateAction<string[]>>;
-    onRowDoubleClick: (workflow: T) => void;
   }) => {
-    const { emptyState, rows, selectedKeys, setSelectedKeys, onRowDoubleClick } = options;
+    const { emptyState, onRowDoubleClick, onToggleKey, rows, selectedKeys } = options;
+    const selectedKeySet = new Set(selectedKeys);
 
     if (rows.length === 0) {
       return (
@@ -94,7 +62,7 @@ function WorkflowTransferBox({
         <tbody>
           {rows.map((workflow) => {
             const key = workflowKey(workflow);
-            const checked = selectedKeys.includes(key);
+            const checked = selectedKeySet.has(key);
 
             return (
               <tr
@@ -107,11 +75,7 @@ function WorkflowTransferBox({
                     type='checkbox'
                     checked={checked}
                     className='mt-0.5 size-4 rounded border border-border/80 bg-background'
-                    onChange={() => {
-                      setSelectedKeys((current) => (
-                        checked ? current.filter((item) => item !== key) : [...current, key]
-                      ));
-                    }}
+                    onChange={() => onToggleKey(key)}
                   />
                 </td>
                 <td className='px-3 py-3 align-top'>
@@ -156,8 +120,8 @@ function WorkflowTransferBox({
           <div className='relative'>
             <Search className='pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground' />
             <Input
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              value={workflowSearchQuery}
+              onChange={(event) => dispatch(setTransferWorkflowSearchQuery(event.target.value))}
               placeholder={t('actionManagement.transfer.searchPlaceholder')}
               className='h-11 pl-10'
             />
@@ -166,13 +130,13 @@ function WorkflowTransferBox({
 
         <div className='mt-4 min-h-0 flex-1 overflow-auto'>
           {renderWorkflowTable({
-            emptyState: availableWorkflows.length === stagedWorkflows.length
-              ? t('actionManagement.transfer.emptyAvailable')
-              : t('actionManagement.transfer.noSearchResults'),
+            emptyState: workflowSearchQuery.trim().length > 0
+              ? t('actionManagement.transfer.noSearchResults')
+              : t('actionManagement.transfer.emptyAvailable'),
+            onRowDoubleClick: (workflow) => dispatch(moveToStaged([workflow])),
+            onToggleKey: (key) => dispatch(toggleTransferAvailableWorkflowKey(key)),
             rows: visibleAvailableWorkflows,
             selectedKeys: selectedAvailableKeys,
-            setSelectedKeys: setSelectedAvailableKeys,
-            onRowDoubleClick: (workflow) => onMoveToStaged([workflow]),
           })}
         </div>
       </section>
@@ -183,7 +147,7 @@ function WorkflowTransferBox({
           variant='outline'
           size='icon'
           disabled={selectedAvailable.length === 0}
-          onClick={() => onMoveToStaged(selectedAvailable)}
+          onClick={() => dispatch(moveToStaged(selectedAvailable))}
           aria-label={t('actionManagement.transfer.moveSelectedToChosen')}
         >
           <ChevronRight className='size-4' />
@@ -193,7 +157,7 @@ function WorkflowTransferBox({
           variant='outline'
           size='icon'
           disabled={visibleAvailableWorkflows.length === 0}
-          onClick={() => onMoveToStaged(visibleAvailableWorkflows)}
+          onClick={() => dispatch(moveToStaged(visibleAvailableWorkflows))}
           aria-label={t('actionManagement.transfer.moveAllToChosen')}
         >
           <ChevronsRight className='size-4' />
@@ -203,7 +167,7 @@ function WorkflowTransferBox({
           variant='outline'
           size='icon'
           disabled={selectedStaged.length === 0}
-          onClick={() => onRemoveFromStaged(selectedStaged)}
+          onClick={() => dispatch(removeFromStaged(selectedStaged))}
           aria-label={t('actionManagement.transfer.moveSelectedBack')}
         >
           <ChevronLeft className='size-4' />
@@ -212,8 +176,8 @@ function WorkflowTransferBox({
           type='button'
           variant='outline'
           size='icon'
-          disabled={stagedWorkflows.length === 0}
-          onClick={() => onRemoveFromStaged(stagedWorkflows)}
+          disabled={stagedSelection.length === 0}
+          onClick={() => dispatch(removeFromStaged(stagedSelection))}
           aria-label={t('actionManagement.transfer.moveAllBack')}
         >
           <ChevronsLeft className='size-4' />
@@ -224,20 +188,20 @@ function WorkflowTransferBox({
         <div className='flex flex-wrap items-center justify-between gap-3'>
           <div>
             <p className='text-sm font-semibold text-foreground'>
-              {t('actionManagement.transfer.selected', { count: stagedWorkflows.length })}
+              {t('actionManagement.transfer.selected', { count: stagedSelection.length })}
             </p>
             <p className='mt-1 text-xs text-muted-foreground'>{t('actionManagement.transfer.selectedHint')}</p>
           </div>
-          <Badge variant='outline'>{stagedWorkflows.length}</Badge>
+          <Badge variant='outline'>{stagedSelection.length}</Badge>
         </div>
 
         <div className='mt-4 min-h-0 flex-1 overflow-auto'>
           {renderWorkflowTable({
             emptyState: t('actionManagement.transfer.emptySelected'),
-            rows: stagedWorkflows,
+            onRowDoubleClick: (workflow) => dispatch(removeFromStaged([workflow])),
+            onToggleKey: (key) => dispatch(toggleTransferStagedWorkflowKey(key)),
+            rows: stagedSelection,
             selectedKeys: selectedStagedKeys,
-            setSelectedKeys: setSelectedStagedKeys,
-            onRowDoubleClick: (workflow) => onRemoveFromStaged([workflow]),
           })}
         </div>
       </section>

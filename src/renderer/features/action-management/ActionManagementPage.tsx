@@ -3,18 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { selectActiveGitHubAccount, selectMonitoredManagedWorkflowCount } from '@/store/selectors';
+import { selectActionManagementPageView, selectActiveGitHubAccount } from '@/store/selectors';
 import {
-  closeDispatchDialog,
-  closeTransferModal,
-  dispatchManagedWorkflow,
-  loadManagedWorkflows,
-  openDispatchDialog,
+  loadManagedWorkflowsForActiveAccount,
   openTransferModal,
-  refreshManagedWorkflows,
-  removeManagedWorkflow,
-  setDispatchInput,
-  toggleMonitoring,
+  refreshManagedWorkflowsForActiveAccount,
 } from '@/store/slices/actionManagementSlice';
 import ManagedActionRow from './components/ManagedActionRow';
 import ActionTransferModal from './components/ActionTransferModal';
@@ -31,22 +24,9 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
   const dispatch = useAppDispatch();
   const activeAccountId = useAppSelector((state) => state.githubAccounts.activeAccountId);
   const activeAccount = useAppSelector(selectActiveGitHubAccount);
-  const monitoredCount = useAppSelector(selectMonitoredManagedWorkflowCount);
-  const {
-    dispatchDialog,
-    failedRefreshCount,
-    loadError,
-    loadStatus,
-    managedReferences,
-    managedWorkflows,
-    persistError,
-    persistStatus,
-    refreshError,
-    refreshStatus,
-    transferModal,
-  } = useAppSelector((state) => state.actionManagement);
+  const pageView = useAppSelector(selectActionManagementPageView);
 
-  useActionMonitoring(activeAccountId);
+  useActionMonitoring();
 
   if (!activeAccountId || !activeAccount) {
     return (
@@ -77,7 +57,7 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
     );
   }
 
-  if (loadStatus === 'loading') {
+  if (pageView.showLoadingState) {
     return (
       <section className="editor-panel px-6 py-12 text-center">
         <LoaderCircle className="mx-auto size-8 animate-spin text-primary" />
@@ -86,12 +66,12 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
     );
   }
 
-  if (loadStatus === 'failed') {
+  if (pageView.showLoadFailedState) {
     return (
       <section className="editor-panel border-destructive/30 bg-destructive/6 px-6 py-8">
         <p className="text-base font-semibold text-destructive">{t('actionManagement.loadFailedTitle')}</p>
-        <p className="mt-2 text-sm leading-7 text-destructive/90">{loadError}</p>
-        <Button className="mt-5" variant="outline" onClick={() => void dispatch(loadManagedWorkflows(activeAccountId))}>
+        <p className="mt-2 text-sm leading-7 text-destructive/90">{pageView.loadError}</p>
+        <Button className="mt-5" variant="outline" onClick={() => void dispatch(loadManagedWorkflowsForActiveAccount())}>
           <RefreshCw />
           {t('actionManagement.retry')}
         </Button>
@@ -122,19 +102,19 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
             <Button
               variant="outline"
               size="sm"
-              disabled={managedReferences.length === 0 || refreshStatus === 'loading'}
-              onClick={() => void dispatch(refreshManagedWorkflows({ accountId: activeAccountId }))}
+              disabled={!pageView.canRefreshManagedWorkflows}
+              onClick={() => void dispatch(refreshManagedWorkflowsForActiveAccount())}
             >
-              <RefreshCw className={refreshStatus === 'loading' ? 'animate-spin' : undefined} />
+              <RefreshCw className={pageView.isRefreshingManagedWorkflows ? 'animate-spin' : undefined} />
               {t('actionManagement.refresh')}
             </Button>
           </div>
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          <span className="status-chip">{t('actionManagement.managedCount', { count: managedReferences.length })}</span>
-          {monitoredCount > 0 ? <span className="status-chip">{t('actionManagement.actionMonitoring.monitoredCount', { count: monitoredCount })}</span> : null}
-          {failedRefreshCount > 0 ? <span>{t('actionManagement.failedRefreshCount', { count: failedRefreshCount })}</span> : null}
+          <span className="status-chip">{t('actionManagement.managedCount', { count: pageView.managedCount })}</span>
+          {pageView.monitoredCount > 0 ? <span className="status-chip">{t('actionManagement.actionMonitoring.monitoredCount', { count: pageView.monitoredCount })}</span> : null}
+          {pageView.failedRefreshCount > 0 ? <span>{t('actionManagement.failedRefreshCount', { count: pageView.failedRefreshCount })}</span> : null}
         </div>
       </section>
 
@@ -146,30 +126,30 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
             <p className="text-sm leading-6 text-muted-foreground">{t('actionManagement.managed.description')}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="status-chip">{t('actionManagement.managedCount', { count: managedReferences.length })}</div>
-            {monitoredCount > 0 ? <div className="status-chip">{t('actionManagement.actionMonitoring.monitoredCount', { count: monitoredCount })}</div> : null}
+            <div className="status-chip">{t('actionManagement.managedCount', { count: pageView.managedCount })}</div>
+            {pageView.monitoredCount > 0 ? <div className="status-chip">{t('actionManagement.actionMonitoring.monitoredCount', { count: pageView.monitoredCount })}</div> : null}
           </div>
         </div>
 
-        {persistError ? (
+        {pageView.persistError ? (
           <div className="mt-5 shrink-0 rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
-            {persistError}
+            {pageView.persistError}
           </div>
         ) : null}
 
-        {refreshError ? (
+        {pageView.refreshError ? (
           <div className="mt-5 shrink-0 rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
-            {refreshError}
+            {pageView.refreshError}
           </div>
         ) : null}
 
-        {managedReferences.length === 0 ? (
+        {pageView.showManagedEmptyState ? (
           <div className="mt-5 shrink-0 rounded-[1.5rem] border border-dashed border-border/70 bg-background/25 px-6 py-10 text-center">
             <Workflow className="mx-auto size-8 text-primary" />
             <p className="mt-4 text-base font-medium text-foreground">{t('actionManagement.managed.emptyTitle')}</p>
             <p className="mt-2 text-sm leading-7 text-muted-foreground">{t('actionManagement.managed.emptyDescription')}</p>
           </div>
-        ) : managedWorkflows.length === 0 && refreshStatus === 'loading' ? (
+        ) : pageView.showManagedRefreshingState ? (
           <div className="mt-5 flex shrink-0 items-center gap-3 rounded-2xl border border-border/70 bg-background/35 px-4 py-5 text-sm text-muted-foreground">
             <LoaderCircle className="size-4 animate-spin text-primary" />
             {t('actionManagement.managed.refreshing')}
@@ -188,74 +168,18 @@ function ActionManagementPage({ onAddAccount, onOpenAccounts }: ActionManagement
                 </tr>
               </thead>
               <tbody>
-                {managedWorkflows.map((workflow) => {
-                  const workflowKey = `${workflow.repoFullName}#${workflow.workflowId}`;
-
-                  return (
-                    <ManagedActionRow
-                      key={workflowKey}
-                      workflow={workflow}
-                      removing={persistStatus === 'loading'}
-                      onDispatch={(item) => dispatch(openDispatchDialog(item))}
-                      onToggleMonitoring={(item) => {
-                        void dispatch(toggleMonitoring({
-                          accountId: activeAccountId,
-                          repoFullName: item.repoFullName,
-                          workflowId: item.workflowId,
-                        }));
-                      }}
-                      onOpenExternal={(url) => {
-                        void window.hagihub.openExternal(url);
-                      }}
-                      onRemove={(item) => {
-                        void dispatch(removeManagedWorkflow({
-                          accountId: activeAccountId,
-                          repoFullName: item.repoFullName,
-                          workflowId: item.workflowId,
-                        }));
-                      }}
-                    />
-                  );
-                })}
+                {pageView.managedWorkflowRows.map(({ key, workflow }) => (
+                  <ManagedActionRow key={key} workflow={workflow} />
+                ))}
               </tbody>
             </table>
           </div>
         )}
       </section>
 
-      <ActionTransferModal
-        open={transferModal.open}
-        accountId={activeAccountId}
-        onClose={() => dispatch(closeTransferModal())}
-        onSaved={() => {
-          void dispatch(refreshManagedWorkflows({ accountId: activeAccountId }));
-        }}
-      />
+      <ActionTransferModal />
 
-      <WorkflowDispatchDialog
-        open={dispatchDialog.open}
-        workflow={dispatchDialog.workflow}
-        formValues={dispatchDialog.formValues}
-        submitStatus={dispatchDialog.submitStatus}
-        error={dispatchDialog.error}
-        successMessage={dispatchDialog.successMessage}
-        onClose={() => dispatch(closeDispatchDialog())}
-        onChange={(name, value) => dispatch(setDispatchInput({ name, value }))}
-        onSubmit={() => {
-          if (!dispatchDialog.workflow) {
-            return;
-          }
-
-          void dispatch(dispatchManagedWorkflow({
-            accountId: activeAccountId,
-            workflow: dispatchDialog.workflow,
-            inputs: dispatchDialog.formValues,
-          })).unwrap().then(() => {
-            dispatch(closeDispatchDialog());
-            void dispatch(refreshManagedWorkflows({ accountId: activeAccountId }));
-          }).catch(() => {});
-        }}
-      />
+      <WorkflowDispatchDialog />
     </div>
   );
 }

@@ -1,34 +1,34 @@
-import { useEffect } from 'react';
+import { useEffect, useEffectEvent } from 'react';
 import { LoaderCircle, Play, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { GitHubManagedWorkflow } from '../../../../shared/api';
+import { useAppDispatch, useAppSelector } from '@/store';
+import {
+  closeDispatchDialog,
+  setDispatchInput,
+  submitDispatchDialog,
+} from '@/store/slices/actionManagementSlice';
 
-interface WorkflowDispatchDialogProps {
-  open: boolean;
-  workflow: GitHubManagedWorkflow | null;
-  formValues: Record<string, string>;
-  submitStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
-  error: string | null;
-  successMessage: string | null;
-  onClose: () => void;
-  onChange: (name: string, value: string) => void;
-  onSubmit: () => void;
-}
-
-function WorkflowDispatchDialog({
-  open,
-  workflow,
-  formValues,
-  submitStatus,
-  error,
-  successMessage,
-  onClose,
-  onChange,
-  onSubmit,
-}: WorkflowDispatchDialogProps) {
+function WorkflowDispatchDialog() {
   const { t } = useTranslation('github');
+  const dispatch = useAppDispatch();
+  const {
+    error,
+    formValues,
+    open,
+    submitStatus,
+    successMessage,
+    workflow,
+  } = useAppSelector((state) => state.actionManagement.dispatchDialog);
+
+  const requestClose = useEffectEvent(() => {
+    if (submitStatus === 'loading') {
+      return;
+    }
+
+    dispatch(closeDispatchDialog());
+  });
 
   useEffect(() => {
     if (!open) {
@@ -36,8 +36,8 @@ function WorkflowDispatchDialog({
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && submitStatus !== 'loading') {
-        onClose();
+      if (event.key === 'Escape') {
+        requestClose();
       }
     };
 
@@ -45,7 +45,7 @@ function WorkflowDispatchDialog({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose, open, submitStatus]);
+  }, [open, requestClose]);
 
   if (!open || !workflow) {
     return null;
@@ -57,7 +57,7 @@ function WorkflowDispatchDialog({
         <select
           value={value}
           className="flex h-10 w-full rounded-lg border border-border/70 bg-background/45 px-3 py-2 text-sm text-foreground shadow-sm transition-colors focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20"
-          onChange={(event) => onChange(name, event.target.value)}
+          onChange={(event) => dispatch(setDispatchInput({ name, value: event.target.value }))}
         >
           <option value="">{t('actionManagement.dispatch.selectPlaceholder')}</option>
           {options.map((option) => (
@@ -71,7 +71,7 @@ function WorkflowDispatchDialog({
       <Input
         value={value}
         type="text"
-        onChange={(event) => onChange(name, event.target.value)}
+        onChange={(event) => dispatch(setDispatchInput({ name, value: event.target.value }))}
         placeholder={t('actionManagement.dispatch.valuePlaceholder')}
       />
     );
@@ -81,8 +81,8 @@ function WorkflowDispatchDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(6,10,18,0.8)] px-4 py-6 backdrop-blur-md"
       onClick={(event) => {
-        if (event.target === event.currentTarget && submitStatus !== 'loading') {
-          onClose();
+        if (event.target === event.currentTarget) {
+          requestClose();
         }
       }}
       role="dialog"
@@ -95,7 +95,7 @@ function WorkflowDispatchDialog({
             <h2 className="text-2xl font-semibold text-foreground">{t('actionManagement.dispatch.title')}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{workflow.workflowName}</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} disabled={submitStatus === 'loading'} aria-label={t('actionManagement.dispatch.close')}>
+          <Button variant="ghost" size="icon" onClick={requestClose} disabled={submitStatus === 'loading'} aria-label={t('actionManagement.dispatch.close')}>
             <X />
           </Button>
         </div>
@@ -160,10 +160,10 @@ function WorkflowDispatchDialog({
           ) : null}
 
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={onClose} disabled={submitStatus === 'loading'}>
+            <Button variant="outline" onClick={requestClose} disabled={submitStatus === 'loading'}>
               {t('actionManagement.dispatch.cancel')}
             </Button>
-            <Button onClick={onSubmit} disabled={submitStatus === 'loading'}>
+            <Button onClick={() => void dispatch(submitDispatchDialog())} disabled={submitStatus === 'loading'}>
               {submitStatus === 'loading' ? <LoaderCircle className="animate-spin" /> : <Play />}
               {submitStatus === 'loading'
                 ? t('actionManagement.dispatch.submitting')

@@ -1,64 +1,36 @@
 import { useEffect, useEffectEvent } from 'react';
 import { AlertCircle, LoaderCircle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { GLOBAL_TRANSFER_LOAD_ERROR_KEY } from '@/features/action-management/model';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { selectActionTransferModalView, selectGitHubRepoCollections } from '@/store/selectors';
+import { selectActionTransferModalView } from '@/store/selectors';
 import {
   batchSaveManagedWorkflows,
+  closeTransferModal,
   clearTransferLoadErrors,
   loadMultiRepoWorkflows,
-  moveToStaged,
-  removeFromStaged,
   setTransferPhase,
-  toggleRepoSelection,
 } from '@/store/slices/actionManagementSlice';
-import RepoMultiSelect, { type RepoOwnerOption } from './RepoMultiSelect';
+import RepoMultiSelect from './RepoMultiSelect';
 import WorkflowTransferBox from './WorkflowTransferBox';
 
-interface ActionTransferModalProps {
-  open: boolean;
-  accountId: string;
-  onClose: () => void;
-  onSaved: () => void;
-}
-
-function ActionTransferModal({
-  open,
-  accountId,
-  onClose,
-  onSaved,
-}: ActionTransferModalProps) {
+function ActionTransferModal() {
   const { t } = useTranslation('github');
   const dispatch = useAppDispatch();
-  const { groupedRepos, personalRepos } = useAppSelector(selectGitHubRepoCollections);
+  const activeAccountId = useAppSelector((state) => state.githubAccounts.activeAccountId);
   const { fetchStatus: reposStatus, error: reposError } = useAppSelector((state) => state.githubRepos);
   const {
-    candidateWorkflows,
     loadProgress,
+    open,
     phase,
     saveError,
     saveStatus,
-    selectedRepoFullNames,
     stagedSelection,
   } = useAppSelector((state) => state.actionManagement.transferModal);
   const transferModalView = useAppSelector(selectActionTransferModalView);
 
-  const ownerOptions: RepoOwnerOption[] = [
-    ...(personalRepos.length > 0
-      ? [{
-        key: 'personal',
-        label: t('actionManagement.transfer.personalOwner'),
-        repoCount: personalRepos.length,
-      }]
-      : []),
-    ...groupedRepos.map((group) => ({
-      key: group.org.login,
-      label: group.org.login,
-      repoCount: group.repos.length,
-    })),
-  ];
   const canLoadWorkflows = transferModalView.selectedRepoCount > 0 && reposStatus === 'succeeded' && !transferModalView.isLoadingWorkflows;
   const canClose = transferModalView.canClose;
   const phases = [
@@ -72,7 +44,7 @@ function ActionTransferModal({
       return;
     }
 
-    onClose();
+    dispatch(closeTransferModal());
   });
 
   useEffect(() => {
@@ -97,10 +69,14 @@ function ActionTransferModal({
   }
 
   const handleLoadWorkflows = async () => {
+    if (!activeAccountId) {
+      return;
+    }
+
     dispatch(clearTransferLoadErrors());
 
     try {
-      await dispatch(loadMultiRepoWorkflows({ accountId })).unwrap();
+      await dispatch(loadMultiRepoWorkflows({ accountId: activeAccountId })).unwrap();
       dispatch(setTransferPhase(2));
     } catch {
       // Per-repo failures are accumulated in Redux state and displayed inline.
@@ -108,13 +84,15 @@ function ActionTransferModal({
   };
 
   const handleSave = async () => {
+    if (!activeAccountId) {
+      return;
+    }
+
     try {
       await dispatch(batchSaveManagedWorkflows({
-        accountId,
+        accountId: activeAccountId,
         stagedSelection,
       })).unwrap();
-      onClose();
-      onSaved();
     } catch {
       // The slice stores the failure state and keeps the modal open.
     }
@@ -170,14 +148,7 @@ function ActionTransferModal({
 
           {phase === 1 ? (
             <div className="space-y-5">
-              <RepoMultiSelect
-                ownerOptions={ownerOptions}
-                personalRepos={personalRepos}
-                groupedRepos={groupedRepos}
-                selectedRepoFullNames={selectedRepoFullNames}
-                onToggleRepo={(repoFullName) => dispatch(toggleRepoSelection(repoFullName))}
-                reposStatus={reposStatus}
-              />
+              <RepoMultiSelect reposStatus={reposStatus} />
 
               {reposError ? (
                 <div className="rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
@@ -204,7 +175,7 @@ function ActionTransferModal({
                   <div className="space-y-2">
                     {transferModalView.loadErrorEntries.map(([repoFullName, message]) => (
                       <p key={repoFullName}>
-                        {repoFullName === '__global__' ? (
+                        {repoFullName === GLOBAL_TRANSFER_LOAD_ERROR_KEY ? (
                           message
                         ) : (
                           <>
@@ -232,12 +203,7 @@ function ActionTransferModal({
 
           {phase === 2 ? (
             <div className="space-y-5">
-              <WorkflowTransferBox
-                availableWorkflows={candidateWorkflows}
-                stagedWorkflows={stagedSelection}
-                onMoveToStaged={(workflows) => dispatch(moveToStaged(workflows))}
-                onRemoveFromStaged={(workflows) => dispatch(removeFromStaged(workflows))}
-              />
+              <WorkflowTransferBox />
 
               <div className="flex justify-end gap-3">
                 <Button variant="outline" onClick={() => dispatch(setTransferPhase(1))}>
