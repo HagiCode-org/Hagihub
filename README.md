@@ -1,5 +1,8 @@
 # Hagihub
 
+[![license](https://img.shields.io/badge/license-Apache--2.0-ffd43b)](./LICENSE)
+[![build](https://img.shields.io/github/actions/workflow/status/HagiCode-org/Hagihub/build.yml?branch=main&label=build)](https://github.com/HagiCode-org/Hagihub/actions/workflows/build.yml)
+
 Hagihub 是一个基于 Electron 的多账号 GitHub 管理桌面应用，用来在同一工作区内切换多个 GitHub 身份、浏览个人仓库与组织仓库，并为后续的仓库协作与 AI 工作流提供统一入口。
 
 当前版本已经支持：
@@ -123,4 +126,4 @@ npm run build:mac
 
 ## License
 
-AGPL-3.0
+Apache-2.0
