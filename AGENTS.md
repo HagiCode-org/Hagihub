@@ -24,16 +24,24 @@ npm run build:linux
 npm run typecheck:main
 npm run typecheck:preload
 npm run typecheck:renderer
-npm test
-npm run lint
+npm run build:tsc:check     # prepare:i18n + all three typechecks (PR gate)
+npm run build:linux:dir     # Linux package-only self-check used by PR checks
+npm run i18n:check          # hagi18n audit + doctor + generated-resource check
 ```
+
+CI uses Node.js 24; PR checks run `npm ci`, `build:tsc:check`, `build:prod`, and `build:linux:dir`. There is no `test` or `lint` script.
 
 ## Key Paths
 
 - `src/main/`: Electron main process
 - `src/preload/`: context bridge
 - `src/renderer/`: React UI (Redux Toolkit, react-i18next, shadcn/ui, Tailwind CSS 4)
-- `src/renderer/locales/`: i18n translation files (zh-CN, en-US)
+- `src/renderer/locales/`: i18n translation files (zh-CN, en-US); YAML sources, with `generated-locales/` produced by `npm run prepare:i18n` (`scripts/generate-i18n-resources.mjs`, never hand-edit)
+- `src/main/storage/`, `src/main/github-*.ts`: local account storage, GitHub auth (Device Flow), and API access; `src/main/__tests__/` holds main-process tests
+- `src/shared/`: types shared across main, preload, and renderer
+- `scripts/`: Electron Forge packaging (`run-electron-forge.js`), MSIX, smoke tests, signing verification
+- `.github/workflows/`: `pr-checks.yml`, `build.yml` (+ reusable Windows/Unix builds), `release-draft-action.yml` (drafts via `HagiCode-org/hagi-release-drafter`)
+- `PRODUCT.md`, `DESIGN.md`: product and design context for UI work
 
 ## Agent Guidelines
 
