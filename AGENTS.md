@@ -27,6 +27,7 @@ npm run typecheck:renderer
 npm run build:tsc:check     # prepare:i18n + all three typechecks (PR gate)
 npm run build:linux:dir     # Linux package-only self-check used by PR checks
 npm run i18n:check          # hagi18n audit + doctor + generated-resource check
+npm run smoke-test          # packaging smoke test (also the last step of build:prod)
 ```
 
 CI uses Node.js 24; PR checks run `npm ci`, `build:tsc:check`, `build:prod`, and `build:linux:dir`. There is no `test` or `lint` script.
