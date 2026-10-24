@@ -27,6 +27,7 @@ npm run typecheck:renderer
 npm run build:tsc:check     # prepare:i18n + all three typechecks (PR gate)
 npm run build:linux:dir     # Linux package-only self-check used by PR checks
 npm run i18n:check          # hagi18n audit + doctor + generated-resource check
+npm run i18n:sync           # also i18n:audit|report|doctor|prune; use `:write` variants of sync/prune to apply (base locale en-US)
 npm run smoke-test          # packaging smoke test (also the last step of build:prod)
 ```
 
