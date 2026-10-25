@@ -16,7 +16,7 @@ Run commands from `repos/Hagihub/`.
 
 ```bash
 npm install
-npm run dev
+npm run dev                  # renderer (Vite, port 36599) + main tsc watch + preload watch + Electron
 npm run build:prod
 npm run build:win
 npm run build:mac
