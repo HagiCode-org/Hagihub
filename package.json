@@ -108,7 +108,7 @@
     "@electron-forge/maker-msix": "^7.11.2",
     "@electron-forge/maker-rpm": "^7.11.2",
     "@electron-forge/maker-zip": "^7.11.2",
-    "@hagicode/hagi18n": "^0.1.1",
+    "@hagicode/hagi18n": "^0.2.0",
     "@rabbitholesyndrome/electron-forge-maker-portable": "^0.2.0",
     "@reforged/maker-appimage": "^5.2.0",
     "@tailwindcss/vite": "^4.1.18",
