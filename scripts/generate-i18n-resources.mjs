@@ -187,19 +187,19 @@ function collectParityErrors(expectedArtifacts, actualArtifacts) {
     const actual = actualByKey.get(key);
 
     if (!actual) {
-      errors.push(`Missing generated locale artifact ${artifact.locale}/${artifact.relativePath}; rerun npm run i18n:generate`);
+      errors.push(`Missing generated locale artifact ${artifact.locale}/${artifact.relativePath}; rerun pnpm run i18n:generate`);
       continue;
     }
 
     if (formatJson(actual.data) !== formatJson(artifact.data)) {
-      errors.push(`${artifact.locale}/${artifact.relativePath} is stale; rerun npm run i18n:generate`);
+      errors.push(`${artifact.locale}/${artifact.relativePath} is stale; rerun pnpm run i18n:generate`);
     }
 
     actualByKey.delete(key);
   }
 
   for (const leftover of actualByKey.values()) {
-    errors.push(`Unexpected generated locale artifact ${leftover.locale}/${leftover.relativePath}; rerun npm run i18n:generate`);
+    errors.push(`Unexpected generated locale artifact ${leftover.locale}/${leftover.relativePath}; rerun pnpm run i18n:generate`);
   }
 
   return errors;
@@ -230,7 +230,7 @@ export async function generateI18nResources(options = {}) {
 
 export async function verifyGeneratedI18nResources(options = {}) {
   const { generatedRoot, expectedLocales, artifacts, fileCount } = await loadYamlLocaleTree(options);
-  assert(await fileExists(generatedRoot), `Generated locale directory is missing: ${path.relative(repoRoot, generatedRoot)}. Rerun npm run i18n:generate`);
+  assert(await fileExists(generatedRoot), `Generated locale directory is missing: ${path.relative(repoRoot, generatedRoot)}. Rerun pnpm run i18n:generate`);
   const generatedTree = await loadGeneratedLocaleTree(options);
   const errors = collectParityErrors(artifacts, generatedTree.artifacts);
   assert.equal(errors.length, 0, errors.join('\n'));
