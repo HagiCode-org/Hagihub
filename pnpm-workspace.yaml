@@ -1,0 +1,34 @@
+# pnpm settings (pnpm 12 reads these here, not from package.json).
+
+# Layout workaround (tool requirement): Electron Forge refuses to package under pnpm's isolated layout
+# ("node-linker must be set to hoisted"). Scoped to this repository.
+nodeLinker: hoisted
+
+# Electron tooling pulls @electron/node-gyp from github.com/electron/node-gyp, pinned by commit in
+# pnpm-lock.yaml. pnpm blocks git-hosted transitive dependencies by default; this replaces npm's
+# `allow-git=all` (the old .npmrc).
+blockExoticSubdeps: false
+
+# Dependency lifecycle scripts run only for approved packages. Reviewed from the old lockfile's
+# `hasInstallScript` entries:
+#   electron    - downloads the Electron binary that packaging and the smoke test run; approved.
+#   fs-xattr    - macOS-only optional native addon used by the DMG maker; needs its build step on macOS.
+#   fsevents - macOS-only optional file watcher; ships a prebuilt binary, no script needed.
+#   macos-alias - macOS-only optional native addon used by the DMG maker; needs its build step on macOS.
+#   msw - transitive dev dependency; postinstall only prints a notice, denied.
+allowBuilds:
+  electron: true
+  fs-xattr: true
+  fsevents: false
+  macos-alias: true
+  msw: false
+
+# pnpm 12 rejects packages younger than its default minimumReleaseAge (1 day). First-party packages
+# are published and consumed the same day, so exempt only that scope.
+minimumReleaseAgeExclude:
+  - "@hagicode/*"
+
+# Agent skills shipped inside dependencies are not installed into the repository (reviewed: denied).
+permissions:
+  '@hagicode/hagi18n':
+    skills: false
