@@ -3,6 +3,30 @@ repoRoot: .
 baseLocale: en-US
 targetLocales:
   - zh-CN
+# 与英文基线相同、且在各语言里本就应当相同的值(品牌名、URL、技术标识、通用借词等),按「文件 → 键」逐条精确列出,每条写理由。
+# 名单对所有目标语言生效:只有在所有仍与英文相同的语言里英文写法都正确时才加入;其余一律翻译。
+auditIdenticalAllowlist:
+  common.yml:
+    - app.name # 品牌名
+    - shell.title # 品牌名
+    - shell.rendererStackValue # 技术栈名称
+    - shell.electronLabel # 技术名称
+    - shell.info.chrome # 技术名称
+    - shell.info.node # 技术名称
+    - settingsPage.notification.values.focusWindow # 内部事件标识
+  github.yml:
+    - createDialog.specialRepos.github.label # GitHub 特殊仓库名
+    - createDialog.specialRepos.githubPages.label # GitHub 特殊仓库名
+    - createDialog.specialRepos.username.label # 仅含占位符
+    - repoCard.fork # GitHub 界面术语
+    - repoCard.openActions # GitHub 界面术语
+    - repoCard.info.url # 通用缩写
+    - repoCard.tabs.readme # 文件名
+    - repoCard.tabs.license # 文件名
+    - repoCard.license.presets.gpl-3.0 # 许可证正式名
+    - repoCard.license.presets.lgpl-3.0 # 许可证正式名
+    - repoCard.license.presets.mpl-2.0 # 许可证正式名
+    - repoCard.license.presets.agpl-3.0 # 许可证正式名
 doctor:
   excludedDirectories:
     - .git
